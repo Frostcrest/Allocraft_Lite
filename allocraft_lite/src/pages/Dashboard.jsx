@@ -222,10 +222,8 @@ export default function Dashboard() {
                   />
                   <CardContent className="p-6 relative">
                     <div className="flex items-center justify-between mb-4">
-                      <div
-                        className={`p-3 rounded-xl ${asset.gradient} bg-opacity-10`}
-                      >
-                        <asset.icon className="w-6 h-6 text-slate-700" />
+                      <div className={`p-3 rounded-xl ${asset.gradient} bg-opacity-10`}>
+                        <asset.icon className="w-6 h-6 text-white" /> {/* Make icon white */}
                       </div>
                       <Plus className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
                     </div>

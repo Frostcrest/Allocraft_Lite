@@ -32,7 +32,7 @@ export default function StatCard({
             )}
           </div>
           <div className={`p-3 rounded-xl ${gradient} bg-opacity-10`}>
-            <Icon className="w-6 h-6 text-slate-700" />
+            <Icon className="w-6 h-6 text-white" /> {/* Make icon white */}
           </div>
         </div>
       </CardContent>
