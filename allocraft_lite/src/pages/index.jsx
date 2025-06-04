@@ -8,7 +8,13 @@ import Options from "./Options";
 
 import Wheels from "./Wheels";
 
+import Login from "./Login.jsx";
+
+import Register from "./Register.jsx";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { useAuth } from "@/context/AuthContext";
+import { Navigate } from "react-router-dom";
 
 const PAGES = {
     
@@ -47,13 +53,17 @@ function PagesContent() {
                     <Route path="/" element={<Dashboard />} />
                 
                 
-                <Route path="/Dashboard" element={<Dashboard />} />
+                <Route path="/Dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                 
                 <Route path="/Stocks" element={<Stocks />} />
                 
                 <Route path="/Options" element={<Options />} />
                 
                 <Route path="/Wheels" element={<Wheels />} />
+                
+                <Route path="/login" element={<Login />} />
+                
+                <Route path="/register" element={<Register />} />
                 
             </Routes>
         </Layout>
@@ -66,6 +76,11 @@ export default function Pages() {
             <PagesContent />
         </Router>
     );
+}
+
+function PrivateRoute({ children }) {
+  const { token } = useAuth();
+  return token ? children : <Navigate to="/login" replace />;
 }
 
 <link rel="icon" type="image/png" href="/src/assets/allocraft_logo.png" />
