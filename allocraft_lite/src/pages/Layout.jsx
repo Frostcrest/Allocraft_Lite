@@ -54,17 +54,13 @@ export default function Layout({ children, currentPageName }) {
       <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-white to-slate-50">
         <Sidebar className="border-r border-slate-200/60 bg-white/80 backdrop-blur-xl">
           <SidebarHeader className="border-b border-slate-200/60 p-6">
-            <div className="flex items-center gap-3">
-              {/* Remove the dark background and shadow from the logo container */}
+            <div className="flex items-center gap-6">
+              {/* Large logo, no tagline */}
               <img
                 src={allocraftLogo}
                 alt="Allocraft Logo"
-                className="w-10 h-10 object-contain"
+                className="w-32 h-32 object-contain"
               />
-              <div>
-                <h2 className="font-bold text-slate-900 text-lg tracking-tight">Allocraft</h2>
-                <p className="text-xs text-slate-500 font-medium">Portfolio Tracker</p>
-              </div>
             </div>
           </SidebarHeader>
           
