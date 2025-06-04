@@ -13,7 +13,7 @@ If you haven't already, clone the repository:
 
 ```sh
 git clone <your-repo-url>
-cd allocraft-cb344658
+cd allocraft-lite
 ```
 
 ### 2. Install Dependencies
