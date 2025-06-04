@@ -21,7 +21,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import frostcrestRoundedIcon from "@/assets/frostcrest_rounded_icon.png";
+import allocraftLogo from "@/assets/allocraft_logo-transparent-preview.png";
 
 const navigationItems = [
   {
@@ -55,14 +55,12 @@ export default function Layout({ children, currentPageName }) {
         <Sidebar className="border-r border-slate-200/60 bg-white/80 backdrop-blur-xl">
           <SidebarHeader className="border-b border-slate-200/60 p-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl flex items-center justify-center shadow-lg">
-                {/* Replace PieChart icon with the frostcrest_rounded_icon image */}
-                <img
-                  src={frostcrestRoundedIcon}
-                  alt="Allocraft Logo"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              </div>
+              {/* Remove the dark background and shadow from the logo container */}
+              <img
+                src={allocraftLogo}
+                alt="Allocraft Logo"
+                className="w-10 h-10 object-contain"
+              />
               <div>
                 <h2 className="font-bold text-slate-900 text-lg tracking-tight">Allocraft</h2>
                 <p className="text-xs text-slate-500 font-medium">Portfolio Tracker</p>

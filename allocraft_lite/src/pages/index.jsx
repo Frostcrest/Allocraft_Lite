@@ -67,3 +67,5 @@ export default function Pages() {
         </Router>
     );
 }
+
+<link rel="icon" type="image/png" href="/src/assets/allocraft_logo.png" />
