@@ -1,10 +1,11 @@
-const API_BASE_URL = "https://api.allocraft.app"; // Update if your FastAPI runs elsewhere
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-export async function fetchFromAPI(endpoint, options = {}) {
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+export async function apiFetch(path, options = {}) {
+    const token = sessionStorage.getItem("allocraft_token");
+    const headers = {
+        ...(options.headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        "Content-Type": "application/json",
+    };
+    return fetch(`${API_BASE}${path}`, { ...options, headers });
 }
