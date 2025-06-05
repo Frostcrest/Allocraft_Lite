@@ -16,3 +16,18 @@ export async function fetchFromAPI(endpoint, options = {}) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+fetch("http://localhost:8000/auth/register", {
+  method: "POST",
+  body: JSON.stringify({ username, password }),
+  headers: {
+    "Content-Type": "application/json",
+  },
+})
+  .then((response) => response.json())
+  .then((data) => {
+    console.log("Success:", data);
+  })
+  .catch((error) => {
+    console.error("Error:", error);
+  });
