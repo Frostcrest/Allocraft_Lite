@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000"; // Update if your FastAPI runs elsewhere
+const API_BASE_URL = "https://api.allocraft.app"; // Update if your FastAPI runs elsewhere
 
 export async function fetchFromAPI(endpoint, options = {}) {
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
