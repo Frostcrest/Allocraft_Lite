@@ -3,7 +3,7 @@ import { fetchFromAPI } from '@/api/fastapiClient';
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import WheelForm from "@/components/forms/WheelForm";
-import { Plus, Edit, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, Edit, RotateCcw, Trash2, ArrowRight } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -337,6 +337,7 @@ export default function Wheels() {
                       {groupWheels[0]?.premium_received !== undefined ? `$${groupWheels[0]?.premium_received} premium` : "-"}
                     </div>
                   </div>
+                  <ArrowRight className="mx-2 text-slate-400" />
                   {/* Assigned */}
                   <div className="flex flex-col items-center px-4">
                     <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
@@ -346,6 +347,7 @@ export default function Wheels() {
                       {assignment ? `${(assignment.contracts || 1) * 100} shares` : "-"}
                     </div>
                   </div>
+                  <ArrowRight className="mx-2 text-slate-400" />
                   {/* Sell Call */}
                   <div className="flex flex-col items-center px-4">
                     <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
@@ -355,6 +357,7 @@ export default function Wheels() {
                       {groupWheels[0]?.premium_received !== undefined ? `$${groupWheels[0]?.premium_received} premium` : "-"}
                     </div>
                   </div>
+                  <ArrowRight className="mx-2 text-slate-400" />
                   {/* Called Away */}
                   <div className="flex flex-col items-center px-4">
                     <div className="bg-slate-100 rounded-r-full rounded-l-none px-6 py-2 font-bold border border-slate-300">
@@ -398,6 +401,72 @@ export default function Wheels() {
           setFormData={setAssignmentFormData}
           onSubmit={handleAssignmentSubmit}
         />
+      </div>
+    </div>
+  );
+}
+
+function WheelPhaseRow({ groupId, groupWheels }) {
+  // Find the relevant trades for each phase
+  const sellPut = groupWheels.find(w => w.trade_type === "Sell Put");
+  const assignment = groupWheels.find(w => w.trade_type === "Assignment");
+  const sellCall = groupWheels.find(w => w.trade_type === "Sell Call");
+  const calledAway = groupWheels.find(w => w.trade_type === "Called Away");
+
+  // Calculate values
+  const strikePut = sellPut?.strike_price ?? "-";
+  const premiumPut = sellPut?.premium_received ?? "-";
+  const assignedShares = assignment ? (assignment.contracts || 1) * 100 : "-";
+  const strikeCall = sellCall?.strike_price ?? "-";
+  const premiumCall = sellCall?.premium_received ?? "-";
+  const calledAwayStrike = calledAway?.strike_price ?? "-";
+  // Calculate profit: (call strike - assignment strike) * shares
+  let calledAwayProfit = "-";
+  if (assignment && calledAway) {
+    const shares = (assignment.contracts || 1) * 100;
+    calledAwayProfit = `$${((calledAway.strike_price - assignment.strike_price) * shares).toFixed(2)}`;
+  }
+
+  return (
+    <div className="flex items-center gap-0 py-6">
+      {/* Sell Put */}
+      <div className="flex flex-col items-center px-4">
+        <div className="bg-slate-100 rounded-l-full rounded-r-none px-6 py-2 font-bold border border-slate-300">
+          Sell ${strikePut} Put
+        </div>
+        <div className="text-xs text-slate-600 mt-1">
+          {premiumPut !== "-" ? `$${premiumPut} premium` : "-"}
+        </div>
+      </div>
+      <ArrowRight className="mx-2 text-slate-400" />
+      {/* Assigned */}
+      <div className="flex flex-col items-center px-4">
+        <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
+          Assigned at ${strikePut}
+        </div>
+        <div className="text-xs text-slate-600 mt-1">
+          {assignedShares !== "-" ? `${assignedShares} shares` : "-"}
+        </div>
+      </div>
+      <ArrowRight className="mx-2 text-slate-400" />
+      {/* Sell Call */}
+      <div className="flex flex-col items-center px-4">
+        <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
+          Sell ${strikeCall} Call
+        </div>
+        <div className="text-xs text-slate-600 mt-1">
+          {premiumCall !== "-" ? `$${premiumCall} premium` : "-"}
+        </div>
+      </div>
+      <ArrowRight className="mx-2 text-slate-400" />
+      {/* Called Away */}
+      <div className="flex flex-col items-center px-4">
+        <div className="bg-slate-100 rounded-r-full rounded-l-none px-6 py-2 font-bold border border-slate-300">
+          Called Away at ${calledAwayStrike}
+        </div>
+        <div className="text-xs text-slate-600 mt-1">
+          {calledAwayProfit !== "-" ? `${calledAwayProfit} profit` : "-"}
+        </div>
       </div>
     </div>
   );
