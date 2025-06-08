@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import fetchFromAPI from "@/api/fastapiClient";
+import { fetchFromAPI } from "@/api/fastapiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
