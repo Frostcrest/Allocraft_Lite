@@ -8,13 +8,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatCurrency, calculateWheelTotal } from "@/lib/utils"; // <-- Add this import
+import ImportExportButtons from "@/components/ImportExportButtons";
 
 export default function Wheels() {
   const [wheels, setWheels] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingWheel, setEditingWheel] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   const [formData, setFormData] = useState({
     wheel_id: '',
     ticker: '',
@@ -76,7 +77,7 @@ export default function Wheels() {
           body: JSON.stringify(wheelData)
         });
       }
-      
+
       loadWheels();
       setShowForm(false);
       resetForm();
@@ -141,13 +142,16 @@ export default function Wheels() {
               Cash-secured puts and covered calls
             </p>
           </div>
-          <Button 
-            onClick={() => setShowForm(true)}
-            className="bg-slate-900 hover:bg-slate-800 shadow-lg"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Add Trade
-          </Button>
+          <div className="flex gap-2 items-center">
+            <ImportExportButtons section="wheels" />
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-slate-900 hover:bg-slate-800 shadow-lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Trade
+            </Button>
+          </div>
         </div>
 
         {Object.keys(groupedWheels).length > 0 ? (
@@ -170,8 +174,8 @@ export default function Wheels() {
                 <CardContent>
                   <div className="space-y-4">
                     {wheelTrades.map((trade) => (
-                      <div 
-                        key={trade.id} 
+                      <div
+                        key={trade.id}
                         className="flex items-center justify-between p-4 rounded-lg bg-slate-50/60 hover:bg-slate-50 transition-colors"
                       >
                         <div className="flex items-center gap-4">
@@ -236,7 +240,7 @@ export default function Wheels() {
             </div>
             <h3 className="text-lg font-medium text-slate-900 mb-2">No wheel strategies yet</h3>
             <p className="text-slate-500 mb-6">Start tracking your cash-secured puts and covered calls</p>
-            <Button 
+            <Button
               onClick={() => setShowForm(true)}
               className="bg-slate-900 hover:bg-slate-800"
             >
@@ -264,6 +268,8 @@ export default function Wheels() {
             />
           </DialogContent>
         </Dialog>
+
+
       </div>
     </div>
   );

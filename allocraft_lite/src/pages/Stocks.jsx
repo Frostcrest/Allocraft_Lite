@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import StockForm from "../components/forms/StockForm";
 import StockTable from "../components/tables/StockTable";
 import { formatCurrency } from "@/lib/utils"; // <-- Add this import
+import ImportExportButtons from "@/components/ImportExportButtons";
 
 export default function Stocks() {
   const [stocks, setStocks] = useState([]);
@@ -99,13 +100,16 @@ export default function Stocks() {
               {formatCurrency(calculateTotalValue())}
             </p>
           </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-slate-900 hover:bg-slate-800 shadow-lg"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Add Position
-          </Button>
+          <div className="flex gap-2 items-center">
+            <ImportExportButtons section="stocks" />
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-slate-900 hover:bg-slate-800 shadow-lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Position
+            </Button>
+          </div>
         </div>
 
         {stocks.length > 0 ? (
