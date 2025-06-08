@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchFromAPI } from "@/api/fastapiClient";
+import fetchFromAPI from "@/api/fastapiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -174,8 +174,8 @@ export default function Dashboard() {
             change={
               totalPL >= 0
                 ? "+" +
-                  ((totalPL / (totalValue - totalPL)) * 100).toFixed(1) +
-                  "%"
+                ((totalPL / (totalValue - totalPL)) * 100).toFixed(1) +
+                "%"
                 : ((totalPL / (totalValue - totalPL)) * 100).toFixed(1) + "%"
             }
             changeType={totalPL >= 0 ? "positive" : "negative"}
