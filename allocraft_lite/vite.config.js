@@ -9,9 +9,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
-  server: {
-    proxy: {
-      '/wheels': 'http://localhost:5173',
-    },
-  },
 });

@@ -149,8 +149,7 @@ export default function Wheels() {
       strike_price: put.strike_price,
       premium_received: put.premium_received,
       status: "Assigned",
-      assigned_put_id: put.id,
-      sell_put_quantity: put.contracts || 1 // <-- Add this line
+      assigned_put_id: put.id // tie assignment to the put
     });
     setAssignmentModal(true);
   };
@@ -158,9 +157,6 @@ export default function Wheels() {
   // Example Assignment Modal (replace with your modal/form)
   const AssignmentModal = ({ isOpen, onClose, formData, setFormData, onSubmit }) => {
     if (!isOpen) return null;
-    // Calculate assignment_shares_quantity
-    const sharesQuantity = (formData.sell_put_quantity || 1) * 100;
-
     return (
       <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
         <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
@@ -175,33 +171,20 @@ export default function Wheels() {
               <input className="w-full border rounded px-2 py-1" value={formData.ticker} disabled />
             </div>
             <div>
-              <label className="block text-sm font-medium">Assignment Strike Price</label>
-              <input
-                className="w-full border rounded px-2 py-1"
-                type="number"
-                value={formData.assignment_strike_price || formData.strike_price}
-                onChange={e => setFormData({ ...formData, assignment_strike_price: e.target.value })}
-              />
+              <label className="block text-sm font-medium">Trade Type</label>
+              <input className="w-full border rounded px-2 py-1" value={formData.trade_type} disabled />
             </div>
             <div>
-              <label className="block text-sm font-medium">Assignment Shares Quantity</label>
-              <input
-                className="w-full border rounded px-2 py-1"
-                value={sharesQuantity}
-                disabled
-              />
+              <label className="block text-sm font-medium">Strike Price</label>
+              <input className="w-full border rounded px-2 py-1" value={formData.strike_price} disabled />
             </div>
+            {/* Add more fields as needed */}
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button
               onClick={() => {
-                onSubmit({
-                  ...formData,
-                  assignment_strike_price: formData.assignment_strike_price || formData.strike_price,
-                  assignment_shares_quantity: sharesQuantity,
-                  assignment_status: "closed"
-                });
+                onSubmit(formData);
                 onClose();
               }}
               className="bg-slate-900 text-white"
@@ -216,14 +199,10 @@ export default function Wheels() {
 
   // Submit handler for assignment
   const handleAssignmentSubmit = async (assignmentData) => {
-    // Example API call
-    await fetchFromAPI('/wheels/assignment/', {
-      method: 'POST',
-      body: JSON.stringify({
-        ...assignmentData,
-        assignment_status: "closed"
-      })
-    });
+    // Implement your API call here
+    // Example:
+    // await fetch('/wheels/assignment', { method: 'POST', body: JSON.stringify(assignmentData) });
+    // Reload wheels after assignment
     await loadWheels();
   };
 
@@ -283,16 +262,6 @@ export default function Wheels() {
             const sellCall = groupWheels.find(w => w.trade_type === "Sell Call");
             const calledAway = groupWheels.find(w => w.trade_type === "Called Away");
 
-            const assignmentStrike = assignment?.strike_price ?? 0;
-            const calledAwayStrike = calledAway?.strike_price ?? 0;
-            const contracts = assignment?.contracts ?? 1; // default to 1 if not set
-
-            let calledAwayProfit = "-";
-            if (assignment && calledAway) {
-              const profit = (calledAwayStrike - assignmentStrike) * 100 * contracts;
-              calledAwayProfit = `$${profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} profit`;
-            }
-
             return (
               <div key={groupId} className="mb-8 border rounded-lg shadow bg-white">
                 <div className="flex items-center justify-between px-6 py-4 border-b">
@@ -325,7 +294,7 @@ export default function Wheels() {
                         <td className="px-6 py-4 whitespace-nowrap">{wheel.status}</td>
                         <td className="px-6 py-4 whitespace-nowrap flex gap-2">
                           {/* Assignment Action Button for open puts */}
-                          {wheel.trade_type === "Sell Put" && wheel.status === "Active" && (
+                          {wheel.trade_type === "Sell Put" && wheel.status === "Open" && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -396,7 +365,7 @@ export default function Wheels() {
                       Called Away at ${calledAway?.strike_price}
                     </div>
                     <div className="text-xs text-slate-600 mt-1">
-                      {calledAwayProfit}
+                      {assignment && calledAway ? `$${((calledAway.strike_price - assignment.strike_price) * ((assignment.contracts || 1) * 100)).toFixed(2)} profit` : "-"}
                     </div>
                   </div>
                 </div>
