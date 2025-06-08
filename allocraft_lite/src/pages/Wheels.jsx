@@ -3,7 +3,7 @@ import { fetchFromAPI } from '@/api/fastapiClient';
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import WheelForm from "@/components/forms/WheelForm";
-import { Plus, Edit, RotateCcw, Trash2, ArrowRight } from "lucide-react";
+import { Plus, Edit, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -255,122 +255,71 @@ export default function Wheels() {
 
         {/* Wheel Groups Table */}
         <div className="mt-8">
-          {Object.entries(groupedWheels).map(([groupId, groupWheels]) => {
-            // Define these inside the map!
-            const sellPut = groupWheels.find(w => w.trade_type === "Sell Put");
-            const assignment = groupWheels.find(w => w.trade_type === "Assignment");
-            const sellCall = groupWheels.find(w => w.trade_type === "Sell Call");
-            const calledAway = groupWheels.find(w => w.trade_type === "Called Away");
-
-            return (
-              <div key={groupId} className="mb-8 border rounded-lg shadow bg-white">
-                <div className="flex items-center justify-between px-6 py-4 border-b">
-                  <div className="text-lg font-semibold">{groupId}</div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    title="Add Trade to this Wheel Group"
-                    onClick={() => handleAddTradeToGroup(groupId, groupWheels[0]?.ticker || "")}
-                  >
-                    <Plus className="w-5 h-5" />
-                  </Button>
-                </div>
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead>
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Trade Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Strike Price</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Premium</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupWheels.map((wheel) => (
-                      <tr key={wheel.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">{wheel.trade_type}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{wheel.strike_price}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{wheel.premium_received}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{wheel.status}</td>
-                        <td className="px-6 py-4 whitespace-nowrap flex gap-2">
-                          {/* Assignment Action Button for open puts */}
-                          {wheel.trade_type === "Sell Put" && wheel.status === "Open" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAssignment(wheel)}
-                              title="Mark as Assigned"
-                            >
-                              Assignment
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(wheel)}
-                            className="hover:bg-slate-100"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(wheel.id)}
-                            className="hover:bg-red-50 hover:text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Wheel Phase Row - New Component Integrated Here */}
-                <div className="flex items-center gap-0 py-6">
-                  {/* Sell Put */}
-                  <div className="flex flex-col items-center px-4">
-                    <div className="bg-slate-100 rounded-l-full rounded-r-none px-6 py-2 font-bold border border-slate-300">
-                      Sell ${groupWheels[0]?.strike_price} Put
-                    </div>
-                    <div className="text-xs text-slate-600 mt-1">
-                      {groupWheels[0]?.premium_received !== undefined ? `$${groupWheels[0]?.premium_received} premium` : "-"}
-                    </div>
-                  </div>
-                  <ArrowRight className="mx-2 text-slate-400" />
-                  {/* Assigned */}
-                  <div className="flex flex-col items-center px-4">
-                    <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
-                      Assigned at ${groupWheels[0]?.strike_price}
-                    </div>
-                    <div className="text-xs text-slate-600 mt-1">
-                      {assignment ? `${(assignment.contracts || 1) * 100} shares` : "-"}
-                    </div>
-                  </div>
-                  <ArrowRight className="mx-2 text-slate-400" />
-                  {/* Sell Call */}
-                  <div className="flex flex-col items-center px-4">
-                    <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
-                      Sell ${groupWheels[0]?.strike_price} Call
-                    </div>
-                    <div className="text-xs text-slate-600 mt-1">
-                      {groupWheels[0]?.premium_received !== undefined ? `$${groupWheels[0]?.premium_received} premium` : "-"}
-                    </div>
-                  </div>
-                  <ArrowRight className="mx-2 text-slate-400" />
-                  {/* Called Away */}
-                  <div className="flex flex-col items-center px-4">
-                    <div className="bg-slate-100 rounded-r-full rounded-l-none px-6 py-2 font-bold border border-slate-300">
-                      Called Away at ${calledAway?.strike_price}
-                    </div>
-                    <div className="text-xs text-slate-600 mt-1">
-                      {assignment && calledAway ? `$${((calledAway.strike_price - assignment.strike_price) * ((assignment.contracts || 1) * 100)).toFixed(2)} profit` : "-"}
-                    </div>
-                  </div>
-                </div>
+          {Object.entries(groupedWheels).map(([groupId, groupWheels]) => (
+            <div key={groupId} className="mb-8 border rounded-lg shadow bg-white">
+              <div className="flex items-center justify-between px-6 py-4 border-b">
+                <div className="text-lg font-semibold">{groupId}</div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="Add Trade to this Wheel Group"
+                  onClick={() => handleAddTradeToGroup(groupId, groupWheels[0]?.ticker || "")}
+                >
+                  <Plus className="w-5 h-5" />
+                </Button>
               </div>
-            );
-          })}
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Trade Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Strike Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Premium</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupWheels.map((wheel) => (
+                    <tr key={wheel.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">{wheel.trade_type}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{wheel.strike_price}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{wheel.premium_received}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{wheel.status}</td>
+                      <td className="px-6 py-4 whitespace-nowrap flex gap-2">
+                        {/* Assignment Action Button for open puts */}
+                        {wheel.trade_type === "Sell Put" && wheel.status === "Open" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAssignment(wheel)}
+                            title="Mark as Assigned"
+                          >
+                            Assignment
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(wheel)}
+                          className="hover:bg-slate-100"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(wheel.id)}
+                          className="hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
 
         {/* Add/Edit Trade Modal */}
@@ -401,72 +350,6 @@ export default function Wheels() {
           setFormData={setAssignmentFormData}
           onSubmit={handleAssignmentSubmit}
         />
-      </div>
-    </div>
-  );
-}
-
-function WheelPhaseRow({ groupId, groupWheels }) {
-  // Find the relevant trades for each phase
-  const sellPut = groupWheels.find(w => w.trade_type === "Sell Put");
-  const assignment = groupWheels.find(w => w.trade_type === "Assignment");
-  const sellCall = groupWheels.find(w => w.trade_type === "Sell Call");
-  const calledAway = groupWheels.find(w => w.trade_type === "Called Away");
-
-  // Calculate values
-  const strikePut = sellPut?.strike_price ?? "-";
-  const premiumPut = sellPut?.premium_received ?? "-";
-  const assignedShares = assignment ? (assignment.contracts || 1) * 100 : "-";
-  const strikeCall = sellCall?.strike_price ?? "-";
-  const premiumCall = sellCall?.premium_received ?? "-";
-  const calledAwayStrike = calledAway?.strike_price ?? "-";
-  // Calculate profit: (call strike - assignment strike) * shares
-  let calledAwayProfit = "-";
-  if (assignment && calledAway) {
-    const shares = (assignment.contracts || 1) * 100;
-    calledAwayProfit = `$${((calledAway.strike_price - assignment.strike_price) * shares).toFixed(2)}`;
-  }
-
-  return (
-    <div className="flex items-center gap-0 py-6">
-      {/* Sell Put */}
-      <div className="flex flex-col items-center px-4">
-        <div className="bg-slate-100 rounded-l-full rounded-r-none px-6 py-2 font-bold border border-slate-300">
-          Sell ${strikePut} Put
-        </div>
-        <div className="text-xs text-slate-600 mt-1">
-          {premiumPut !== "-" ? `$${premiumPut} premium` : "-"}
-        </div>
-      </div>
-      <ArrowRight className="mx-2 text-slate-400" />
-      {/* Assigned */}
-      <div className="flex flex-col items-center px-4">
-        <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
-          Assigned at ${strikePut}
-        </div>
-        <div className="text-xs text-slate-600 mt-1">
-          {assignedShares !== "-" ? `${assignedShares} shares` : "-"}
-        </div>
-      </div>
-      <ArrowRight className="mx-2 text-slate-400" />
-      {/* Sell Call */}
-      <div className="flex flex-col items-center px-4">
-        <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
-          Sell ${strikeCall} Call
-        </div>
-        <div className="text-xs text-slate-600 mt-1">
-          {premiumCall !== "-" ? `$${premiumCall} premium` : "-"}
-        </div>
-      </div>
-      <ArrowRight className="mx-2 text-slate-400" />
-      {/* Called Away */}
-      <div className="flex flex-col items-center px-4">
-        <div className="bg-slate-100 rounded-r-full rounded-l-none px-6 py-2 font-bold border border-slate-300">
-          Called Away at ${calledAwayStrike}
-        </div>
-        <div className="text-xs text-slate-600 mt-1">
-          {calledAwayProfit !== "-" ? `${calledAwayProfit} profit` : "-"}
-        </div>
       </div>
     </div>
   );
