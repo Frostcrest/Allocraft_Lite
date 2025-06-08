@@ -23,7 +23,6 @@ import { Plus, Edit, Trash2, Target, RefreshCcw, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import OptionForm from "@/components/forms/OptionForm";
 import { formatCurrency } from "@/lib/utils"; // <-- Add this import
-import ImportExportButtons from "@/components/ImportExportButtons";
 
 export default function Options() {
   const [options, setOptions] = useState([]);
@@ -105,7 +104,7 @@ export default function Options() {
       } else {
         await fetchFromAPI('/options/', { method: 'POST', body: JSON.stringify(optionData) });
       }
-
+      
       loadOptions();
       setShowForm(false);
       resetForm();
@@ -126,8 +125,8 @@ export default function Options() {
       cost: option.cost !== undefined && option.cost !== null
         ? option.cost.toString()
         : (option.cost_basis !== undefined && option.cost_basis !== null
-          ? option.cost_basis.toString()
-          : ''),
+            ? option.cost_basis.toString()
+            : ''),
       status: option.status ?? 'Open'
     });
     setShowForm(true);
@@ -190,7 +189,6 @@ export default function Options() {
             </p>
           </div>
           <div className="flex gap-2 items-center">
-            <ImportExportButtons section="options" />
             <Button
               onClick={handleRefreshPrices}
               className="bg-slate-900 hover:bg-slate-800 shadow-lg flex items-center gap-2"
@@ -199,8 +197,8 @@ export default function Options() {
             >
               {refreshing ? (
                 <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l5-5-5-5v4A12 12 0 002 12h2z" />
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l5-5-5-5v4A12 12 0 002 12h2z"/>
                 </svg>
               ) : refreshDone ? (
                 <Check className="w-5 h-5 text-emerald-500 transition-opacity duration-500" />
@@ -209,7 +207,7 @@ export default function Options() {
               )}
               <span>Refresh Prices</span>
             </Button>
-            <Button
+            <Button 
               onClick={() => setShowForm(true)}
               className="bg-slate-900 hover:bg-slate-800 shadow-lg"
             >
@@ -252,7 +250,7 @@ export default function Options() {
                   const pl = netLiquidity !== null && totalCost !== null
                     ? netLiquidity - totalCost
                     : null;
-
+                  
                   return (
                     <TableRow key={option.id} className="hover:bg-slate-50/40 transition-colors">
                       <TableCell className="font-semibold text-slate-900">{option.ticker}</TableCell>
@@ -338,7 +336,7 @@ export default function Options() {
             </div>
             <h3 className="text-lg font-medium text-slate-900 mb-2">No options contracts yet</h3>
             <p className="text-slate-500 mb-6">Track your calls and puts</p>
-            <Button
+            <Button 
               onClick={() => setShowForm(true)}
               className="bg-slate-900 hover:bg-slate-800"
             >
