@@ -349,14 +349,10 @@ export default function Wheels() {
                   {/* Sell Call */}
                   <div className="flex flex-col items-center px-4">
                     <div className="bg-slate-100 px-6 py-2 font-bold border border-slate-300">
-                      {sellCall
-                        ? `Sell $${sellCall.strike_price} Call`
-                        : "Sell Call"}
+                      Sell ${groupWheels[0]?.strike_price} Call
                     </div>
                     <div className="text-xs text-slate-600 mt-1">
-                      {sellCall?.premium_received
-                        ? `$${sellCall.premium_received} premium`
-                        : "-"}
+                      {groupWheels[0]?.premium_received !== undefined ? `$${groupWheels[0]?.premium_received} premium` : "-"}
                     </div>
                   </div>
                   {/* Called Away */}
