@@ -111,13 +111,23 @@ export default function Wheels() {
     }
   };
 
+  // Group wheels by wheel_id (Wheel Group ID)
   const groupedWheels = wheels.reduce((acc, wheel) => {
-    if (!acc[wheel.wheel_id]) {
-      acc[wheel.wheel_id] = [];
-    }
+    acc[wheel.wheel_id] = acc[wheel.wheel_id] || [];
     acc[wheel.wheel_id].push(wheel);
     return acc;
   }, {});
+
+  // Handler for the Plus icon in each group row
+  const handleAddTradeToGroup = (wheelGroupId, ticker) => {
+    setFormData({
+      ...formData,
+      wheel_id: wheelGroupId,
+      ticker: ticker // Pre-fill ticker as well
+    });
+    setShowForm(true);
+    setEditingWheel(null);
+  };
 
   if (loading) {
     return (
@@ -145,7 +155,19 @@ export default function Wheels() {
           <div className="flex gap-2 items-center">
             <ImportExportButtons section="wheels" />
             <Button
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setShowForm(true);
+                setEditingWheel(null);
+                setFormData({
+                  wheel_id: '',
+                  ticker: '',
+                  trade_type: 'Sell Put',
+                  trade_date: new Date().toISOString().split('T')[0],
+                  strike_price: '',
+                  premium_received: '',
+                  status: 'Active'
+                });
+              }}
               className="bg-slate-900 hover:bg-slate-800 shadow-lg"
             >
               <Plus className="w-5 h-5 mr-2" />
@@ -154,102 +176,71 @@ export default function Wheels() {
           </div>
         </div>
 
-        {Object.keys(groupedWheels).length > 0 ? (
-          <div className="space-y-6">
-            {Object.entries(groupedWheels).map(([wheelId, wheelTrades]) => (
-              <Card key={wheelId} className="border-0 shadow-lg bg-white/80 backdrop-blur-xl">
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl font-bold text-slate-900">
-                      Wheel Strategy: {wheelId}
-                    </CardTitle>
-                    <div className="text-right">
-                      <p className="text-sm text-slate-500">Total Premium</p>
-                      <p className="text-lg font-bold text-emerald-600">
-                        {formatCurrency(calculateWheelTotal(wheelTrades))}
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {wheelTrades.map((trade) => (
-                      <div
-                        key={trade.id}
-                        className="flex items-center justify-between p-4 rounded-lg bg-slate-50/60 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="flex-shrink-0">
-                            <Badge variant={trade.trade_type === 'Sell Put' ? 'default' : 'secondary'}>
-                              {trade.trade_type}
-                            </Badge>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">{trade.ticker}</p>
-                            <p className="text-sm text-slate-500">
-                              {format(new Date(trade.trade_date), 'MMM d, yyyy')}
-                            </p>
-                          </div>
-                          {trade.strike_price && (
-                            <div>
-                              <p className="text-sm text-slate-500">Strike</p>
-                              <p className="font-medium">{formatCurrency(trade.strike_price)}</p>
-                            </div>
-                          )}
+        {/* Wheel Groups Table */}
+        <div className="mt-8">
+          {Object.entries(groupedWheels).map(([groupId, groupWheels]) => (
+            <div key={groupId} className="mb-8 border rounded-lg shadow bg-white">
+              <div className="flex items-center justify-between px-6 py-4 border-b">
+                <div className="text-lg font-semibold">{groupId}</div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="Add Trade to this Wheel Group"
+                  onClick={() => handleAddTradeToGroup(groupId, groupWheels[0]?.ticker || "")}
+                >
+                  <Plus className="w-5 h-5" />
+                </Button>
+              </div>
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead>
+                  <tr>
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ticker</th> */}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Trade Type</th>
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Trade Date</th> */}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Strike Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Premium</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupWheels.map((wheel) => (
+                    <tr key={wheel.id}>
+                      {/* <td className="px-6 py-4 whitespace-nowrap">{wheel.ticker}</td> */}
+                      <td className="px-6 py-4 whitespace-nowrap">{wheel.trade_type}</td>
+                      {/* <td className="px-6 py-4 whitespace-nowrap">{wheel.trade_date}</td> */}
+                      <td className="px-6 py-4 whitespace-nowrap">{wheel.strike_price}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{wheel.premium_received}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{wheel.status}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(wheel)}
+                            className="hover:bg-slate-100"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(wheel.id)}
+                            className="hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-sm text-slate-500">Premium</p>
-                            <p className="font-semibold text-emerald-600">
-                              {formatCurrency(trade.premium_received)}
-                            </p>
-                          </div>
-                          <Badge variant={trade.status === 'Active' ? 'default' : 'secondary'}>
-                            {trade.status}
-                          </Badge>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(trade)}
-                              className="hover:bg-slate-100"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(trade.id)}
-                              className="hover:bg-red-50 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-              <RotateCcw className="w-8 h-8 text-slate-400" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No wheel strategies yet</h3>
-            <p className="text-slate-500 mb-6">Start tracking your cash-secured puts and covered calls</p>
-            <Button
-              onClick={() => setShowForm(true)}
-              className="bg-slate-900 hover:bg-slate-800"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Add Your First Trade
-            </Button>
-          </div>
-        )}
+          ))}
+        </div>
 
+        {/* Add/Edit Trade Modal */}
         <Dialog open={showForm} onOpenChange={setShowForm}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
