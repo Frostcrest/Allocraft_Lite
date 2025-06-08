@@ -207,45 +207,60 @@ export default function Wheels() {
                       <div
                         key={trade.id}
                         className="flex items-center justify-between p-4 rounded-lg bg-slate-50/60 hover:bg-slate-50 transition-colors"
+                        style={{ background: "#fcfdfe" }}
                       >
-                        <div className="flex flex-row gap-8 text-xs text-slate-700 w-full">
-                          {/* General Info */}
-                          <div className="flex flex-col min-w-[120px]">
-                            <span className="font-semibold text-base text-slate-900">{trade.ticker}</span>
-                            <span>Trade Date: {trade.trade_date ? format(new Date(trade.trade_date), 'MMM d, yyyy') : ''}</span>
-                            <span>Call/Put: {trade.call_put}</span>
-                          </div>
+                        <div className="flex flex-row justify-between w-full items-stretch gap-0">
                           {/* Sell Put */}
-                          <div className="flex flex-col min-w-[120px]">
-                            <span className="font-semibold text-slate-800">Sell Put</span>
-                            <span>Strike: {trade.sell_put_strike_price}</span>
-                            <span>Open Prem: {trade.sell_put_open_premium}</span>
-                            <span>Closed Prem: {trade.sell_put_closed_premium}</span>
-                            <span>Status: {trade.sell_put_status}</span>
-                            <span>Qty: {trade.sell_put_quantity}</span>
+                          <div className="flex flex-col items-center flex-1 min-w-0">
+                            <span className="font-semibold text-slate-800 mb-2">Sell Put</span>
+                            <svg width="100%" height="24" viewBox="0 0 120 24" className="mb-2" style={{ maxWidth: 120 }}>
+                              <polygon points="0,12 110,12 110,4 120,12 110,20 110,12 0,12" fill="#e2e8f0" />
+                            </svg>
+                            <div className="text-center">
+                              <span>Strike: {trade.sell_put_strike_price}</span><br />
+                              <span>Open Prem: {trade.sell_put_open_premium}</span><br />
+                              <span>Closed Prem: {trade.sell_put_closed_premium}</span><br />
+                              <span>Status: {trade.sell_put_status}</span><br />
+                              <span>Qty: {trade.sell_put_quantity}</span>
+                            </div>
                           </div>
                           {/* Assignment */}
-                          <div className="flex flex-col min-w-[120px]">
-                            <span className="font-semibold text-slate-800">Assignment</span>
-                            <span>Strike: {trade.assignment_strike_price}</span>
-                            <span>Shares: {trade.assignment_shares_quantity}</span>
-                            <span>Status: {trade.assignment_status}</span>
+                          <div className="flex flex-col items-center flex-1 min-w-0">
+                            <span className="font-semibold text-slate-800 mb-2">Assigned</span>
+                            <svg width="100%" height="24" viewBox="0 0 120 24" className="mb-2" style={{ maxWidth: 120 }}>
+                              <polygon points="0,12 110,12 110,4 120,12 110,20 110,12 0,12" fill="#e2e8f0" />
+                            </svg>
+                            <div className="text-center">
+                              <span>Strike: {trade.assignment_strike_price}</span><br />
+                              <span>Shares: {trade.assignment_shares_quantity}</span><br />
+                              <span>Status: {trade.assignment_status}</span>
+                            </div>
                           </div>
                           {/* Sell Call */}
-                          <div className="flex flex-col min-w-[120px]">
-                            <span className="font-semibold text-slate-800">Sell Call</span>
-                            <span>Strike: {trade.sell_call_strike_price}</span>
-                            <span>Open Prem: {trade.sell_call_open_premium}</span>
-                            <span>Closed Prem: {trade.sell_call_closed_premium}</span>
-                            <span>Status: {trade.sell_call_status}</span>
-                            <span>Qty: {trade.sell_call_quantity}</span>
+                          <div className="flex flex-col items-center flex-1 min-w-0">
+                            <span className="font-semibold text-slate-800 mb-2">Sell Call</span>
+                            <svg width="100%" height="24" viewBox="0 0 120 24" className="mb-2" style={{ maxWidth: 120 }}>
+                              <polygon points="0,12 110,12 110,4 120,12 110,20 110,12 0,12" fill="#e2e8f0" />
+                            </svg>
+                            <div className="text-center">
+                              <span>Strike: {trade.sell_call_strike_price}</span><br />
+                              <span>Open Prem: {trade.sell_call_open_premium}</span><br />
+                              <span>Closed Prem: {trade.sell_call_closed_premium}</span><br />
+                              <span>Status: {trade.sell_call_status}</span><br />
+                              <span>Qty: {trade.sell_call_quantity}</span>
+                            </div>
                           </div>
                           {/* Called Away */}
-                          <div className="flex flex-col min-w-[120px]">
-                            <span className="font-semibold text-slate-800">Called Away</span>
-                            <span>Strike: {trade.called_away_strike_price}</span>
-                            <span>Shares: {trade.called_away_shares_quantity}</span>
-                            <span>Status: {trade.called_away_status}</span>
+                          <div className="flex flex-col items-center flex-1 min-w-0">
+                            <span className="font-semibold text-slate-800 mb-2">Called Away</span>
+                            <svg width="100%" height="24" viewBox="0 0 120 24" className="mb-2" style={{ maxWidth: 120 }}>
+                              <polygon points="0,12 110,12 110,4 120,12 110,20 110,12 0,12" fill="#e2e8f0" />
+                            </svg>
+                            <div className="text-center">
+                              <span>Strike: {trade.called_away_strike_price}</span><br />
+                              <span>Shares: {trade.called_away_shares_quantity}</span><br />
+                              <span>Status: {trade.called_away_status}</span>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-4 ml-4">
