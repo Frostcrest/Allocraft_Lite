@@ -1,116 +1,292 @@
 import React from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 export default function WheelForm({
   formData,
-  editingWheel,
   onChange,
   onSubmit,
   onCancel,
+  editingWheel,
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      {/* Remove Wheel ID as a unique identifier input, keep as grouping label */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="wheel_id">Wheel Group ID</Label>
-          <Input
-            id="wheel_id"
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Wheel ID
+          </label>
+          <input
+            type="text"
+            className="input"
             value={formData.wheel_id}
             onChange={e => onChange("wheel_id", e.target.value)}
-            placeholder="AAPL-001"
             required
+            placeholder="AAPL-W1"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="ticker">Ticker</Label>
-          <Input
-            id="ticker"
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Ticker
+          </label>
+          <input
+            type="text"
+            className="input"
             value={formData.ticker}
-            onChange={e => onChange("ticker", e.target.value.toUpperCase())}
+            onChange={e => onChange("ticker", e.target.value)}
+            required
             placeholder="AAPL"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Trade Date
+          </label>
+          <input
+            type="date"
+            className="input"
+            value={formData.trade_date}
+            onChange={e => onChange("trade_date", e.target.value)}
             required
           />
         </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Call/Put
+          </label>
+          <input
+            type="text"
+            className="input"
+            value={formData.call_put}
+            onChange={e => onChange("call_put", e.target.value)}
+            placeholder="put/call"
+          />
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="trade_type">Trade Type</Label>
-        <Select
-          value={formData.trade_type}
-          onValueChange={value => onChange("trade_type", value)}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Sell Put">Sell Put</SelectItem>
-            <SelectItem value="Assignment">Assignment</SelectItem>
-            <SelectItem value="Sell Call">Sell Call</SelectItem>
-            <SelectItem value="Called Away">Called Away</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="trade_date">Trade Date</Label>
-        <Input
-          id="trade_date"
-          type="date"
-          value={formData.trade_date}
-          onChange={e => onChange("trade_date", e.target.value)}
-          required
-        />
-      </div>
+
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="strike_price">Strike Price</Label>
-          <Input
-            id="strike_price"
+        {/* Sell Put Fields */}
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Put Strike Price
+          </label>
+          <input
             type="number"
+            className="input"
+            value={formData.sell_put_strike_price}
+            onChange={e => onChange("sell_put_strike_price", e.target.value)}
             step="0.01"
-            value={formData.strike_price}
-            onChange={e => onChange("strike_price", e.target.value)}
-            placeholder="150.00"
+            min="0"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="premium_received">Premium Received</Label>
-          <Input
-            id="premium_received"
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Put Open Premium
+          </label>
+          <input
             type="number"
+            className="input"
+            value={formData.sell_put_open_premium}
+            onChange={e => onChange("sell_put_open_premium", e.target.value)}
             step="0.01"
-            value={formData.premium_received}
-            onChange={e => onChange("premium_received", e.target.value)}
-            placeholder="250.00"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Put Closed Premium
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.sell_put_closed_premium}
+            onChange={e => onChange("sell_put_closed_premium", e.target.value)}
+            step="0.01"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Put Status
+          </label>
+          <input
+            type="text"
+            className="input"
+            value={formData.sell_put_status}
+            onChange={e => onChange("sell_put_status", e.target.value)}
+            placeholder="Closed/Open"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Put Quantity
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.sell_put_quantity}
+            onChange={e => onChange("sell_put_quantity", e.target.value)}
+            min="0"
           />
         </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="status">Status</Label>
-        <Select
-          value={formData.status}
-          onValueChange={value => onChange("status", value)}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* Assignment Fields */}
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Assignment Strike Price
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.assignment_strike_price}
+            onChange={e => onChange("assignment_strike_price", e.target.value)}
+            step="0.01"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Assignment Shares Quantity
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.assignment_shares_quantity}
+            onChange={e => onChange("assignment_shares_quantity", e.target.value)}
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Assignment Status
+          </label>
+          <input
+            type="text"
+            className="input"
+            value={formData.assignment_status}
+            onChange={e => onChange("assignment_status", e.target.value)}
+            placeholder="Closed/Open"
+          />
+        </div>
       </div>
-      <DialogFooter className="gap-3">
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* Sell Call Fields */}
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Call Strike Price
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.sell_call_strike_price}
+            onChange={e => onChange("sell_call_strike_price", e.target.value)}
+            step="0.01"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Call Open Premium
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.sell_call_open_premium}
+            onChange={e => onChange("sell_call_open_premium", e.target.value)}
+            step="0.01"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Call Closed Premium
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.sell_call_closed_premium}
+            onChange={e => onChange("sell_call_closed_premium", e.target.value)}
+            step="0.01"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Call Status
+          </label>
+          <input
+            type="text"
+            className="input"
+            value={formData.sell_call_status}
+            onChange={e => onChange("sell_call_status", e.target.value)}
+            placeholder="Closed/Open"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Sell Call Quantity
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.sell_call_quantity}
+            onChange={e => onChange("sell_call_quantity", e.target.value)}
+            min="0"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* Called Away Fields */}
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Called Away Strike Price
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.called_away_strike_price}
+            onChange={e => onChange("called_away_strike_price", e.target.value)}
+            step="0.01"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Called Away Shares Quantity
+          </label>
+          <input
+            type="number"
+            className="input"
+            value={formData.called_away_shares_quantity}
+            onChange={e => onChange("called_away_shares_quantity", e.target.value)}
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Called Away Status
+          </label>
+          <input
+            type="text"
+            className="input"
+            value={formData.called_away_status}
+            onChange={e => onChange("called_away_status", e.target.value)}
+            placeholder="Closed/Open"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 mt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-slate-900 hover:bg-slate-800">
-          {editingWheel ? "Update" : "Add"} Trade
+        <Button type="submit" className="bg-slate-900 text-white">
+          {editingWheel ? "Update" : "Add"}
         </Button>
-      </DialogFooter>
+      </div>
     </form>
   );
 }

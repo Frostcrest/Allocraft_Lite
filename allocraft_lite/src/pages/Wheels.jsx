@@ -6,24 +6,38 @@ import WheelForm from "@/components/forms/WheelForm";
 import { Plus, Edit, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { formatCurrency, calculateWheelTotal } from "@/lib/utils"; // <-- Add this import
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatCurrency, calculateWheelTotal } from "@/lib/utils";
+
+const initialFormData = {
+  wheel_id: '',
+  ticker: '',
+  trade_date: new Date().toISOString().split('T')[0],
+  call_put: '',
+  sell_put_strike_price: '',
+  sell_put_open_premium: '',
+  sell_put_closed_premium: '',
+  sell_put_status: '',
+  sell_put_quantity: '',
+  assignment_strike_price: '',
+  assignment_shares_quantity: '',
+  assignment_status: '',
+  sell_call_strike_price: '',
+  sell_call_open_premium: '',
+  sell_call_closed_premium: '',
+  sell_call_status: '',
+  sell_call_quantity: '',
+  called_away_strike_price: '',
+  called_away_shares_quantity: '',
+  called_away_status: ''
+};
 
 export default function Wheels() {
   const [wheels, setWheels] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingWheel, setEditingWheel] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  const [formData, setFormData] = useState({
-    wheel_id: '',
-    ticker: '',
-    trade_type: 'Sell Put',
-    trade_date: new Date().toISOString().split('T')[0],
-    strike_price: '',
-    premium_received: '',
-    status: 'Active'
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
     loadWheels();
@@ -31,7 +45,6 @@ export default function Wheels() {
 
   const loadWheels = async () => {
     try {
-      // Updated to use fetchFromAPI
       const data = await fetchFromAPI('/wheels/?ordering=-created_date');
       setWheels(data);
     } catch (error) {
@@ -42,41 +55,41 @@ export default function Wheels() {
   };
 
   const resetForm = () => {
-    setFormData({
-      wheel_id: '',
-      ticker: '',
-      trade_type: 'Sell Put',
-      trade_date: new Date().toISOString().split('T')[0],
-      strike_price: '',
-      premium_received: '',
-      status: 'Active'
-    });
+    setFormData(initialFormData);
     setEditingWheel(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const wheelData = {
-        ...formData,
-        strike_price: formData.strike_price ? parseFloat(formData.strike_price) : null,
-        premium_received: formData.premium_received ? parseFloat(formData.premium_received) : null
-      };
+    // Prepare data for API
+    const wheelData = {
+      ...formData,
+      sell_put_strike_price: formData.sell_put_strike_price ? parseFloat(formData.sell_put_strike_price) : null,
+      sell_put_open_premium: formData.sell_put_open_premium ? parseFloat(formData.sell_put_open_premium) : null,
+      sell_put_closed_premium: formData.sell_put_closed_premium ? parseFloat(formData.sell_put_closed_premium) : null,
+      sell_put_quantity: formData.sell_put_quantity ? parseInt(formData.sell_put_quantity) : null,
+      assignment_strike_price: formData.assignment_strike_price ? parseFloat(formData.assignment_strike_price) : null,
+      assignment_shares_quantity: formData.assignment_shares_quantity ? parseInt(formData.assignment_shares_quantity) : null,
+      sell_call_strike_price: formData.sell_call_strike_price ? parseFloat(formData.sell_call_strike_price) : null,
+      sell_call_open_premium: formData.sell_call_open_premium ? parseFloat(formData.sell_call_open_premium) : null,
+      sell_call_closed_premium: formData.sell_call_closed_premium ? parseFloat(formData.sell_call_closed_premium) : null,
+      sell_call_quantity: formData.sell_call_quantity ? parseInt(formData.sell_call_quantity) : null,
+      called_away_strike_price: formData.called_away_strike_price ? parseFloat(formData.called_away_strike_price) : null,
+      called_away_shares_quantity: formData.called_away_shares_quantity ? parseInt(formData.called_away_shares_quantity) : null,
+    };
 
+    try {
       if (editingWheel) {
-        // Update
         await fetchFromAPI(`/wheels/${editingWheel.id}/`, {
           method: 'PUT',
           body: JSON.stringify(wheelData)
         });
       } else {
-        // Create
         await fetchFromAPI('/wheels/', {
           method: 'POST',
           body: JSON.stringify(wheelData)
         });
       }
-      
       loadWheels();
       setShowForm(false);
       resetForm();
@@ -90,11 +103,24 @@ export default function Wheels() {
     setFormData({
       wheel_id: wheel.wheel_id ?? '',
       ticker: wheel.ticker ?? '',
-      trade_type: wheel.trade_type ?? 'Sell Put',
       trade_date: wheel.trade_date ?? new Date().toISOString().split('T')[0],
-      strike_price: wheel.strike_price !== undefined && wheel.strike_price !== null ? wheel.strike_price.toString() : '',
-      premium_received: wheel.premium_received !== undefined && wheel.premium_received !== null ? wheel.premium_received.toString() : '',
-      status: wheel.status ?? 'Active'
+      call_put: wheel.call_put ?? '',
+      sell_put_strike_price: wheel.sell_put_strike_price ?? '',
+      sell_put_open_premium: wheel.sell_put_open_premium ?? '',
+      sell_put_closed_premium: wheel.sell_put_closed_premium ?? '',
+      sell_put_status: wheel.sell_put_status ?? '',
+      sell_put_quantity: wheel.sell_put_quantity ?? '',
+      assignment_strike_price: wheel.assignment_strike_price ?? '',
+      assignment_shares_quantity: wheel.assignment_shares_quantity ?? '',
+      assignment_status: wheel.assignment_status ?? '',
+      sell_call_strike_price: wheel.sell_call_strike_price ?? '',
+      sell_call_open_premium: wheel.sell_call_open_premium ?? '',
+      sell_call_closed_premium: wheel.sell_call_closed_premium ?? '',
+      sell_call_status: wheel.sell_call_status ?? '',
+      sell_call_quantity: wheel.sell_call_quantity ?? '',
+      called_away_strike_price: wheel.called_away_strike_price ?? '',
+      called_away_shares_quantity: wheel.called_away_shares_quantity ?? '',
+      called_away_status: wheel.called_away_status ?? ''
     });
     setShowForm(true);
   };
@@ -141,7 +167,7 @@ export default function Wheels() {
               Cash-secured puts and covered calls
             </p>
           </div>
-          <Button 
+          <Button
             onClick={() => setShowForm(true)}
             className="bg-slate-900 hover:bg-slate-800 shadow-lg"
           >
@@ -162,7 +188,15 @@ export default function Wheels() {
                     <div className="text-right">
                       <p className="text-sm text-slate-500">Total Premium</p>
                       <p className="text-lg font-bold text-emerald-600">
-                        {formatCurrency(calculateWheelTotal(wheelTrades))}
+                        {formatCurrency(
+                          wheelTrades.reduce(
+                            (sum, t) =>
+                              sum +
+                              (parseFloat(t.sell_put_open_premium) || 0) +
+                              (parseFloat(t.sell_call_open_premium) || 0),
+                            0
+                          )
+                        )}
                       </p>
                     </div>
                   </div>
@@ -170,57 +204,67 @@ export default function Wheels() {
                 <CardContent>
                   <div className="space-y-4">
                     {wheelTrades.map((trade) => (
-                      <div 
-                        key={trade.id} 
+                      <div
+                        key={trade.id}
                         className="flex items-center justify-between p-4 rounded-lg bg-slate-50/60 hover:bg-slate-50 transition-colors"
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="flex-shrink-0">
-                            <Badge variant={trade.trade_type === 'Sell Put' ? 'default' : 'secondary'}>
-                              {trade.trade_type}
-                            </Badge>
+                        <div className="flex flex-row gap-8 text-xs text-slate-700 w-full">
+                          {/* General Info */}
+                          <div className="flex flex-col min-w-[120px]">
+                            <span className="font-semibold text-base text-slate-900">{trade.ticker}</span>
+                            <span>Trade Date: {trade.trade_date ? format(new Date(trade.trade_date), 'MMM d, yyyy') : ''}</span>
+                            <span>Call/Put: {trade.call_put}</span>
                           </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">{trade.ticker}</p>
-                            <p className="text-sm text-slate-500">
-                              {format(new Date(trade.trade_date), 'MMM d, yyyy')}
-                            </p>
+                          {/* Sell Put */}
+                          <div className="flex flex-col min-w-[120px]">
+                            <span className="font-semibold text-slate-800">Sell Put</span>
+                            <span>Strike: {trade.sell_put_strike_price}</span>
+                            <span>Open Prem: {trade.sell_put_open_premium}</span>
+                            <span>Closed Prem: {trade.sell_put_closed_premium}</span>
+                            <span>Status: {trade.sell_put_status}</span>
+                            <span>Qty: {trade.sell_put_quantity}</span>
                           </div>
-                          {trade.strike_price && (
-                            <div>
-                              <p className="text-sm text-slate-500">Strike</p>
-                              <p className="font-medium">{formatCurrency(trade.strike_price)}</p>
-                            </div>
-                          )}
+                          {/* Assignment */}
+                          <div className="flex flex-col min-w-[120px]">
+                            <span className="font-semibold text-slate-800">Assignment</span>
+                            <span>Strike: {trade.assignment_strike_price}</span>
+                            <span>Shares: {trade.assignment_shares_quantity}</span>
+                            <span>Status: {trade.assignment_status}</span>
+                          </div>
+                          {/* Sell Call */}
+                          <div className="flex flex-col min-w-[120px]">
+                            <span className="font-semibold text-slate-800">Sell Call</span>
+                            <span>Strike: {trade.sell_call_strike_price}</span>
+                            <span>Open Prem: {trade.sell_call_open_premium}</span>
+                            <span>Closed Prem: {trade.sell_call_closed_premium}</span>
+                            <span>Status: {trade.sell_call_status}</span>
+                            <span>Qty: {trade.sell_call_quantity}</span>
+                          </div>
+                          {/* Called Away */}
+                          <div className="flex flex-col min-w-[120px]">
+                            <span className="font-semibold text-slate-800">Called Away</span>
+                            <span>Strike: {trade.called_away_strike_price}</span>
+                            <span>Shares: {trade.called_away_shares_quantity}</span>
+                            <span>Status: {trade.called_away_status}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-sm text-slate-500">Premium</p>
-                            <p className="font-semibold text-emerald-600">
-                              {formatCurrency(trade.premium_received)}
-                            </p>
-                          </div>
-                          <Badge variant={trade.status === 'Active' ? 'default' : 'secondary'}>
-                            {trade.status}
-                          </Badge>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(trade)}
-                              className="hover:bg-slate-100"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(trade.id)}
-                              className="hover:bg-red-50 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                        <div className="flex items-center gap-4 ml-4">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(trade)}
+                            className="hover:bg-slate-100"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(trade.id)}
+                            className="hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -236,7 +280,7 @@ export default function Wheels() {
             </div>
             <h3 className="text-lg font-medium text-slate-900 mb-2">No wheel strategies yet</h3>
             <p className="text-slate-500 mb-6">Start tracking your cash-secured puts and covered calls</p>
-            <Button 
+            <Button
               onClick={() => setShowForm(true)}
               className="bg-slate-900 hover:bg-slate-800"
             >
