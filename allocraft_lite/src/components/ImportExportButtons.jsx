@@ -19,7 +19,7 @@ export default function ImportExportButtons({ section }) {
         formData.append("file", file);
 
         try {
-            const res = await fetch(`/${section}/upload`, {
+            const res = await fetch(`http://localhost:5173/${section}/upload`, {
                 method: "POST",
                 body: formData,
             });

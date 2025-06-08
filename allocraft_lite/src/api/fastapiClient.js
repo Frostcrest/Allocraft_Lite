@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5173";
 
 export async function apiFetch(path, options = {}) {
   const token = sessionStorage.getItem("allocraft_token");
@@ -11,7 +11,7 @@ export async function apiFetch(path, options = {}) {
 }
 
 export async function fetchFromAPI(endpoint, options = {}) {
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5173";
   const url = endpoint.startsWith("http") ? endpoint : `${baseUrl}${endpoint}`;
   const response = await fetch(url, {
     headers: { "Content-Type": "application/json" },
