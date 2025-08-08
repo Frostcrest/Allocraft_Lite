@@ -304,6 +304,152 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Admin: Users management */}
+        <AdminUsers />
+      </div>
+    </div>
+  );
+}
+
+function AdminUsers() {
+  const [users, setUsers] = useState([]);
+  const [error, setError] = useState("");
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+  async function load() {
+    setError("");
+    try {
+      const token = sessionStorage.getItem("allocraft_token");
+      const res = await fetch(`${API_BASE}/users/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setUsers(data);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function save(u) {
+    const token = sessionStorage.getItem("allocraft_token");
+    const body = {
+      username: u.username,
+      email: u.email,
+      roles: u.roles,
+      is_active: u.is_active,
+      ...(u._password ? { password: u._password } : {}),
+    };
+    const res = await fetch(`${API_BASE}/users/${u.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      alert(await res.text());
+    } else {
+      load();
+    }
+  }
+
+  if (!users || users.length === 0) {
+    return (
+      <div className="bg-white/80 backdrop-blur-xl border-0 shadow-lg rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Admin: Users</h2>
+          <button className="text-sm underline" onClick={load}>
+            Refresh
+          </button>
+        </div>
+        <div className="text-slate-500 text-sm mt-2">
+          {error ? error : "No users found or insufficient permissions."}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white/80 backdrop-blur-xl border-0 shadow-lg rounded-xl p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Admin: Users</h2>
+        <button className="text-sm underline" onClick={load}>
+          Refresh
+        </button>
+      </div>
+      {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
+      <div className="overflow-auto mt-3">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left">
+              <th className="px-2 py-1">ID</th>
+              <th className="px-2 py-1">Username</th>
+              <th className="px-2 py-1">Email</th>
+              <th className="px-2 py-1">Roles</th>
+              <th className="px-2 py-1">Active</th>
+              <th className="px-2 py-1">New Password</th>
+              <th className="px-2 py-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id} className="border-t">
+                <td className="px-2 py-1">{u.id}</td>
+                <td className="px-2 py-1">
+                  <input
+                    className="border rounded px-2 py-1"
+                    defaultValue={u.username}
+                    onChange={(e) => (u.username = e.target.value)}
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    className="border rounded px-2 py-1"
+                    defaultValue={u.email}
+                    onChange={(e) => (u.email = e.target.value)}
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    className="border rounded px-2 py-1"
+                    defaultValue={u.roles}
+                    onChange={(e) => (u.roles = e.target.value)}
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="checkbox"
+                    defaultChecked={u.is_active}
+                    onChange={(e) => (u.is_active = e.target.checked)}
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="password"
+                    placeholder="••••••"
+                    className="border rounded px-2 py-1"
+                    onChange={(e) => (u._password = e.target.value)}
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <button
+                    className="px-3 py-1 bg-slate-900 text-white rounded"
+                    onClick={() => save(u)}
+                  >
+                    Save
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -8,18 +8,31 @@ import Options from "./Options";
 
 import Wheels from "./Wheels";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import Login from "../pages/Login.jsx";
+import Signup from "../pages/Signup.jsx";
+
+function isAuthed() {
+    return !!sessionStorage.getItem("allocraft_token");
+}
+
+function RequireAuth({ children }) {
+    if (!isAuthed()) {
+        return <Navigate to="/login" replace />;
+    }
+    return children;
+}
 
 const PAGES = {
-    
+
     Dashboard: Dashboard,
-    
+
     Stocks: Stocks,
-    
+
     Options: Options,
-    
+
     Wheels: Wheels,
-    
+
 }
 
 function _getCurrentPage(url) {
@@ -39,24 +52,28 @@ function _getCurrentPage(url) {
 function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-    
+
     return (
-        <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Dashboard />} />
-                
-                
-                <Route path="/Dashboard" element={<Dashboard />} />
-                
-                <Route path="/Stocks" element={<Stocks />} />
-                
-                <Route path="/Options" element={<Options />} />
-                
-                <Route path="/Wheels" element={<Wheels />} />
-                
-            </Routes>
-        </Layout>
+        <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route
+                path="/*"
+                element={
+                    <RequireAuth>
+                        <Layout currentPageName={currentPage}>
+                            <Routes>
+                                <Route path="/" element={<Dashboard />} />
+                                <Route path="/Dashboard" element={<Dashboard />} />
+                                <Route path="/Stocks" element={<Stocks />} />
+                                <Route path="/Options" element={<Options />} />
+                                <Route path="/Wheels" element={<Wheels />} />
+                            </Routes>
+                        </Layout>
+                    </RequireAuth>
+                }
+            />
+        </Routes>
     );
 }
 
