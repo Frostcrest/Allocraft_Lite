@@ -79,15 +79,18 @@ export default function Wheels() {
     };
 
     try {
+      // Backend model doesn't have call_put; omit it if empty
+      const payload = { ...wheelData };
+      delete payload.call_put;
       if (editingWheel) {
-        await fetchFromAPI(`/wheels/${editingWheel.id}/`, {
+        await fetchFromAPI(`/wheels/${editingWheel.id}`, {
           method: 'PUT',
-          body: JSON.stringify(wheelData)
+          body: JSON.stringify(payload)
         });
       } else {
         await fetchFromAPI('/wheels/', {
           method: 'POST',
-          body: JSON.stringify(wheelData)
+          body: JSON.stringify(payload)
         });
       }
       loadWheels();
@@ -128,7 +131,7 @@ export default function Wheels() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this wheel trade?')) {
       try {
-        await fetchFromAPI(`/wheels/${id}/`, { method: 'DELETE' });
+        await fetchFromAPI(`/wheels/${id}`, { method: 'DELETE' });
         loadWheels();
       } catch (error) {
         console.error('Error deleting wheel:', error);

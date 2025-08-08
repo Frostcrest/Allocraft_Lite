@@ -43,6 +43,12 @@ You should see output similar to:
 
 Open [http://localhost:5173/](http://localhost:5173/) in your browser to view the app.
 
+If your backend runs on a different URL/port, create `.env.local` with:
+
+```
+VITE_API_BASE_URL=http://localhost:8000
+```
+
 ### 4. Build for Production (Optional)
 
 To create an optimized production build:

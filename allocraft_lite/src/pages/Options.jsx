@@ -39,7 +39,7 @@ export default function Options() {
     strike_price: '',
     expiry_date: '',
     contracts: '',
-    cost: '',
+    cost_basis: '',
     status: 'Open'
   });
 
@@ -54,7 +54,9 @@ export default function Options() {
         return;
       }
       try {
-        const dates = await fetchFromAPI(`/option_expiries/${formData.ticker}`);
+        const data = await fetchFromAPI(`/option_expiries/${formData.ticker}`);
+        // backend returns [{date, days}]; map to array of date strings
+        const dates = Array.isArray(data) ? data.map(d => d.date || d) : [];
         setExpiryDates(dates);
       } catch (error) {
         console.error("Error fetching expiry dates:", error);
@@ -95,12 +97,12 @@ export default function Options() {
         ...formData,
         strike_price: parseFloat(formData.strike_price),
         contracts: parseFloat(formData.contracts),
-        cost: parseFloat(formData.cost),
+        cost_basis: parseFloat(formData.cost_basis),
       };
 
       if (editingOption) {
         // FIX: Use editingOption.id instead of optionId
-        await fetchFromAPI(`/options/${editingOption.id}/`, { method: 'PUT', body: JSON.stringify(optionData) });
+        await fetchFromAPI(`/options/${editingOption.id}`, { method: 'PUT', body: JSON.stringify(optionData) });
       } else {
         await fetchFromAPI('/options/', { method: 'POST', body: JSON.stringify(optionData) });
       }
@@ -121,12 +123,9 @@ export default function Options() {
       strike_price: option.strike_price !== undefined && option.strike_price !== null ? option.strike_price.toString() : '',
       expiry_date: option.expiry_date ?? '',
       contracts: option.contracts !== undefined && option.contracts !== null ? option.contracts.toString() : '',
-      // Prefer cost, fallback to cost_basis
-      cost: option.cost !== undefined && option.cost !== null
-        ? option.cost.toString()
-        : (option.cost_basis !== undefined && option.cost_basis !== null
-          ? option.cost_basis.toString()
-          : ''),
+      cost_basis: option.cost_basis !== undefined && option.cost_basis !== null
+        ? option.cost_basis.toString()
+        : '',
       status: option.status ?? 'Open'
     });
     setShowForm(true);
@@ -135,7 +134,7 @@ export default function Options() {
   const handleDelete = async (optionId) => {
     if (window.confirm('Are you sure you want to delete this option?')) {
       try {
-        await fetchFromAPI(`/options/${optionId}/`, { method: 'DELETE' });
+        await fetchFromAPI(`/options/${optionId}`, { method: 'DELETE' });
         loadOptions();
       } catch (error) {
         console.error('Error deleting option:', error);

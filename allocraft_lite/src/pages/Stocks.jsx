@@ -31,7 +31,7 @@ export default function Stocks() {
     try {
       if (editingStock) {
         await fetchFromAPI(
-          `/stocks/${stockId}/`,
+          `/stocks/${editingStock.id}`,
           { method: "PUT", body: JSON.stringify(stockData) }
         );
       } else {
@@ -56,7 +56,7 @@ export default function Stocks() {
   const handleDelete = async (stockId) => {
     if (window.confirm("Are you sure you want to delete this stock position?")) {
       try {
-        await fetchFromAPI(`/stocks/${stockId}/`, { method: "DELETE" });
+        await fetchFromAPI(`/stocks/${stockId}`, { method: "DELETE" });
         loadStocks();
       } catch (error) {
         console.error("Error deleting stock:", error);
