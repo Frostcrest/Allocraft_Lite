@@ -4,6 +4,7 @@ import { Plus, Edit, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { wheelApi } from "@/api/fastapiClient";
+import { formatCurrency } from "@/lib/utils";
 import WheelEventForm from "@/components/forms/WheelEventForm";
 
 const initialCycle = {
@@ -233,11 +234,13 @@ export default function Wheels() {
                       {metrics ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                           <div><div className="text-slate-500">Shares Owned</div><div className="font-semibold">{metrics.shares_owned}</div></div>
-                          <div><div className="text-slate-500">Avg Cost Basis</div><div className="font-semibold">${metrics.average_cost_basis}</div></div>
-                          <div><div className="text-slate-500">Cost Remaining</div><div className="font-semibold">${metrics.total_cost_remaining}</div></div>
-                          <div><div className="text-slate-500">Net Options Cashflow</div><div className="font-semibold">${metrics.net_options_cashflow}</div></div>
-                          <div><div className="text-slate-500">Realized Stock P/L</div><div className="font-semibold">${metrics.realized_stock_pl}</div></div>
-                          <div><div className="text-slate-500">Total Realized P/L</div><div className="font-semibold">${metrics.total_realized_pl}</div></div>
+                          <div><div className="text-slate-500">Avg Cost Basis</div><div className="font-semibold">{formatCurrency(metrics.average_cost_basis)}</div></div>
+                          <div><div className="text-slate-500">Cost Remaining</div><div className="font-semibold">{formatCurrency(metrics.total_cost_remaining)}</div></div>
+                          <div><div className="text-slate-500">Net Options Cashflow</div><div className="font-semibold">{formatCurrency(metrics.net_options_cashflow)}</div></div>
+                          <div><div className="text-slate-500">Realized Stock P/L</div><div className="font-semibold">{formatCurrency(metrics.realized_stock_pl)}</div></div>
+                          <div><div className="text-slate-500">Total Realized P/L</div><div className="font-semibold">{formatCurrency(metrics.total_realized_pl)}</div></div>
+                          <div><div className="text-slate-500">Current Price</div><div className="font-semibold">{metrics.current_price != null ? formatCurrency(metrics.current_price) : '—'}</div></div>
+                          <div><div className="text-slate-500">Unrealized P/L</div><div className={`font-semibold ${metrics.unrealized_pl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrency(metrics.unrealized_pl)}</div></div>
                         </div>
                       ) : (
                         <div className="text-sm text-slate-500">No metrics yet</div>
@@ -277,10 +280,10 @@ export default function Wheels() {
                                   <td className="py-2 pr-4">{e.event_type}</td>
                                   <td className="py-2 pr-4">{e.quantity_shares ?? ''}</td>
                                   <td className="py-2 pr-4">{e.contracts ?? ''}</td>
-                                  <td className="py-2 pr-4">{e.price ?? ''}</td>
-                                  <td className="py-2 pr-4">{e.strike ?? ''}</td>
-                                  <td className="py-2 pr-4">{e.premium ?? ''}</td>
-                                  <td className="py-2 pr-4">{e.fees ?? ''}</td>
+                                  <td className="py-2 pr-4">{e.price != null && e.price !== '' ? formatCurrency(Number(e.price)) : ''}</td>
+                                  <td className="py-2 pr-4">{e.strike != null && e.strike !== '' ? formatCurrency(Number(e.strike)) : ''}</td>
+                                  <td className="py-2 pr-4">{e.premium != null && e.premium !== '' ? formatCurrency(Number(e.premium)) : ''}</td>
+                                  <td className="py-2 pr-4">{e.fees != null && e.fees !== '' ? formatCurrency(Number(e.fees)) : ''}</td>
                                   <td className="py-2 pr-4">{e.link_event_id ?? ''}</td>
                                   <td className="py-2 pr-4">{e.notes ?? ''}</td>
                                   <td className="py-2">
