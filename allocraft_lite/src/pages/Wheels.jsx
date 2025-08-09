@@ -7,6 +7,13 @@ import { wheelApi } from "@/api/fastapiClient";
 import { formatCurrency } from "@/lib/utils";
 import WheelEventForm from "@/components/forms/WheelEventForm";
 import { Timeline as LotTimeline } from "@/features/wheels/components/Timeline";
+import { LotActionsProvider } from "@/features/wheels/lot-actions/LotActionsProvider";
+import { useLotActions } from "@/features/wheels/lot-actions/useLotActions";
+import { ActionButtonsRow } from "@/features/wheels/lot-actions/ActionButtonsRow";
+import { CoverLotModal } from "@/features/wheels/lot-actions/CoverLotModal";
+import { CloseCallModal } from "@/features/wheels/lot-actions/CloseCallModal";
+import { RollCallModal } from "@/features/wheels/lot-actions/RollCallModal";
+import { NewLotWizard } from "@/features/wheels/lot-actions/NewLotWizard";
 
 const initialCycle = {
   cycle_key: "",
@@ -38,6 +45,7 @@ export default function Wheels() {
   const [coverageMap, setCoverageMap] = useState({}); // lotId -> { strike, premium, status }
   const [lotEventsMap, setLotEventsMap] = useState({}); // lotId -> LotEvent[] mapped for timeline
   const [uiLots, setUiLots] = useState([]); // includes synthetic CSP lots
+  const [actionLots, setActionLots] = useState([]); // LotVMs for actions mock
   const [viewMode, setViewMode] = useState("lots"); // 'lots' | 'events'
   const [lotDetails, setLotDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -165,6 +173,32 @@ export default function Wheels() {
     }
   }, [events, lots]);
 
+  // Build actionLots (LotVMs) from uiLots and mapped timelines
+  useEffect(() => {
+    const ticker = cycles.find(c => c.id === selectedId)?.ticker || '';
+    const arr = (uiLots || []).map((l, idx) => {
+      const covSrc = l._coverage || coverageMap[l.id] || null;
+      // timeline events for this lot
+      let tl = [];
+      if (l._synthetic) {
+        const ev = (events || []).find(e => e.id === l._sourceEventId);
+        if (ev) tl = [mapEventForTimeline(ev)];
+      } else {
+        tl = lotEventsMap[l.id] || [];
+      }
+      return {
+        lotNo: idx + 1,
+        ticker,
+        acquisition: mapAcquisition(l, covSrc),
+        costBasis: l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—',
+        coverage: mapCoverage(covSrc),
+        status: mapStatus(l.status),
+        events: tl,
+      };
+    });
+    setActionLots(arr);
+  }, [uiLots, coverageMap, lotEventsMap, events, cycles, selectedId]);
+
   const openAddCycle = () => {
     setCycleForm(initialCycle);
     setShowCycleDialog(true);
@@ -190,13 +224,12 @@ export default function Wheels() {
     const data = await wheelApi.listCycles();
     setCycles(data);
     setSelectedId(data.length ? data[0].id : null);
-    setEvents([]);
     setMetrics(null);
   };
 
   const openAddEvent = () => {
     setEditingEvent(null);
-    setEventForm(initialEvent);
+    setEventForm({ ...initialEvent });
     setShowEventDialog(true);
   };
 
@@ -219,34 +252,26 @@ export default function Wheels() {
 
   const saveEvent = async (e) => {
     e.preventDefault();
-    const num = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
-    const payload = {
-      cycle_id: selectedId,
-      event_type: eventForm.event_type,
-      trade_date: eventForm.trade_date || null,
-      quantity_shares: num(eventForm.quantity_shares),
-      contracts: eventForm.contracts === "" ? null : parseInt(eventForm.contracts),
-      price: num(eventForm.price),
-      strike: num(eventForm.strike),
-      premium: num(eventForm.premium),
-      fees: num(eventForm.fees),
-      link_event_id: eventForm.link_event_id === "" ? null : parseInt(eventForm.link_event_id),
-      notes: eventForm.notes || null,
-    };
-    if (editingEvent) {
-      await wheelApi.updateEvent(editingEvent.id, payload);
-    } else {
-      await wheelApi.createEvent(payload);
+    try {
+      const payload = { ...eventForm, cycle_id: selectedId };
+      if (editingEvent) {
+        await wheelApi.updateEvent(editingEvent.id, payload);
+      } else {
+        await wheelApi.createEvent(payload);
+      }
+      const [evts, m, ls] = await Promise.all([
+        wheelApi.listEvents(selectedId),
+        wheelApi.metrics(selectedId),
+        wheelApi.listLots(selectedId)
+      ]);
+      setEvents(evts);
+      setMetrics(m);
+      setLots(ls);
+      setShowEventDialog(false);
+      setEditingEvent(null);
+    } catch (err) {
+      console.error(err);
     }
-    const [evts, m, ls] = await Promise.all([
-      wheelApi.listEvents(selectedId),
-      wheelApi.metrics(selectedId),
-      wheelApi.listLots(selectedId)
-    ]);
-    setEvents(evts);
-    setMetrics(m);
-    setLots(ls);
-    setShowEventDialog(false);
   };
 
   const deleteEvent = async (id) => {
@@ -261,19 +286,6 @@ export default function Wheels() {
     setMetrics(m);
     setLots(ls);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-slate-200 rounded w-64"></div>
-            <div className="h-96 bg-slate-200 rounded-xl"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
@@ -355,66 +367,79 @@ export default function Wheels() {
                   </Card>
 
                   {viewMode === 'lots' ? (
-                    <Card className="border-0 shadow bg-white/80">
-                      <CardHeader className="py-4">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-lg">Lots</CardTitle>
-                          <div className="text-sm text-slate-500">Uncovered: {lots.filter(l => l.status === 'OPEN_UNCOVERED').length}</div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        {uiLots.length === 0 ? (
-                          <div className="text-sm text-slate-500 flex items-center justify-between">
-                            <span>No lots yet. Use Rebuild to construct from events.</span>
-                            <Button size="sm" onClick={async () => { await wheelApi.rebuildLots(selectedId); const ls = await wheelApi.listLots(selectedId); setLots(ls); }}>Rebuild</Button>
+                    <LotActionsProvider lots={actionLots} setLots={setActionLots}>
+                      <Card className="border-0 shadow bg-white/80">
+                        <CardHeader className="py-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <CardTitle className="text-lg">Lots</CardTitle>
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm text-slate-500">Uncovered: {lots.filter(l => l.status === 'OPEN_UNCOVERED').length}</div>
+                              <NewLotHeaderButton />
+                            </div>
                           </div>
-                        ) : (
-                          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                            {uiLots.map((l, idx) => {
-                              // build timeline events: from lotEventsMap for real lots; synthetic from source event
-                              let timeline = [];
-                              if (l._synthetic) {
-                                const ev = (events || []).find(e => e.id === l._sourceEventId);
-                                if (ev) timeline = [mapEventForTimeline(ev)];
-                              } else {
-                                timeline = lotEventsMap[l.id] || [];
-                              }
-                              return (
-                                <LotCard
-                                  key={l.id}
-                                  lotNo={l._synthetic && idx === 0 ? 0 : idx + 1}
-                                  ticker={cycles.find(c => c.id === selectedId)?.ticker || ''}
-                                  acquisition={mapAcquisition(l, l._coverage || coverageMap[l.id])}
-                                  costBasis={l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—'}
-                                  coverage={mapCoverage(l._coverage || coverageMap[l.id])}
-                                  status={mapStatus(l.status)}
-                                  timeline={timeline}
-                                  onClick={async () => {
-                                    if (l._synthetic) {
-                                      const ev = (events || []).find(e => e.id === l._sourceEventId);
-                                      if (ev) {
-                                        setLotDetails({ synthetic: true, event: ev });
-                                      }
-                                      return;
-                                    }
-                                    try {
-                                      const [details, met, links] = await Promise.all([
-                                        wheelApi.getLot(l.id),
-                                        wheelApi.lotMetrics(l.id),
-                                        wheelApi.getLotLinks(l.id)
-                                      ]);
-                                      setLotDetails({ lot: details, metrics: met, ...links });
-                                    } catch (e) {
-                                      console.error(e);
-                                    }
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                        </CardHeader>
+                        <CardContent>
+                          {uiLots.length === 0 ? (
+                            <div className="text-sm text-slate-500 flex items-center justify-between">
+                              <span>No lots yet. Use Rebuild to construct from events.</span>
+                              <Button size="sm" onClick={async () => { await wheelApi.rebuildLots(selectedId); const ls = await wheelApi.listLots(selectedId); setLots(ls); }}>Rebuild</Button>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                              {uiLots.map((l, idx) => {
+                                // build timeline events: from lotEventsMap for real lots; synthetic from source event
+                                let timeline = [];
+                                if (l._synthetic) {
+                                  const ev = (events || []).find(e => e.id === l._sourceEventId);
+                                  if (ev) timeline = [mapEventForTimeline(ev)];
+                                } else {
+                                  timeline = lotEventsMap[l.id] || [];
+                                }
+                                const vm = actionLots[idx];
+                                return (
+                                  <div key={l.id} className="space-y-2">
+                                    <LotCard
+                                      lotNo={l._synthetic && idx === 0 ? 0 : idx + 1}
+                                      ticker={cycles.find(c => c.id === selectedId)?.ticker || ''}
+                                      acquisition={mapAcquisition(l, l._coverage || coverageMap[l.id])}
+                                      costBasis={l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—'}
+                                      coverage={mapCoverage(l._coverage || coverageMap[l.id])}
+                                      status={mapStatus(l.status)}
+                                      timeline={timeline}
+                                      onClick={async () => {
+                                        if (l._synthetic) {
+                                          const ev = (events || []).find(e => e.id === l._sourceEventId);
+                                          if (ev) {
+                                            setLotDetails({ synthetic: true, event: ev });
+                                          }
+                                          return;
+                                        }
+                                        try {
+                                          const [details, met, links] = await Promise.all([
+                                            wheelApi.getLot(l.id),
+                                            wheelApi.lotMetrics(l.id),
+                                            wheelApi.getLotLinks(l.id)
+                                          ]);
+                                          setLotDetails({ lot: details, metrics: met, ...links });
+                                        } catch (e) {
+                                          console.error(e);
+                                        }
+                                      }}
+                                    />
+                                    {vm && (
+                                      <div className="-mt-1">
+                                        <ActionButtonsRow lot={vm} />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                      <ModalsHost />
+                    </LotActionsProvider>
                   ) : (
                     <Card className="border-0 shadow bg-white/80">
                       <CardHeader className="py-4">
@@ -622,6 +647,29 @@ export default function Wheels() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Host for lot action modals using the actions context
+function ModalsHost() {
+  const actions = useLotActions();
+  const modal = actions.modal;
+  return (
+    <>
+      {modal?.type === 'cover' && modal.lot && <CoverLotModal lot={modal.lot} />}
+      {modal?.type === 'close' && modal.lot && <CloseCallModal lot={modal.lot} />}
+      {modal?.type === 'roll' && modal.lot && <RollCallModal lot={modal.lot} />}
+      {modal?.type === 'new' && <NewLotWizard />}
+    </>
+  );
+}
+
+function NewLotHeaderButton() {
+  const actions = useLotActions();
+  return (
+    <Button size="sm" className="bg-slate-900 hover:bg-slate-800 text-white" onClick={() => actions.openNewLot()}>
+      <Plus className="w-4 h-4 mr-1" /> New Lot
+    </Button>
   );
 }
 
