@@ -1,151 +1,166 @@
 import React, { useState, useEffect } from 'react';
-import { fetchFromAPI } from "@/api/fastapiClient";
 import { Button } from "@/components/ui/button";
-import { format } from 'date-fns';
-import WheelForm from "@/components/forms/WheelForm";
 import { Plus, Edit, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { formatCurrency, calculateWheelTotal } from "@/lib/utils";
+import { wheelApi } from "@/api/fastapiClient";
+import WheelEventForm from "@/components/forms/WheelEventForm";
 
-const initialFormData = {
-  wheel_id: '',
-  ticker: '',
-  trade_date: new Date().toISOString().split('T')[0],
-  call_put: '',
-  sell_put_strike_price: '',
-  sell_put_open_premium: '',
-  sell_put_closed_premium: '',
-  sell_put_status: '',
-  sell_put_quantity: '',
-  assignment_strike_price: '',
-  assignment_shares_quantity: '',
-  assignment_status: '',
-  sell_call_strike_price: '',
-  sell_call_open_premium: '',
-  sell_call_closed_premium: '',
-  sell_call_status: '',
-  sell_call_quantity: '',
-  called_away_strike_price: '',
-  called_away_shares_quantity: '',
-  called_away_status: ''
+const initialCycle = {
+  cycle_key: "",
+  ticker: "",
+  started_at: new Date().toISOString().split("T")[0],
+  status: "Open",
+  notes: "",
+};
+
+const initialEvent = {
+  event_type: "",
+  trade_date: new Date().toISOString().split("T")[0],
+  quantity_shares: "",
+  contracts: "",
+  price: "",
+  strike: "",
+  premium: "",
+  fees: "",
+  link_event_id: "",
+  notes: "",
 };
 
 export default function Wheels() {
-  const [wheels, setWheels] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editingWheel, setEditingWheel] = useState(null);
+  const [cycles, setCycles] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState(initialFormData);
+  const [showCycleDialog, setShowCycleDialog] = useState(false);
+  const [showEventDialog, setShowEventDialog] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [cycleForm, setCycleForm] = useState(initialCycle);
+  const [eventForm, setEventForm] = useState(initialEvent);
 
   useEffect(() => {
-    loadWheels();
+    (async () => {
+      try {
+        const data = await wheelApi.listCycles();
+        setCycles(data);
+        if (data.length) setSelectedId(data[0].id);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const loadWheels = async () => {
-    try {
-      const data = await fetchFromAPI('/wheels/?ordering=-created_date');
-      setWheels(data);
-    } catch (error) {
-      console.error('Error loading wheels:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData(initialFormData);
-    setEditingWheel(null);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    // Prepare data for API
-    const wheelData = {
-      ...formData,
-      sell_put_strike_price: formData.sell_put_strike_price ? parseFloat(formData.sell_put_strike_price) : null,
-      sell_put_open_premium: formData.sell_put_open_premium ? parseFloat(formData.sell_put_open_premium) : null,
-      sell_put_closed_premium: formData.sell_put_closed_premium ? parseFloat(formData.sell_put_closed_premium) : null,
-      sell_put_quantity: formData.sell_put_quantity ? parseInt(formData.sell_put_quantity) : null,
-      assignment_strike_price: formData.assignment_strike_price ? parseFloat(formData.assignment_strike_price) : null,
-      assignment_shares_quantity: formData.assignment_shares_quantity ? parseInt(formData.assignment_shares_quantity) : null,
-      sell_call_strike_price: formData.sell_call_strike_price ? parseFloat(formData.sell_call_strike_price) : null,
-      sell_call_open_premium: formData.sell_call_open_premium ? parseFloat(formData.sell_call_open_premium) : null,
-      sell_call_closed_premium: formData.sell_call_closed_premium ? parseFloat(formData.sell_call_closed_premium) : null,
-      sell_call_quantity: formData.sell_call_quantity ? parseInt(formData.sell_call_quantity) : null,
-      called_away_strike_price: formData.called_away_strike_price ? parseFloat(formData.called_away_strike_price) : null,
-      called_away_shares_quantity: formData.called_away_shares_quantity ? parseInt(formData.called_away_shares_quantity) : null,
-    };
-
-    try {
-      // Backend model doesn't have call_put; omit it if empty
-      const payload = { ...wheelData };
-      delete payload.call_put;
-      if (editingWheel) {
-        await fetchFromAPI(`/wheels/${editingWheel.id}`, {
-          method: 'PUT',
-          body: JSON.stringify(payload)
-        });
-      } else {
-        await fetchFromAPI('/wheels/', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-      }
-      loadWheels();
-      setShowForm(false);
-      resetForm();
-    } catch (error) {
-      console.error('Error saving wheel:', error);
-    }
-  };
-
-  const handleEdit = (wheel) => {
-    setEditingWheel(wheel);
-    setFormData({
-      wheel_id: wheel.wheel_id ?? '',
-      ticker: wheel.ticker ?? '',
-      trade_date: wheel.trade_date ?? new Date().toISOString().split('T')[0],
-      call_put: wheel.call_put ?? '',
-      sell_put_strike_price: wheel.sell_put_strike_price ?? '',
-      sell_put_open_premium: wheel.sell_put_open_premium ?? '',
-      sell_put_closed_premium: wheel.sell_put_closed_premium ?? '',
-      sell_put_status: wheel.sell_put_status ?? '',
-      sell_put_quantity: wheel.sell_put_quantity ?? '',
-      assignment_strike_price: wheel.assignment_strike_price ?? '',
-      assignment_shares_quantity: wheel.assignment_shares_quantity ?? '',
-      assignment_status: wheel.assignment_status ?? '',
-      sell_call_strike_price: wheel.sell_call_strike_price ?? '',
-      sell_call_open_premium: wheel.sell_call_open_premium ?? '',
-      sell_call_closed_premium: wheel.sell_call_closed_premium ?? '',
-      sell_call_status: wheel.sell_call_status ?? '',
-      sell_call_quantity: wheel.sell_call_quantity ?? '',
-      called_away_strike_price: wheel.called_away_strike_price ?? '',
-      called_away_shares_quantity: wheel.called_away_shares_quantity ?? '',
-      called_away_status: wheel.called_away_status ?? ''
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this wheel trade?')) {
+  useEffect(() => {
+    if (!selectedId) return;
+    (async () => {
       try {
-        await fetchFromAPI(`/wheels/${id}`, { method: 'DELETE' });
-        loadWheels();
-      } catch (error) {
-        console.error('Error deleting wheel:', error);
+        const [evts, m] = await Promise.all([
+          wheelApi.listEvents(selectedId),
+          wheelApi.metrics(selectedId),
+        ]);
+        setEvents(evts);
+        setMetrics(m);
+      } catch (e) {
+        console.error(e);
       }
+    })();
+  }, [selectedId]);
+
+  const openAddCycle = () => {
+    setCycleForm(initialCycle);
+    setShowCycleDialog(true);
+  };
+
+  const saveCycle = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = { ...cycleForm };
+      const res = await wheelApi.createCycle(payload);
+      const data = await wheelApi.listCycles();
+      setCycles(data);
+      setSelectedId(res.id);
+      setShowCycleDialog(false);
+    } catch (e2) {
+      console.error(e2);
     }
   };
 
-  const groupedWheels = wheels.reduce((acc, wheel) => {
-    if (!acc[wheel.wheel_id]) {
-      acc[wheel.wheel_id] = [];
+  const removeCycle = async (id) => {
+    if (!window.confirm('Delete this wheel cycle? This removes all its events.')) return;
+    await wheelApi.deleteCycle(id);
+    const data = await wheelApi.listCycles();
+    setCycles(data);
+    setSelectedId(data.length ? data[0].id : null);
+    setEvents([]);
+    setMetrics(null);
+  };
+
+  const openAddEvent = () => {
+    setEditingEvent(null);
+    setEventForm(initialEvent);
+    setShowEventDialog(true);
+  };
+
+  const openEditEvent = (evt) => {
+    setEditingEvent(evt);
+    setEventForm({
+      event_type: evt.event_type,
+      trade_date: evt.trade_date || new Date().toISOString().split('T')[0],
+      quantity_shares: evt.quantity_shares ?? "",
+      contracts: evt.contracts ?? "",
+      price: evt.price ?? "",
+      strike: evt.strike ?? "",
+      premium: evt.premium ?? "",
+      fees: evt.fees ?? "",
+      link_event_id: evt.link_event_id ?? "",
+      notes: evt.notes ?? "",
+    });
+    setShowEventDialog(true);
+  };
+
+  const saveEvent = async (e) => {
+    e.preventDefault();
+    const num = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
+    const payload = {
+      cycle_id: selectedId,
+      event_type: eventForm.event_type,
+      trade_date: eventForm.trade_date || null,
+      quantity_shares: num(eventForm.quantity_shares),
+      contracts: eventForm.contracts === "" ? null : parseInt(eventForm.contracts),
+      price: num(eventForm.price),
+      strike: num(eventForm.strike),
+      premium: num(eventForm.premium),
+      fees: num(eventForm.fees),
+      link_event_id: eventForm.link_event_id === "" ? null : parseInt(eventForm.link_event_id),
+      notes: eventForm.notes || null,
+    };
+    if (editingEvent) {
+      await wheelApi.updateEvent(editingEvent.id, payload);
+    } else {
+      await wheelApi.createEvent(payload);
     }
-    acc[wheel.wheel_id].push(wheel);
-    return acc;
-  }, {});
+    const [evts, m] = await Promise.all([
+      wheelApi.listEvents(selectedId),
+      wheelApi.metrics(selectedId),
+    ]);
+    setEvents(evts);
+    setMetrics(m);
+    setShowEventDialog(false);
+  };
+
+  const deleteEvent = async (id) => {
+    if (!window.confirm('Delete this event?')) return;
+    await wheelApi.deleteEvent(id);
+    const [evts, m] = await Promise.all([
+      wheelApi.listEvents(selectedId),
+      wheelApi.metrics(selectedId),
+    ]);
+    setEvents(evts);
+    setMetrics(m);
+  };
 
   if (loading) {
     return (
@@ -165,164 +180,181 @@ export default function Wheels() {
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Wheel Strategies</h1>
-            <p className="text-slate-600 mt-2">
-              Cash-secured puts and covered calls
-            </p>
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Wheel Cycles</h1>
+            <p className="text-slate-600 mt-2">Track entries at any stage and compute live cost basis</p>
           </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-slate-900 hover:bg-slate-800 shadow-lg"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Add Trade
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={openAddCycle} className="bg-slate-900 hover:bg-slate-800 shadow-lg">
+              <Plus className="w-5 h-5 mr-2" /> New Cycle
+            </Button>
+            {selectedId && (
+              <Button variant="outline" onClick={openAddEvent}>Add Event</Button>
+            )}
+          </div>
         </div>
 
-        {Object.keys(groupedWheels).length > 0 ? (
-          <div className="space-y-6">
-            {Object.entries(groupedWheels).map(([wheelId, wheelTrades]) => (
-              <Card key={wheelId} className="border-0 shadow-lg bg-white/80 backdrop-blur-xl">
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl font-bold text-slate-900">
-                      Wheel Strategy: {wheelId}
-                    </CardTitle>
-                    <div className="text-right">
-                      <p className="text-sm text-slate-500">Total Premium</p>
-                      <p className="text-lg font-bold text-emerald-600">
-                        {formatCurrency(
-                          wheelTrades.reduce(
-                            (sum, t) =>
-                              sum +
-                              (parseFloat(t.sell_put_open_premium) || 0) +
-                              (parseFloat(t.sell_call_open_premium) || 0),
-                            0
-                          )
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {wheelTrades.map((trade) => (
-                      <div
-                        key={trade.id}
-                        className="flex items-center justify-between p-4 rounded-lg bg-slate-50/60 hover:bg-slate-50 transition-colors"
-                        style={{ background: "#fcfdfe" }}
-                      >
-                        <div className="flex flex-row justify-between w-full items-stretch gap-0">
-                          {/* Sell Put */}
-                          <div className="flex flex-col items-center flex-1 min-w-0">
-                            <span className="font-semibold text-slate-800 mb-2">Sell Put</span>
-                            <svg width="100%" height="24" viewBox="0 0 120 24" className="mb-2" style={{ maxWidth: 120 }}>
-                              <polygon points="0,12 110,12 110,4 120,12 110,20 110,12 0,12" fill="#e2e8f0" />
-                            </svg>
-                            <div className="text-center">
-                              <span>Strike: {trade.sell_put_strike_price}</span><br />
-                              <span>Open Prem: {trade.sell_put_open_premium}</span><br />
-                              <span>Closed Prem: {trade.sell_put_closed_premium}</span><br />
-                              <span>Status: {trade.sell_put_status}</span><br />
-                              <span>Qty: {trade.sell_put_quantity}</span>
-                            </div>
-                          </div>
-                          {/* Assignment */}
-                          <div className="flex flex-col items-center flex-1 min-w-0">
-                            <span className="font-semibold text-slate-800 mb-2">Assigned</span>
-                            <svg width="100%" height="24" viewBox="0 0 120 24" className="mb-2" style={{ maxWidth: 120 }}>
-                              <polygon points="0,12 110,12 110,4 120,12 110,20 110,12 0,12" fill="#e2e8f0" />
-                            </svg>
-                            <div className="text-center">
-                              <span>Strike: {trade.assignment_strike_price}</span><br />
-                              <span>Shares: {trade.assignment_shares_quantity}</span><br />
-                              <span>Status: {trade.assignment_status}</span>
-                            </div>
-                          </div>
-                          {/* Sell Call */}
-                          <div className="flex flex-col items-center flex-1 min-w-0">
-                            <span className="font-semibold text-slate-800 mb-2">Sell Call</span>
-                            <svg width="100%" height="24" viewBox="0 0 120 24" className="mb-2" style={{ maxWidth: 120 }}>
-                              <polygon points="0,12 110,12 110,4 120,12 110,20 110,12 0,12" fill="#e2e8f0" />
-                            </svg>
-                            <div className="text-center">
-                              <span>Strike: {trade.sell_call_strike_price}</span><br />
-                              <span>Open Prem: {trade.sell_call_open_premium}</span><br />
-                              <span>Closed Prem: {trade.sell_call_closed_premium}</span><br />
-                              <span>Status: {trade.sell_call_status}</span><br />
-                              <span>Qty: {trade.sell_call_quantity}</span>
-                            </div>
-                          </div>
-                          {/* Called Away */}
-                          <div className="flex flex-col items-center flex-1 min-w-0">
-                            <span className="font-semibold text-slate-800 mb-2">Called Away</span>
-                            <svg width="100%" height="24" viewBox="0 0 120 24" className="mb-2" style={{ maxWidth: 120 }}>
-                              <polygon points="0,12 110,12 110,4 120,12 110,20 110,12 0,12" fill="#e2e8f0" />
-                            </svg>
-                            <div className="text-center">
-                              <span>Strike: {trade.called_away_strike_price}</span><br />
-                              <span>Shares: {trade.called_away_shares_quantity}</span><br />
-                              <span>Status: {trade.called_away_status}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 ml-4">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(trade)}
-                            className="hover:bg-slate-100"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(trade.id)}
-                            className="hover:bg-red-50 hover:text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
+        {cycles.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
               <RotateCcw className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No wheel strategies yet</h3>
-            <p className="text-slate-500 mb-6">Start tracking your cash-secured puts and covered calls</p>
-            <Button
-              onClick={() => setShowForm(true)}
-              className="bg-slate-900 hover:bg-slate-800"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Add Your First Trade
+            <h3 className="text-lg font-medium text-slate-900 mb-2">No cycles yet</h3>
+            <p className="text-slate-500 mb-6">Create your first wheel cycle to begin tracking</p>
+            <Button onClick={openAddCycle} className="bg-slate-900 hover:bg-slate-800">
+              <Plus className="w-5 h-5 mr-2" /> Add Your First Cycle
             </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="space-y-3">
+              {cycles.map((c) => (
+                <Card key={c.id} className={`cursor-pointer ${selectedId === c.id ? 'ring-2 ring-slate-900' : ''}`} onClick={() => setSelectedId(c.id)}>
+                  <CardHeader className="py-4">
+                    <CardTitle className="text-base flex justify-between items-center">
+                      <span>{c.cycle_key} • {c.ticker}</span>
+                      <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); removeCycle(c.id); }}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </CardTitle>
+                    <div className="text-xs text-slate-500">{c.status} • Started {c.started_at || '—'}</div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+
+            <div className="lg:col-span-2 space-y-6">
+              {selectedId && (
+                <>
+                  <Card className="border-0 shadow bg-white/80">
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-lg">Cycle Metrics</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {metrics ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <div><div className="text-slate-500">Shares Owned</div><div className="font-semibold">{metrics.shares_owned}</div></div>
+                          <div><div className="text-slate-500">Avg Cost Basis</div><div className="font-semibold">${metrics.average_cost_basis}</div></div>
+                          <div><div className="text-slate-500">Cost Remaining</div><div className="font-semibold">${metrics.total_cost_remaining}</div></div>
+                          <div><div className="text-slate-500">Net Options Cashflow</div><div className="font-semibold">${metrics.net_options_cashflow}</div></div>
+                          <div><div className="text-slate-500">Realized Stock P/L</div><div className="font-semibold">${metrics.realized_stock_pl}</div></div>
+                          <div><div className="text-slate-500">Total Realized P/L</div><div className="font-semibold">${metrics.total_realized_pl}</div></div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-slate-500">No metrics yet</div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow bg-white/80">
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-lg">Events</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {events.length === 0 ? (
+                        <div className="text-sm text-slate-500">No events. Add your first event.</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-sm">
+                            <thead>
+                              <tr className="text-left text-slate-500">
+                                <th className="py-2 pr-4">Date</th>
+                                <th className="py-2 pr-4">Type</th>
+                                <th className="py-2 pr-4">Shares</th>
+                                <th className="py-2 pr-4">Contracts</th>
+                                <th className="py-2 pr-4">Price</th>
+                                <th className="py-2 pr-4">Strike</th>
+                                <th className="py-2 pr-4">Premium</th>
+                                <th className="py-2 pr-4">Fees</th>
+                                <th className="py-2 pr-4">Link</th>
+                                <th className="py-2 pr-4">Notes</th>
+                                <th></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {events.map((e) => (
+                                <tr key={e.id} className="border-t">
+                                  <td className="py-2 pr-4">{e.trade_date || '—'}</td>
+                                  <td className="py-2 pr-4">{e.event_type}</td>
+                                  <td className="py-2 pr-4">{e.quantity_shares ?? ''}</td>
+                                  <td className="py-2 pr-4">{e.contracts ?? ''}</td>
+                                  <td className="py-2 pr-4">{e.price ?? ''}</td>
+                                  <td className="py-2 pr-4">{e.strike ?? ''}</td>
+                                  <td className="py-2 pr-4">{e.premium ?? ''}</td>
+                                  <td className="py-2 pr-4">{e.fees ?? ''}</td>
+                                  <td className="py-2 pr-4">{e.link_event_id ?? ''}</td>
+                                  <td className="py-2 pr-4">{e.notes ?? ''}</td>
+                                  <td className="py-2">
+                                    <div className="flex gap-1">
+                                      <Button size="icon" variant="ghost" onClick={() => openEditEvent(e)}><Edit className="w-4 h-4" /></Button>
+                                      <Button size="icon" variant="ghost" onClick={() => deleteEvent(e.id)} className="hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </div>
           </div>
         )}
 
-        <Dialog open={showForm} onOpenChange={setShowForm}>
+        {/* Add Cycle Dialog */}
+        <Dialog open={showCycleDialog} onOpenChange={setShowCycleDialog}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-slate-900">
-                {editingWheel ? "Edit Wheel Trade" : "Add Wheel Trade"}
-              </DialogTitle>
+              <DialogTitle className="text-xl font-bold text-slate-900">New Wheel Cycle</DialogTitle>
             </DialogHeader>
-            <WheelForm
-              formData={formData}
-              editingWheel={editingWheel}
-              onChange={(field, value) =>
-                setFormData((prev) => ({ ...prev, [field]: value }))
-              }
-              onSubmit={handleSubmit}
-              onCancel={() => setShowForm(false)}
+            <form onSubmit={saveCycle} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700">Cycle Key</label>
+                  <input className="input" value={cycleForm.cycle_key} onChange={(e) => setCycleForm((p) => ({ ...p, cycle_key: e.target.value }))} required placeholder="AAPL-1" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700">Ticker</label>
+                  <input className="input" value={cycleForm.ticker} onChange={(e) => setCycleForm((p) => ({ ...p, ticker: e.target.value.toUpperCase() }))} required placeholder="AAPL" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700">Start Date</label>
+                  <input type="date" className="input" value={cycleForm.started_at} onChange={(e) => setCycleForm((p) => ({ ...p, started_at: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700">Status</label>
+                  <select className="input" value={cycleForm.status} onChange={(e) => setCycleForm((p) => ({ ...p, status: e.target.value }))}>
+                    <option>Open</option>
+                    <option>Closed</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-slate-700">Notes</label>
+                  <input className="input" value={cycleForm.notes} onChange={(e) => setCycleForm((p) => ({ ...p, notes: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowCycleDialog(false)}>Cancel</Button>
+                <Button type="submit" className="bg-slate-900 text-white">Create</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add/Edit Event Dialog */}
+        <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-slate-900">{editingEvent ? 'Edit Event' : 'Add Event'}</DialogTitle>
+            </DialogHeader>
+            <WheelEventForm
+              form={eventForm}
+              editing={!!editingEvent}
+              onChange={(field, value) => setEventForm((p) => ({ ...p, [field]: value }))}
+              onCancel={() => setShowEventDialog(false)}
+              onSubmit={saveEvent}
             />
           </DialogContent>
         </Dialog>

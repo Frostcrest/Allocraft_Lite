@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { 
-  LayoutDashboard, 
-  TrendingUp, 
+import {
+  LayoutDashboard,
+  TrendingUp,
   Target,
   RotateCcw,
   PieChart
@@ -63,7 +63,7 @@ export default function Layout({ children, currentPageName }) {
               />
             </div>
           </SidebarHeader>
-          
+
           <SidebarContent className="p-4">
             <SidebarGroup>
               <SidebarGroupLabel className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 py-2">
@@ -73,18 +73,16 @@ export default function Layout({ children, currentPageName }) {
                 <SidebarMenu className="space-y-1">
                   {navigationItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton 
-                        asChild 
-                        className={`group transition-all duration-200 rounded-xl ${
-                          location.pathname === item.url 
-                            ? 'bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-lg' 
+                      <SidebarMenuButton
+                        asChild
+                        className={`group transition-all duration-200 rounded-xl ${location.pathname === item.url
+                            ? 'bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-lg'
                             : 'hover:bg-slate-50 text-slate-700 hover:text-slate-900'
-                        }`}
+                          }`}
                       >
                         <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
-                          <item.icon className={`w-5 h-5 transition-colors ${
-                            location.pathname === item.url ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
-                          }`} />
+                          <item.icon className={`w-5 h-5 transition-colors ${location.pathname === item.url ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
+                            }`} />
                           <span className="font-medium">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
@@ -97,11 +95,12 @@ export default function Layout({ children, currentPageName }) {
         </Sidebar>
 
         <main className="flex-1 flex flex-col">
-          <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 md:hidden">
-            <div className="flex items-center gap-4">
+          <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4 md:hidden">
               <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors duration-200" />
               <h1 className="text-xl font-bold text-slate-900">Allocraft</h1>
             </div>
+            <UserMenu />
           </header>
 
           <div className="flex-1 overflow-auto">
@@ -110,5 +109,41 @@ export default function Layout({ children, currentPageName }) {
         </main>
       </div>
     </SidebarProvider>
+  );
+}
+
+function UserMenu() {
+  const [username, setUsername] = useState("");
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('allocraft_token') : null;
+  useEffect(() => {
+    async function load() {
+      if (!token) return;
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const me = await res.json();
+          setUsername(me?.username || "");
+        }
+      } catch { }
+    }
+    load();
+  }, [token]);
+  function doLogout() {
+    try { sessionStorage.removeItem('allocraft_token'); } catch { }
+    window.location.href = '/login';
+  }
+  return (
+    <div className="flex items-center gap-3 ml-auto">
+      <Link to="/Profile" className="text-sm text-slate-700 hover:underline flex items-center gap-2">
+        <span className="inline-block w-6 h-6 rounded-full bg-slate-900 text-white text-center leading-6">
+          {username ? username[0].toUpperCase() : 'U'}
+        </span>
+        <span>{username || 'Profile'}</span>
+      </Link>
+      {token && (
+        <button onClick={doLogout} className="text-sm px-3 py-1 bg-slate-900 text-white rounded">Logout</button>
+      )}
+    </div>
   );
 }

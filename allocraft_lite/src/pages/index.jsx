@@ -7,6 +7,7 @@ import Stocks from "./Stocks";
 import Options from "./Options";
 
 import Wheels from "./Wheels";
+import Profile from "./Profile";
 
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import Login from "../pages/Login.jsx";
@@ -32,6 +33,7 @@ const PAGES = {
     Options: Options,
 
     Wheels: Wheels,
+    Profile: Profile,
 
 }
 
@@ -68,6 +70,7 @@ function PagesContent() {
                                 <Route path="/Stocks" element={<Stocks />} />
                                 <Route path="/Options" element={<Options />} />
                                 <Route path="/Wheels" element={<Wheels />} />
+                                <Route path="/Profile" element={<Profile />} />
                             </Routes>
                         </Layout>
                     </RequireAuth>
