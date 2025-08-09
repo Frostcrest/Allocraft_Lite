@@ -1,33 +1,33 @@
 import type {
-  SellCoveredCallInput,
-  CloseCoveredCallInput,
-  RollCoveredCallInput,
-  CreateLotBuyInput,
-  CreateLotShortPutInput,
+    SellCoveredCallInput,
+    CloseCoveredCallInput,
+    RollCoveredCallInput,
+    CreateLotBuyInput,
+    CreateLotShortPutInput,
 } from "./types";
 
 export const isPositive = (n?: number) => typeof n === "number" && n > 0;
 export const isNonNegative = (n?: number) => typeof n === "number" && n >= 0;
 export const isFutureOrToday = (iso: string) =>
-  new Date(iso).setHours(0, 0, 0, 0) >= new Date().setHours(0, 0, 0, 0);
+    new Date(iso).setHours(0, 0, 0, 0) >= new Date().setHours(0, 0, 0, 0);
 
 export function validateSellCC(p: SellCoveredCallInput) {
-  return isPositive(p.strike) && isNonNegative(p.limitPremium) && isFutureOrToday(p.expiry);
+    return isPositive(p.strike) && isNonNegative(p.limitPremium) && isFutureOrToday(p.expiry);
 }
 export function validateCloseCC(p: CloseCoveredCallInput) {
-  return isNonNegative(p.limitDebit);
+    return isNonNegative(p.limitDebit);
 }
 export function validateRoll(p: RollCoveredCallInput) {
-  return (
-    isNonNegative(p.close.limitDebit) &&
-    isPositive(p.open.strike) &&
-    isNonNegative(p.open.limitPremium) &&
-    isFutureOrToday(p.open.expiry)
-  );
+    return (
+        isNonNegative(p.close.limitDebit) &&
+        isPositive(p.open.strike) &&
+        isNonNegative(p.open.limitPremium) &&
+        isFutureOrToday(p.open.expiry)
+    );
 }
 export function validateBuyLot(p: CreateLotBuyInput) {
-  return isPositive(p.price);
+    return isPositive(p.price);
 }
 export function validateShortPut(p: CreateLotShortPutInput) {
-  return isPositive(p.strike) && isNonNegative(p.premium) && isFutureOrToday(p.expiry);
+    return isPositive(p.strike) && isNonNegative(p.premium) && isFutureOrToday(p.expiry);
 }

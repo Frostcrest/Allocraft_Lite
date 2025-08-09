@@ -39,11 +39,11 @@ function PageInner({ initial }: { initial: PageVM }) {
                 ))}
             </div>
 
-                    <div className="grid grid-cols-1 gap-4">
-                        {lots.map((lot: LotVM) => (
-                            <LotCard key={lot.lotNo} lot={lot} actions={<ActionButtonsRow lot={lot} />} />
-                        ))}
-                    </div>
+            <div className="grid grid-cols-1 gap-4">
+                {lots.map((lot: LotVM) => (
+                    <LotCard key={lot.lotNo} lot={lot} actions={<ActionButtonsRow lot={lot} />} />
+                ))}
+            </div>
 
             {modal?.type === "cover" && modal.lot && <CoverLotModal lot={modal.lot} />}
             {modal?.type === "close" && modal.lot && <CloseCallModal lot={modal.lot} />}
