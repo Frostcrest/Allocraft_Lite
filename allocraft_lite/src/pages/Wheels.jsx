@@ -33,6 +33,9 @@ export default function Wheels() {
   const [selectedId, setSelectedId] = useState(null);
   const [events, setEvents] = useState([]);
   const [metrics, setMetrics] = useState(null);
+  const [lots, setLots] = useState([]);
+  const [viewMode, setViewMode] = useState("lots"); // 'lots' | 'events'
+  const [lotDetails, setLotDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCycleDialog, setShowCycleDialog] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
@@ -58,12 +61,14 @@ export default function Wheels() {
     if (!selectedId) return;
     (async () => {
       try {
-        const [evts, m] = await Promise.all([
+        const [evts, m, ls] = await Promise.all([
           wheelApi.listEvents(selectedId),
           wheelApi.metrics(selectedId),
+          wheelApi.listLots(selectedId)
         ]);
         setEvents(evts);
         setMetrics(m);
+        setLots(ls);
       } catch (e) {
         console.error(e);
       }
@@ -143,24 +148,28 @@ export default function Wheels() {
     } else {
       await wheelApi.createEvent(payload);
     }
-    const [evts, m] = await Promise.all([
+    const [evts, m, ls] = await Promise.all([
       wheelApi.listEvents(selectedId),
       wheelApi.metrics(selectedId),
+      wheelApi.listLots(selectedId)
     ]);
     setEvents(evts);
     setMetrics(m);
+    setLots(ls);
     setShowEventDialog(false);
   };
 
   const deleteEvent = async (id) => {
     if (!window.confirm('Delete this event?')) return;
     await wheelApi.deleteEvent(id);
-    const [evts, m] = await Promise.all([
+    const [evts, m, ls] = await Promise.all([
       wheelApi.listEvents(selectedId),
       wheelApi.metrics(selectedId),
+      wheelApi.listLots(selectedId)
     ]);
     setEvents(evts);
     setMetrics(m);
+    setLots(ls);
   };
 
   if (loading) {
@@ -189,7 +198,14 @@ export default function Wheels() {
               <Plus className="w-5 h-5 mr-2" /> New Cycle
             </Button>
             {selectedId && (
-              <Button variant="outline" onClick={openAddEvent}>Add Event</Button>
+              <>
+                <Button variant="outline" onClick={() => setViewMode(viewMode === 'lots' ? 'events' : 'lots')}>
+                  Switch to {viewMode === 'lots' ? 'Events' : 'Lots'} View
+                </Button>
+                {viewMode === 'events' && (
+                  <Button variant="outline" onClick={openAddEvent}>Add Event</Button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -248,58 +264,113 @@ export default function Wheels() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-0 shadow bg-white/80">
-                    <CardHeader className="py-4">
-                      <CardTitle className="text-lg">Events</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {events.length === 0 ? (
-                        <div className="text-sm text-slate-500">No events. Add your first event.</div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full text-sm">
-                            <thead>
-                              <tr className="text-left text-slate-500">
-                                <th className="py-2 pr-4">Date</th>
-                                <th className="py-2 pr-4">Type</th>
-                                <th className="py-2 pr-4">Shares</th>
-                                <th className="py-2 pr-4">Contracts</th>
-                                <th className="py-2 pr-4">Price</th>
-                                <th className="py-2 pr-4">Strike</th>
-                                <th className="py-2 pr-4">Premium</th>
-                                <th className="py-2 pr-4">Fees</th>
-                                <th className="py-2 pr-4">Link</th>
-                                <th className="py-2 pr-4">Notes</th>
-                                <th></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {events.map((e) => (
-                                <tr key={e.id} className="border-t">
-                                  <td className="py-2 pr-4">{e.trade_date || '—'}</td>
-                                  <td className="py-2 pr-4">{e.event_type}</td>
-                                  <td className="py-2 pr-4">{e.quantity_shares ?? ''}</td>
-                                  <td className="py-2 pr-4">{e.contracts ?? ''}</td>
-                                  <td className="py-2 pr-4">{e.price != null && e.price !== '' ? formatCurrency(Number(e.price)) : ''}</td>
-                                  <td className="py-2 pr-4">{e.strike != null && e.strike !== '' ? formatCurrency(Number(e.strike)) : ''}</td>
-                                  <td className="py-2 pr-4">{e.premium != null && e.premium !== '' ? formatCurrency(Number(e.premium)) : ''}</td>
-                                  <td className="py-2 pr-4">{e.fees != null && e.fees !== '' ? formatCurrency(Number(e.fees)) : ''}</td>
-                                  <td className="py-2 pr-4">{e.link_event_id ?? ''}</td>
-                                  <td className="py-2 pr-4">{e.notes ?? ''}</td>
-                                  <td className="py-2">
-                                    <div className="flex gap-1">
-                                      <Button size="icon" variant="ghost" onClick={() => openEditEvent(e)}><Edit className="w-4 h-4" /></Button>
-                                      <Button size="icon" variant="ghost" onClick={() => deleteEvent(e.id)} className="hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                  {viewMode === 'lots' ? (
+                    <Card className="border-0 shadow bg-white/80">
+                      <CardHeader className="py-4">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-lg">Lots</CardTitle>
+                          <div className="text-sm text-slate-500">Uncovered: {lots.filter(l => l.status === 'OPEN_UNCOVERED').length}</div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                      </CardHeader>
+                      <CardContent>
+                        {lots.length === 0 ? (
+                          <div className="text-sm text-slate-500 flex items-center justify-between">
+                            <span>No lots yet. Use Rebuild to construct from events.</span>
+                            <Button size="sm" onClick={async () => { await wheelApi.rebuildLots(selectedId); const ls = await wheelApi.listLots(selectedId); setLots(ls); }}>Rebuild</Button>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                              <thead>
+                                <tr className="text-left text-slate-500">
+                                  <th className="py-2 pr-4">Lot #</th>
+                                  <th className="py-2 pr-4">Acquisition</th>
+                                  <th className="py-2 pr-4">Cost Basis</th>
+                                  <th className="py-2 pr-4">Status</th>
+                                  <th className="py-2 pr-4">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {lots.map((l, idx) => (
+                                  <tr key={l.id} className="border-t hover:bg-slate-50 cursor-pointer" onClick={async () => {
+                                    const [details, met, links] = await Promise.all([
+                                      wheelApi.getLot(l.id),
+                                      wheelApi.lotMetrics(l.id),
+                                      wheelApi.getLotLinks(l.id)
+                                    ]);
+                                    setLotDetails({ lot: details, metrics: met, ...links });
+                                  }}>
+                                    <td className="py-2 pr-4">{idx + 1}</td>
+                                    <td className="py-2 pr-4">{l.acquisition_method} • {l.acquisition_date || '—'}</td>
+                                    <td className="py-2 pr-4">{l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—'}</td>
+                                    <td className="py-2 pr-4">{l.status}</td>
+                                    <td className="py-2 pr-4">
+                                      {l.status === 'OPEN_UNCOVERED' && (
+                                        <Button size="sm" variant="outline" onClick={async (e) => { e.stopPropagation(); await wheelApi.rebuildLots(selectedId); const ls = await wheelApi.listLots(selectedId); setLots(ls); }}>Rebuild</Button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="border-0 shadow bg-white/80">
+                      <CardHeader className="py-4">
+                        <CardTitle className="text-lg">Events</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {events.length === 0 ? (
+                          <div className="text-sm text-slate-500">No events. Add your first event.</div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                              <thead>
+                                <tr className="text-left text-slate-500">
+                                  <th className="py-2 pr-4">Date</th>
+                                  <th className="py-2 pr-4">Type</th>
+                                  <th className="py-2 pr-4">Shares</th>
+                                  <th className="py-2 pr-4">Contracts</th>
+                                  <th className="py-2 pr-4">Price</th>
+                                  <th className="py-2 pr-4">Strike</th>
+                                  <th className="py-2 pr-4">Premium</th>
+                                  <th className="py-2 pr-4">Fees</th>
+                                  <th className="py-2 pr-4">Link</th>
+                                  <th className="py-2 pr-4">Notes</th>
+                                  <th></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {events.map((e) => (
+                                  <tr key={e.id} className="border-t">
+                                    <td className="py-2 pr-4">{e.trade_date || '—'}</td>
+                                    <td className="py-2 pr-4">{e.event_type}</td>
+                                    <td className="py-2 pr-4">{e.quantity_shares ?? ''}</td>
+                                    <td className="py-2 pr-4">{e.contracts ?? ''}</td>
+                                    <td className="py-2 pr-4">{e.price != null && e.price !== '' ? formatCurrency(Number(e.price)) : ''}</td>
+                                    <td className="py-2 pr-4">{e.strike != null && e.strike !== '' ? formatCurrency(Number(e.strike)) : ''}</td>
+                                    <td className="py-2 pr-4">{e.premium != null && e.premium !== '' ? formatCurrency(Number(e.premium)) : ''}</td>
+                                    <td className="py-2 pr-4">{e.fees != null && e.fees !== '' ? formatCurrency(Number(e.fees)) : ''}</td>
+                                    <td className="py-2 pr-4">{e.link_event_id ?? ''}</td>
+                                    <td className="py-2 pr-4">{e.notes ?? ''}</td>
+                                    <td className="py-2">
+                                      <div className="flex gap-1">
+                                        <Button size="icon" variant="ghost" onClick={() => openEditEvent(e)}><Edit className="w-4 h-4" /></Button>
+                                        <Button size="icon" variant="ghost" onClick={() => deleteEvent(e.id)} className="hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
                 </>
               )}
             </div>
@@ -362,6 +433,65 @@ export default function Wheels() {
           </DialogContent>
         </Dialog>
       </div>
+      {/* Lot Details Dialog */}
+      <Dialog open={!!lotDetails} onOpenChange={(v) => !v && setLotDetails(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Lot Details</DialogTitle>
+          </DialogHeader>
+          {lotDetails && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-slate-500">Acquisition</div>
+                  <div className="font-medium">{lotDetails.lot.acquisition_method} • {lotDetails.lot.acquisition_date || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-500">Cost Basis</div>
+                  <div className="font-semibold">{lotDetails.lot.cost_basis_effective != null ? formatCurrency(lotDetails.lot.cost_basis_effective) : '—'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-500">Net Premiums</div>
+                  <div className="font-semibold">{formatCurrency(lotDetails.metrics.net_premiums)}</div>
+                </div>
+                <div>
+                  <div className="text-slate-500">Unrealized P/L</div>
+                  <div className={`font-semibold ${lotDetails.metrics.unrealized_pl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrency(lotDetails.metrics.unrealized_pl)}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-500 mb-2">Linked Events</div>
+                <div className="max-h-60 overflow-y-auto border rounded">
+                  <table className="min-w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-slate-500">
+                        <th className="py-2 px-2">Date</th>
+                        <th className="py-2 px-2">Type</th>
+                        <th className="py-2 px-2">Shares</th>
+                        <th className="py-2 px-2">Contracts</th>
+                        <th className="py-2 px-2">Price/Strike</th>
+                        <th className="py-2 px-2">Premium</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lotDetails.events?.map((e) => (
+                        <tr key={e.id} className="border-t">
+                          <td className="py-2 px-2">{e.trade_date || '—'}</td>
+                          <td className="py-2 px-2">{e.event_type}</td>
+                          <td className="py-2 px-2">{e.quantity_shares ?? ''}</td>
+                          <td className="py-2 px-2">{e.contracts ?? ''}</td>
+                          <td className="py-2 px-2">{e.price != null ? formatCurrency(e.price) : e.strike != null ? formatCurrency(e.strike) : ''}</td>
+                          <td className="py-2 px-2">{e.premium != null ? formatCurrency(e.premium) : ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
