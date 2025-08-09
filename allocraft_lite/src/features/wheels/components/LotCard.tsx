@@ -15,7 +15,7 @@ function StatusChip({ status }: { status: LotVM["status"] }) {
     );
 }
 
-export function LotCard({ lot }: { lot: LotVM }) {
+export function LotCard({ lot, actions }: { lot: LotVM; actions?: React.ReactNode }) {
     const [open, setOpen] = useState(false);
     const id = `lot-${lot.lotNo}-timeline`;
 
@@ -61,6 +61,7 @@ export function LotCard({ lot }: { lot: LotVM }) {
                 )}
             </div>
 
+            {actions}
             {open && (
                 <div id={id} className="mt-5">
                     <Timeline events={lot.events} />
