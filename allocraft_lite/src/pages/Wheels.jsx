@@ -34,6 +34,8 @@ export default function Wheels() {
   const [events, setEvents] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [lots, setLots] = useState([]);
+  const [coverageMap, setCoverageMap] = useState({}); // lotId -> { strike, premium, status }
+  const [uiLots, setUiLots] = useState([]); // includes synthetic CSP lots
   const [viewMode, setViewMode] = useState("lots"); // 'lots' | 'events'
   const [lotDetails, setLotDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,82 @@ export default function Wheels() {
       }
     })();
   }, [selectedId]);
+
+  // Enrich coverage info (strike/premium) for lots by looking at linked events
+  useEffect(() => {
+    if (!lots || lots.length === 0) {
+      setCoverageMap({});
+      return;
+    }
+    (async () => {
+      try {
+        const pairs = await Promise.all(
+          lots.slice(0, 20).map(async (l) => {
+            try {
+              const links = await wheelApi.getLotLinks(l.id);
+              const evts = links?.events || [];
+              const callOpen = evts.find((e) => e.event_type === 'SELL_CALL_OPEN');
+              const callClose = evts.find((e) => e.event_type === 'SELL_CALL_CLOSE' || e.event_type === 'CALL_ASSIGNED');
+              const putOpen = evts.find((e) => e.event_type === 'SELL_PUT_OPEN');
+              let coverage = null;
+              if (callOpen) {
+                coverage = {
+                  strike: callOpen.strike ?? null,
+                  premium: callOpen.premium ?? null,
+                  status: callClose ? 'CLOSED' : 'OPEN',
+                };
+              } else if (putOpen && (l.status === 'CASH_RESERVED' || l.acquisition_method === 'CASH_SECURED_PUT')) {
+                coverage = {
+                  strike: putOpen.strike ?? null,
+                  premium: putOpen.premium ?? null,
+                  status: 'OPEN',
+                };
+              }
+              return [l.id, coverage];
+            } catch {
+              return [l.id, null];
+            }
+          })
+        );
+        setCoverageMap(Object.fromEntries(pairs));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [lots]);
+
+  // Build UI lots: backend lots + synthetic cash-secured put cards for open puts
+  useEffect(() => {
+    try {
+      if (!events) {
+        setUiLots(lots || []);
+        return;
+      }
+      const openPuts = (events || []).filter((e) => e.event_type === 'SELL_PUT_OPEN');
+      const closedIds = new Set((events || []).filter((e) => e.event_type === 'SELL_PUT_CLOSE' && e.link_event_id).map((e) => e.link_event_id));
+      const synthetic = openPuts
+        .filter((op) => !closedIds.has(op.id))
+        .map((op) => ({
+          id: `synthetic-csp-${op.id}`,
+          acquisition_method: 'CASH_SECURED_PUT',
+          acquisition_date: op.trade_date || null,
+          status: 'CASH_RESERVED',
+          cost_basis_effective: null,
+          _coverage: { strike: op.strike ?? null, premium: op.premium ?? null, status: 'OPEN' },
+          _synthetic: true,
+          _sourceEventId: op.id,
+        }));
+      // Avoid duplicates if backend already surfaces CASH_RESERVED lots for same date
+      const hasCashReserved = new Set((lots || []).filter((l) => l.status === 'CASH_RESERVED' || l.acquisition_method === 'CASH_SECURED_PUT').map((l) => `${l.acquisition_method}:${l.acquisition_date}`));
+      const deduped = synthetic.filter((s) => !hasCashReserved.has(`${s.acquisition_method}:${s.acquisition_date}`));
+      setUiLots([
+        ...deduped.sort((a, b) => (a.acquisition_date || '').localeCompare(b.acquisition_date || '')),
+        ...(lots || [])
+      ]);
+    } catch {
+      setUiLots(lots || []);
+    }
+  }, [events, lots]);
 
   const openAddCycle = () => {
     setCycleForm(initialCycle);
@@ -273,46 +351,43 @@ export default function Wheels() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        {lots.length === 0 ? (
+                        {uiLots.length === 0 ? (
                           <div className="text-sm text-slate-500 flex items-center justify-between">
                             <span>No lots yet. Use Rebuild to construct from events.</span>
                             <Button size="sm" onClick={async () => { await wheelApi.rebuildLots(selectedId); const ls = await wheelApi.listLots(selectedId); setLots(ls); }}>Rebuild</Button>
                           </div>
                         ) : (
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                              <thead>
-                                <tr className="text-left text-slate-500">
-                                  <th className="py-2 pr-4">Lot #</th>
-                                  <th className="py-2 pr-4">Acquisition</th>
-                                  <th className="py-2 pr-4">Cost Basis</th>
-                                  <th className="py-2 pr-4">Status</th>
-                                  <th className="py-2 pr-4">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {lots.map((l, idx) => (
-                                  <tr key={l.id} className="border-t hover:bg-slate-50 cursor-pointer" onClick={async () => {
+                          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                            {uiLots.map((l, idx) => (
+                              <LotCard
+                                key={l.id}
+                                lotNo={l._synthetic && idx === 0 ? 0 : idx + 1}
+                                ticker={cycles.find(c => c.id === selectedId)?.ticker || ''}
+                                acquisition={mapAcquisition(l, l._coverage || coverageMap[l.id])}
+                                costBasis={l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—'}
+                                coverage={mapCoverage(l._coverage || coverageMap[l.id])}
+                                status={mapStatus(l.status)}
+                                onClick={async () => {
+                                  if (l._synthetic) {
+                                    const ev = (events || []).find(e => e.id === l._sourceEventId);
+                                    if (ev) {
+                                      setLotDetails({ synthetic: true, event: ev });
+                                    }
+                                    return;
+                                  }
+                                  try {
                                     const [details, met, links] = await Promise.all([
                                       wheelApi.getLot(l.id),
                                       wheelApi.lotMetrics(l.id),
                                       wheelApi.getLotLinks(l.id)
                                     ]);
                                     setLotDetails({ lot: details, metrics: met, ...links });
-                                  }}>
-                                    <td className="py-2 pr-4">{idx + 1}</td>
-                                    <td className="py-2 pr-4">{l.acquisition_method} • {l.acquisition_date || '—'}</td>
-                                    <td className="py-2 pr-4">{l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—'}</td>
-                                    <td className="py-2 pr-4">{l.status}</td>
-                                    <td className="py-2 pr-4">
-                                      {l.status === 'OPEN_UNCOVERED' && (
-                                        <Button size="sm" variant="outline" onClick={async (e) => { e.stopPropagation(); await wheelApi.rebuildLots(selectedId); const ls = await wheelApi.listLots(selectedId); setLots(ls); }}>Rebuild</Button>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                  } catch (e) {
+                                    console.error(e);
+                                  }
+                                }}
+                              />
+                            ))}
                           </div>
                         )}
                       </CardContent>
@@ -437,61 +512,180 @@ export default function Wheels() {
       <Dialog open={!!lotDetails} onOpenChange={(v) => !v && setLotDetails(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Lot Details</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{lotDetails?.synthetic ? 'Cash-Secured Put (Open)' : 'Lot Details'}</DialogTitle>
           </DialogHeader>
           {lotDetails && (
-            <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-slate-500">Acquisition</div>
-                  <div className="font-medium">{lotDetails.lot.acquisition_method} • {lotDetails.lot.acquisition_date || '—'}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Cost Basis</div>
-                  <div className="font-semibold">{lotDetails.lot.cost_basis_effective != null ? formatCurrency(lotDetails.lot.cost_basis_effective) : '—'}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Net Premiums</div>
-                  <div className="font-semibold">{formatCurrency(lotDetails.metrics.net_premiums)}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Unrealized P/L</div>
-                  <div className={`font-semibold ${lotDetails.metrics.unrealized_pl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrency(lotDetails.metrics.unrealized_pl)}</div>
+            lotDetails.synthetic ? (
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-slate-500">Event</div>
+                    <div className="font-medium">SELL_PUT_OPEN • {lotDetails.event.trade_date || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Status</div>
+                    <div className="font-semibold text-sky-700">Open</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Strike</div>
+                    <div className="font-semibold">{lotDetails.event.strike != null ? formatCurrency(lotDetails.event.strike) : '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Premium</div>
+                    <div className="font-semibold">{lotDetails.event.premium != null ? formatCurrency(lotDetails.event.premium) : '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Fees</div>
+                    <div className="font-semibold">{lotDetails.event.fees != null ? formatCurrency(lotDetails.event.fees) : '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Collateral Reserved</div>
+                    <div className="font-semibold">{lotDetails.event.strike != null ? formatCurrency(Number(lotDetails.event.strike) * 100) : '—'}</div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="text-slate-500 mb-2">Linked Events</div>
-                <div className="max-h-60 overflow-y-auto border rounded">
-                  <table className="min-w-full text-xs">
-                    <thead>
-                      <tr className="text-left text-slate-500">
-                        <th className="py-2 px-2">Date</th>
-                        <th className="py-2 px-2">Type</th>
-                        <th className="py-2 px-2">Shares</th>
-                        <th className="py-2 px-2">Contracts</th>
-                        <th className="py-2 px-2">Price/Strike</th>
-                        <th className="py-2 px-2">Premium</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lotDetails.events?.map((e) => (
-                        <tr key={e.id} className="border-t">
-                          <td className="py-2 px-2">{e.trade_date || '—'}</td>
-                          <td className="py-2 px-2">{e.event_type}</td>
-                          <td className="py-2 px-2">{e.quantity_shares ?? ''}</td>
-                          <td className="py-2 px-2">{e.contracts ?? ''}</td>
-                          <td className="py-2 px-2">{e.price != null ? formatCurrency(e.price) : e.strike != null ? formatCurrency(e.strike) : ''}</td>
-                          <td className="py-2 px-2">{e.premium != null ? formatCurrency(e.premium) : ''}</td>
+            ) : (
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-slate-500">Acquisition</div>
+                    <div className="font-medium">{lotDetails.lot.acquisition_method} • {lotDetails.lot.acquisition_date || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Cost Basis</div>
+                    <div className="font-semibold">{lotDetails.lot.cost_basis_effective != null ? formatCurrency(lotDetails.lot.cost_basis_effective) : '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Net Premiums</div>
+                    <div className="font-semibold">{formatCurrency(lotDetails.metrics.net_premiums)}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Unrealized P/L</div>
+                    <div className={`font-semibold ${lotDetails.metrics.unrealized_pl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrency(lotDetails.metrics.unrealized_pl)}</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-slate-500 mb-2">Linked Events</div>
+                  <div className="max-h-60 overflow-y-auto border rounded">
+                    <table className="min-w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-slate-500">
+                          <th className="py-2 px-2">Date</th>
+                          <th className="py-2 px-2">Type</th>
+                          <th className="py-2 px-2">Shares</th>
+                          <th className="py-2 px-2">Contracts</th>
+                          <th className="py-2 px-2">Price/Strike</th>
+                          <th className="py-2 px-2">Premium</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {lotDetails.events?.map((e) => (
+                          <tr key={e.id} className="border-t">
+                            <td className="py-2 px-2">{e.trade_date || '—'}</td>
+                            <td className="py-2 px-2">{e.event_type}</td>
+                            <td className="py-2 px-2">{e.quantity_shares ?? ''}</td>
+                            <td className="py-2 px-2">{e.contracts ?? ''}</td>
+                            <td className="py-2 px-2">{e.price != null ? formatCurrency(e.price) : e.strike != null ? formatCurrency(e.strike) : ''}</td>
+                            <td className="py-2 px-2">{e.premium != null ? formatCurrency(e.premium) : ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
+            )
           )}
         </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+// ---- UI helpers (StatusChip + LotCard) ----
+function StatusChip({ status }) {
+  const map = {
+    OPEN_COVERED: { cls: "border-emerald-300 bg-emerald-50 text-emerald-700", label: "Covered" },
+    OPEN_UNCOVERED: { cls: "border-amber-300 bg-amber-50 text-amber-700", label: "Uncovered" },
+    CASH_RESERVED: { cls: "border-sky-300 bg-sky-50 text-sky-700", label: "Cash Reserved" },
+    CLOSED_CALLED_AWAY: { cls: "border-slate-300 bg-slate-100 text-slate-700", label: "Called Away" },
+    CLOSED_SOLD: { cls: "border-slate-300 bg-slate-100 text-slate-700", label: "Sold" },
+  }[status] || { cls: "border-slate-200 bg-white text-slate-700", label: status };
+  return (
+    <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${map.cls}`}>
+      {map.label}
+    </span>
+  );
+}
+
+function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, onClick }) {
+  return (
+    <div onClick={onClick} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md cursor-pointer">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-slate-900">{`Lot ${lotNo} — ${ticker}`}</h3>
+        <StatusChip status={status} />
+      </div>
+      <div className="space-y-1.5">
+        <div className="text-slate-900">
+          <span className="font-semibold">{acquisition.label}</span>
+          {acquisition.date && <span className="text-slate-500">{` • ${acquisition.date}`}</span>}
+        </div>
+        {acquisition.type === 'CASH_SECURED_PUT' ? (
+          <div className="text-sm text-slate-600">Cash Collateral Reserved: <span className="font-medium text-slate-900">{acquisition.collateral || '—'}</span></div>
+        ) : (
+          <div className="text-sm text-slate-600">Cost Basis: <span className="font-medium text-slate-900">{costBasis}</span></div>
+        )}
+        {status === 'CLOSED_SOLD' || status === 'CLOSED_CALLED_AWAY' ? (
+          <div className="text-sm text-slate-700"><span className="font-medium">Outcome:</span> {acquisition.outcome || 'Closed'}</div>
+        ) : acquisition.type === 'CASH_SECURED_PUT' ? (
+          <div className="text-sm text-slate-700"><span className="font-medium">Put Sold:</span> {coverage?.strike || '—'} strike{coverage?.premium ? `, ${coverage.premium} premium` : ''}{coverage?.status === 'OPEN' && <span className="ml-2 rounded-md bg-sky-100 px-2 py-0.5 text-xs text-sky-800">Open</span>}</div>
+        ) : coverage ? (
+          <div className="text-sm text-slate-700"><span className="font-medium">Call Sold:</span> {coverage.strike || '—'} strike{coverage.premium ? `, ${coverage.premium} premium` : ''}{coverage.status === 'OPEN' && <span className="ml-2 rounded-md bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">Open</span>}{coverage.status === 'CLOSED' && <span className="ml-2 rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-700">Closed</span>}</div>
+        ) : (
+          <div className="text-sm italic text-slate-500">Call not sold yet</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---- mapping helpers ----
+function mapStatus(status) {
+  // passthrough; keeps room for normalization if backend differs
+  return status;
+}
+
+function mapCoverage(cov) {
+  if (!cov) return undefined;
+  const fmt = (n) => (n == null ? null : formatCurrency(Number(n)));
+  return {
+    strike: fmt(cov.strike) || '—',
+    premium: fmt(cov.premium) || null,
+    status: cov.status || 'OPEN',
+  };
+}
+
+function mapAcquisition(lot, cov) {
+  const fmt = (n) => (n == null ? null : formatCurrency(Number(n)));
+  const base = lot.cost_basis_effective != null ? fmt(lot.cost_basis_effective) : '—';
+  const date = lot.acquisition_date || null;
+  if (lot.acquisition_method === 'PUT_ASSIGNMENT') {
+    return { type: 'PUT_ASSIGNMENT', label: `PUT Assigned @ ${base}`, date };
+  }
+  if (lot.acquisition_method === 'OUTRIGHT_PURCHASE') {
+    return { type: 'OUTRIGHT_PURCHASE', label: `Bought @ ${base}`, date };
+  }
+  if (lot.acquisition_method === 'CASH_SECURED_PUT' || lot.status === 'CASH_RESERVED') {
+    const strikeNum = cov?.strike ?? null;
+    const strikeFmt = strikeNum != null ? fmt(strikeNum) : null;
+    const collateralFmt = strikeNum != null ? fmt(strikeNum * 100) : null;
+    return { type: 'CASH_SECURED_PUT', label: `PUT Sold @ ${strikeFmt || '—'}`, date, collateral: collateralFmt };
+  }
+  if (lot.status === 'CLOSED_SOLD') {
+    return { type: 'OUTCOME', label: `Closed Lot`, date, outcome: lot.closed_label };
+  }
+  if (lot.status === 'CLOSED_CALLED_AWAY') {
+    return { type: 'OUTCOME', label: `Closed Lot`, date, outcome: lot.closed_label };
+  }
+  return { type: lot.acquisition_method || 'UNKNOWN', label: `—`, date };
 }

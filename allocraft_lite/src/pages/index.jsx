@@ -7,6 +7,7 @@ import Stocks from "./Stocks";
 import Options from "./Options";
 
 import Wheels from "./Wheels";
+import WheelsLotsMock from "./WheelsLotsMock.jsx";
 import Profile from "./Profile";
 
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
@@ -59,6 +60,8 @@ function PagesContent() {
         <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            {/* Public mock route for easy design preview */}
+            <Route path="/WheelsLotsMock" element={<WheelsLotsMock />} />
             <Route
                 path="/*"
                 element={
