@@ -8,6 +8,7 @@ import Options from "./Options";
 
 import Wheels from "./Wheels";
 import WheelsLotsMock from "./WheelsLotsMock.jsx";
+import LotTimelinePage from "@/features/wheels/LotTimelinePage";
 import Profile from "./Profile";
 
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
@@ -62,6 +63,7 @@ function PagesContent() {
             <Route path="/signup" element={<Signup />} />
             {/* Public mock route for easy design preview */}
             <Route path="/WheelsLotsMock" element={<WheelsLotsMock />} />
+            <Route path="/LotTimelineMock" element={<LotTimelinePage />} />
             <Route
                 path="/*"
                 element={

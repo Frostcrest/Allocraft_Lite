@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { wheelApi } from "@/api/fastapiClient";
 import { formatCurrency } from "@/lib/utils";
 import WheelEventForm from "@/components/forms/WheelEventForm";
+import { Timeline as LotTimeline } from "@/features/wheels/components/Timeline";
 
 const initialCycle = {
   cycle_key: "",
@@ -35,6 +36,7 @@ export default function Wheels() {
   const [metrics, setMetrics] = useState(null);
   const [lots, setLots] = useState([]);
   const [coverageMap, setCoverageMap] = useState({}); // lotId -> { strike, premium, status }
+  const [lotEventsMap, setLotEventsMap] = useState({}); // lotId -> LotEvent[] mapped for timeline
   const [uiLots, setUiLots] = useState([]); // includes synthetic CSP lots
   const [viewMode, setViewMode] = useState("lots"); // 'lots' | 'events'
   const [lotDetails, setLotDetails] = useState(null);
@@ -77,10 +79,11 @@ export default function Wheels() {
     })();
   }, [selectedId]);
 
-  // Enrich coverage info (strike/premium) for lots by looking at linked events
+  // Enrich coverage info (strike/premium) and collect per-lot events for timeline by looking at linked events
   useEffect(() => {
     if (!lots || lots.length === 0) {
       setCoverageMap({});
+      setLotEventsMap({});
       return;
     }
     (async () => {
@@ -107,13 +110,22 @@ export default function Wheels() {
                   status: 'OPEN',
                 };
               }
-              return [l.id, coverage];
+              // map events for timeline UI
+              const eventsVM = evts.map((e) => mapEventForTimeline(e));
+              return [l.id, { coverage, eventsVM }];
             } catch {
-              return [l.id, null];
+              return [l.id, { coverage: null, eventsVM: [] }];
             }
           })
         );
-        setCoverageMap(Object.fromEntries(pairs));
+        const cov = {};
+        const emap = {};
+        for (const [id, v] of pairs) {
+          cov[id] = v.coverage;
+          emap[id] = v.eventsVM;
+        }
+        setCoverageMap(cov);
+        setLotEventsMap(emap);
       } catch (e) {
         console.error(e);
       }
@@ -358,36 +370,47 @@ export default function Wheels() {
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                            {uiLots.map((l, idx) => (
-                              <LotCard
-                                key={l.id}
-                                lotNo={l._synthetic && idx === 0 ? 0 : idx + 1}
-                                ticker={cycles.find(c => c.id === selectedId)?.ticker || ''}
-                                acquisition={mapAcquisition(l, l._coverage || coverageMap[l.id])}
-                                costBasis={l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—'}
-                                coverage={mapCoverage(l._coverage || coverageMap[l.id])}
-                                status={mapStatus(l.status)}
-                                onClick={async () => {
-                                  if (l._synthetic) {
-                                    const ev = (events || []).find(e => e.id === l._sourceEventId);
-                                    if (ev) {
-                                      setLotDetails({ synthetic: true, event: ev });
+                            {uiLots.map((l, idx) => {
+                              // build timeline events: from lotEventsMap for real lots; synthetic from source event
+                              let timeline = [];
+                              if (l._synthetic) {
+                                const ev = (events || []).find(e => e.id === l._sourceEventId);
+                                if (ev) timeline = [mapEventForTimeline(ev)];
+                              } else {
+                                timeline = lotEventsMap[l.id] || [];
+                              }
+                              return (
+                                <LotCard
+                                  key={l.id}
+                                  lotNo={l._synthetic && idx === 0 ? 0 : idx + 1}
+                                  ticker={cycles.find(c => c.id === selectedId)?.ticker || ''}
+                                  acquisition={mapAcquisition(l, l._coverage || coverageMap[l.id])}
+                                  costBasis={l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—'}
+                                  coverage={mapCoverage(l._coverage || coverageMap[l.id])}
+                                  status={mapStatus(l.status)}
+                                  timeline={timeline}
+                                  onClick={async () => {
+                                    if (l._synthetic) {
+                                      const ev = (events || []).find(e => e.id === l._sourceEventId);
+                                      if (ev) {
+                                        setLotDetails({ synthetic: true, event: ev });
+                                      }
+                                      return;
                                     }
-                                    return;
-                                  }
-                                  try {
-                                    const [details, met, links] = await Promise.all([
-                                      wheelApi.getLot(l.id),
-                                      wheelApi.lotMetrics(l.id),
-                                      wheelApi.getLotLinks(l.id)
-                                    ]);
-                                    setLotDetails({ lot: details, metrics: met, ...links });
-                                  } catch (e) {
-                                    console.error(e);
-                                  }
-                                }}
-                              />
-                            ))}
+                                    try {
+                                      const [details, met, links] = await Promise.all([
+                                        wheelApi.getLot(l.id),
+                                        wheelApi.lotMetrics(l.id),
+                                        wheelApi.getLotLinks(l.id)
+                                      ]);
+                                      setLotDetails({ lot: details, metrics: met, ...links });
+                                    } catch (e) {
+                                      console.error(e);
+                                    }
+                                  }}
+                                />
+                              );
+                            })}
                           </div>
                         )}
                       </CardContent>
@@ -618,12 +641,28 @@ function StatusChip({ status }) {
   );
 }
 
-function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, onClick }) {
+function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, timeline = [], onClick }) {
+  const [open, setOpen] = useState(false);
+  const id = `lot-${lotNo}-timeline`;
   return (
-    <div onClick={onClick} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md cursor-pointer">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">{`Lot ${lotNo} — ${ticker}`}</h3>
-        <StatusChip status={status} />
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-slate-900">{`Lot ${lotNo} — ${ticker}`}</h3>
+          <StatusChip status={status} />
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            aria-expanded={open}
+            aria-controls={id}
+          >
+            <span>{open ? "Hide timeline" : "Show timeline"}</span>
+            <span className={`transition-transform ${open ? "rotate-180" : ""}`}>⌄</span>
+          </button>
+          <button onClick={onClick} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Details</button>
+        </div>
       </div>
       <div className="space-y-1.5">
         <div className="text-slate-900">
@@ -645,6 +684,11 @@ function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, onCl
           <div className="text-sm italic text-slate-500">Call not sold yet</div>
         )}
       </div>
+      {open && (
+        <div id={id} className="mt-5">
+          <LotTimeline events={timeline} />
+        </div>
+      )}
     </div>
   );
 }
@@ -688,4 +732,49 @@ function mapAcquisition(lot, cov) {
     return { type: 'OUTCOME', label: `Closed Lot`, date, outcome: lot.closed_label };
   }
   return { type: lot.acquisition_method || 'UNKNOWN', label: `—`, date };
+}
+
+// Map backend event to Timeline LotEvent shape
+function mapEventForTimeline(e) {
+  const type = mapEventType(e.event_type);
+  const label = mapEventLabel(type);
+  const qty = e.quantity_shares != null && e.quantity_shares !== ''
+    ? `${e.quantity_shares} sh`
+    : (e.contracts != null && e.contracts !== '' ? `${e.contracts} ctr` : undefined);
+  const vm = {
+    id: String(e.id),
+    date: e.trade_date || '',
+    type,
+    label,
+    price: e.price != null && e.price !== '' ? formatCurrency(Number(e.price)) : undefined,
+    strike: e.strike != null && e.strike !== '' ? formatCurrency(Number(e.strike)) : undefined,
+    premium: e.premium != null && e.premium !== '' ? formatCurrency(Number(e.premium)) : undefined,
+    qty,
+    notes: e.notes || undefined,
+  };
+  return vm;
+}
+
+function mapEventType(t) {
+  if (t === 'SELL_PUT_OPEN' || t === 'SELL_PUT_CLOSE') return 'SELL_PUT';
+  if (t === 'PUT_ASSIGNED' || t === 'PUT_ASSIGNMENT') return 'PUT_ASSIGNMENT';
+  if (t === 'CALL_ASSIGNED' || t === 'CALL_ASSIGNMENT') return 'CALL_ASSIGNMENT';
+  if (t === 'BUY_SHARES') return 'BUY_SHARES';
+  if (t === 'SELL_CALL_OPEN') return 'SELL_CALL_OPEN';
+  if (t === 'SELL_CALL_CLOSE') return 'SELL_CALL_CLOSE';
+  if (t === 'FEE') return 'FEE';
+  return 'FEE';
+}
+
+function mapEventLabel(type) {
+  switch (type) {
+    case 'SELL_PUT': return 'Sold PUT';
+    case 'PUT_ASSIGNMENT': return 'PUT Assigned';
+    case 'BUY_SHARES': return 'Bought Shares';
+    case 'SELL_CALL_OPEN': return 'Sold CALL';
+    case 'SELL_CALL_CLOSE': return 'Closed CALL';
+    case 'CALL_ASSIGNMENT': return 'CALL Assigned';
+    case 'FEE': return 'Fee';
+    default: return type;
+  }
 }
