@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import BrandedLoader from "@/components/ui/BrandedLoader";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -48,6 +49,13 @@ const navigationItems = [
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  const [showLoader, setShowLoader] = useState(false);
+
+  // Show loader immediately after login until initial user data loads or a fallback timeout
+  useEffect(() => {
+    const shouldShow = sessionStorage.getItem('allocraft_post_login_loading') === '1';
+    if (shouldShow) setShowLoader(true);
+  }, []);
 
   return (
     <SidebarProvider>
@@ -76,8 +84,8 @@ export default function Layout({ children, currentPageName }) {
                       <SidebarMenuButton
                         asChild
                         className={`group transition-all duration-200 rounded-xl ${location.pathname === item.url
-                            ? 'bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-lg'
-                            : 'hover:bg-slate-50 text-slate-700 hover:text-slate-900'
+                          ? 'bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-lg'
+                          : 'hover:bg-slate-50 text-slate-700 hover:text-slate-900'
                           }`}
                       >
                         <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
@@ -100,7 +108,10 @@ export default function Layout({ children, currentPageName }) {
               <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors duration-200" />
               <h1 className="text-xl font-bold text-slate-900">Allocraft</h1>
             </div>
-            <UserMenu />
+            <UserMenu onUserLoaded={() => {
+              try { sessionStorage.removeItem('allocraft_post_login_loading'); } catch { }
+              setTimeout(() => setShowLoader(false), 150);
+            }} />
           </header>
 
           <div className="flex-1 overflow-auto">
@@ -108,11 +119,12 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </main>
       </div>
+      <BrandedLoader show={showLoader} />
     </SidebarProvider>
   );
 }
 
-function UserMenu() {
+function UserMenu({ onUserLoaded }) {
   const [username, setUsername] = useState("");
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('allocraft_token') : null;
   useEffect(() => {
@@ -124,6 +136,8 @@ function UserMenu() {
         if (res.ok) {
           const me = await res.json();
           setUsername(me?.username || "");
+          // Notify parent that initial user data has loaded
+          if (typeof onUserLoaded === 'function') onUserLoaded();
         }
       } catch { }
     }

@@ -23,6 +23,8 @@ export default function Login() {
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
             sessionStorage.setItem('allocraft_token', data.access_token);
+            // Signal post-login loading state for the dashboard
+            try { sessionStorage.setItem('allocraft_post_login_loading', '1'); } catch { }
             navigate('/');
         } catch (err) {
             setError(err.message || 'Login failed');
