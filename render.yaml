@@ -2,6 +2,7 @@ services:
   - type: web
     name: allocraft-lite
     env: static
+  rootDir: allocraft_lite
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     pullRequestPreviewsEnabled: true
