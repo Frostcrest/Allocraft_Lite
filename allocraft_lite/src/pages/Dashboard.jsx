@@ -315,6 +315,7 @@ export default function Dashboard() {
 function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState("");
+  const [newUser, setNewUser] = useState({ username: "", email: "", password: "" });
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
   async function load() {
@@ -369,6 +370,21 @@ function AdminUsers() {
             Refresh
           </button>
         </div>
+        {/* Add User */}
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-2">
+          <input className="border rounded px-2 py-1" placeholder="Username" value={newUser.username} onChange={(e)=>setNewUser(p=>({...p, username:e.target.value}))} />
+          <input className="border rounded px-2 py-1" placeholder="Email" value={newUser.email} onChange={(e)=>setNewUser(p=>({...p, email:e.target.value}))} />
+          <input className="border rounded px-2 py-1" type="password" placeholder="Password" value={newUser.password} onChange={(e)=>setNewUser(p=>({...p, password:e.target.value}))} />
+          <button className="px-3 py-1 bg-slate-900 text-white rounded" onClick={async()=>{
+            try{
+              const token = sessionStorage.getItem("allocraft_token");
+              const res = await fetch(`${API_BASE}/users/`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify(newUser) });
+              if(!res.ok) throw new Error(await res.text());
+              setNewUser({ username:"", email:"", password:"" });
+              load();
+            }catch(e){ setError(String(e)); }
+          }}>Add User</button>
+        </div>
         <div className="text-slate-500 text-sm mt-2">
           {error ? error : "No users found or insufficient permissions."}
         </div>
@@ -383,6 +399,22 @@ function AdminUsers() {
         <button className="text-sm underline" onClick={load}>
           Refresh
         </button>
+      </div>
+      {/* Add User */}
+      <div className="mt-3 grid grid-cols-1 md:grid-cols-5 gap-2">
+        <input className="border rounded px-2 py-1" placeholder="Username" value={newUser.username} onChange={(e)=>setNewUser(p=>({...p, username:e.target.value}))} />
+        <input className="border rounded px-2 py-1" placeholder="Email" value={newUser.email} onChange={(e)=>setNewUser(p=>({...p, email:e.target.value}))} />
+        <input className="border rounded px-2 py-1" type="password" placeholder="Password" value={newUser.password} onChange={(e)=>setNewUser(p=>({...p, password:e.target.value}))} />
+        <div className="flex items-center text-xs text-slate-500">New users get roles="user" and can be edited below.</div>
+        <button className="px-3 py-1 bg-slate-900 text-white rounded" onClick={async()=>{
+          try{
+            const token = sessionStorage.getItem("allocraft_token");
+            const res = await fetch(`${API_BASE}/users/`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify(newUser) });
+            if(!res.ok) throw new Error(await res.text());
+            setNewUser({ username:"", email:"", password:"" });
+            load();
+          }catch(e){ setError(String(e)); }
+        }}>Add User</button>
       </div>
       {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
       <div className="overflow-auto mt-3">
