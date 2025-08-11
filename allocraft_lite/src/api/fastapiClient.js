@@ -60,6 +60,35 @@ export async function apiFetch(path, options = {}) {
 }
 
 /**
+ * fetchJson
+ *
+ * Calls apiFetch and returns parsed JSON or throws a helpful Error with server text.
+ */
+export async function fetchJson(path, options = {}) {
+    const res = await apiFetch(path, options);
+    let bodyText = null;
+    if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+            try { sessionStorage.removeItem("allocraft_token"); } catch {}
+            // Redirect to login for auth errors
+            if (typeof window !== 'undefined') {
+                window.location.href = '/login';
+            }
+        }
+        try { bodyText = await res.text(); } catch {}
+        let message = bodyText || `Request failed with ${res.status}`;
+        try {
+            const maybeJson = JSON.parse(bodyText);
+            message = maybeJson.detail || maybeJson.error || message;
+        } catch {}
+        throw new Error(message);
+    }
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) return res.json();
+    return res.text();
+}
+
+/**
  * fetchFromAPI
  *
  * A more generic helper that accepts full URLs too.
@@ -102,11 +131,7 @@ export function logout() {
 export async function getMe() {
     const token = sessionStorage.getItem("allocraft_token");
     if (!token) throw new Error("Not authenticated");
-    const res = await fetch(`${API_BASE}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return await res.json();
+    return fetchJson('/auth/me', { headers: { Authorization: `Bearer ${token}` } });
 }
 
 // Wheel cycles & events API
@@ -118,86 +143,54 @@ export async function getMe() {
  */
 export const wheelApi = {
     async listCycles() {
-        const res = await apiFetch('/wheels/wheel-cycles');
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson('/wheels/wheel-cycles');
     },
     async createCycle(data) {
-        const res = await apiFetch('/wheels/wheel-cycles', { method: 'POST', body: JSON.stringify(data) });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson('/wheels/wheel-cycles', { method: 'POST', body: JSON.stringify(data) });
     },
     async updateCycle(id, data) {
-        const res = await apiFetch(`/wheels/wheel-cycles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/wheel-cycles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
     },
     async deleteCycle(id) {
-        const res = await apiFetch(`/wheels/wheel-cycles/${id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/wheel-cycles/${id}`, { method: 'DELETE' });
     },
     async listEvents(cycleId) {
-        const url = cycleId ? `/wheels/wheel-events?cycle_id=${cycleId}` : '/wheels/wheel-events';
-        const res = await apiFetch(url);
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    const url = cycleId ? `/wheels/wheel-events?cycle_id=${cycleId}` : '/wheels/wheel-events';
+    return fetchJson(url);
     },
     async createEvent(data) {
-        const res = await apiFetch('/wheels/wheel-events', { method: 'POST', body: JSON.stringify(data) });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson('/wheels/wheel-events', { method: 'POST', body: JSON.stringify(data) });
     },
     async updateEvent(id, data) {
-        const res = await apiFetch(`/wheels/wheel-events/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/wheel-events/${id}`, { method: 'PUT', body: JSON.stringify(data) });
     },
     async deleteEvent(id) {
-        const res = await apiFetch(`/wheels/wheel-events/${id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/wheel-events/${id}`, { method: 'DELETE' });
     },
     async metrics(cycleId) {
-        const res = await apiFetch(`/wheels/wheel-metrics/${cycleId}`);
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/wheel-metrics/${cycleId}`);
     },
     // Lots
     async listLots(cycleId, params = {}) {
         const qs = new URLSearchParams(params).toString();
-        const res = await apiFetch(`/wheels/cycles/${cycleId}/lots${qs ? `?${qs}` : ''}`);
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/cycles/${cycleId}/lots${qs ? `?${qs}` : ''}`);
     },
     async getLot(lotId) {
-        const res = await apiFetch(`/wheels/lots/${lotId}`);
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/lots/${lotId}`);
     },
     async lotMetrics(lotId) {
-        const res = await apiFetch(`/wheels/lots/${lotId}/metrics`);
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/lots/${lotId}/metrics`);
     },
     async getLotLinks(lotId) {
-        const res = await apiFetch(`/wheels/lots/${lotId}/links`);
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/lots/${lotId}/links`);
     },
     async rebuildLots(cycleId) {
-        const res = await apiFetch(`/wheels/lots/rebuild?cycle_id=${cycleId}`, { method: 'POST' });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/lots/rebuild?cycle_id=${cycleId}`, { method: 'POST' });
     },
     async bindCall(lotId, optionEventId) {
-        const res = await apiFetch(`/wheels/lots/${lotId}/bind-call`, { method: 'POST', body: JSON.stringify({ option_event_id: optionEventId }) });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/lots/${lotId}/bind-call`, { method: 'POST', body: JSON.stringify({ option_event_id: optionEventId }) });
     },
     async unbindCall(lotId) {
-        const res = await apiFetch(`/wheels/lots/${lotId}/unbind-call`, { method: 'POST' });
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    return fetchJson(`/wheels/lots/${lotId}/unbind-call`, { method: 'POST' });
     }
 };
