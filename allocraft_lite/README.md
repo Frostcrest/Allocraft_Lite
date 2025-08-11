@@ -5,6 +5,9 @@ _Note: This is not the main Allocraft project. If you are looking for the full A
 
 ## Getting Started
 
+Fastest path on Windows: from the repo root, run `start-dev.bat`.
+It will open both the backend (http://127.0.0.1:8000) and frontend (http://localhost:5173) for you.
+
 Follow these steps to launch Allocraft Lite on your local machine:
 
 ### 1. Clone the Repository
@@ -47,6 +50,9 @@ If your backend runs on a different URL/port, create `.env.local` with:
 
 ```
 VITE_API_BASE_URL=http://localhost:8000
+
+Note: When running locally via Vite (http://localhost:5173), the app automatically targets
+the local backend (http://localhost:8000) and shows a small "DEV API" badge in the header.
 ```
 
 ### 4. Build for Production (Optional)

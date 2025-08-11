@@ -1,3 +1,16 @@
+/**
+ * Allocraft Frontend API Client
+ *
+ * What this file does (explained like you're 10):
+ * - Figures out where our backend API is running (local computer for development, or on the internet for production)
+ * - Sends HTTP requests to the backend (like asking a waiter for food)
+ * - Adds a secret token to requests when you're logged in (so the server knows it's you)
+ *
+ * Why we structure it this way (best practice):
+ * - One place to decide the API base URL (so we don't repeat ourselves)
+ * - Small helper functions to keep UI pages simple and fast
+ * - Clear names and comments so future you (or a new teammate) can fix things easily
+ */
 function resolveApiBase() {
     try {
         if (typeof window !== "undefined") {
@@ -24,6 +37,18 @@ export function isDevBackend() {
     }
 }
 
+/**
+ * apiFetch
+ *
+ * A tiny wrapper around fetch() that always
+ * - Pre-pends the API base URL
+ * - Adds your login token (if you have one)
+ * - Ensures JSON Content-Type by default
+ *
+ * Usage example:
+ *   const res = await apiFetch('/wheels/wheel-cycles');
+ *   const data = await res.json();
+ */
 export async function apiFetch(path, options = {}) {
     const token = sessionStorage.getItem("allocraft_token");
     const headers = {
@@ -34,6 +59,13 @@ export async function apiFetch(path, options = {}) {
     return fetch(`${API_BASE}${path}`, { ...options, headers });
 }
 
+/**
+ * fetchFromAPI
+ *
+ * A more generic helper that accepts full URLs too.
+ * Useful when calling external endpoints or when a function needs
+ * to pass an absolute URL; otherwise prefer apiFetch for internal API calls.
+ */
 export async function fetchFromAPI(endpoint, options = {}) {
     const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
     const opts = {
@@ -51,11 +83,22 @@ export async function fetchFromAPI(endpoint, options = {}) {
 }
 
 // Auth helpers
+/**
+ * logout
+ *
+ * Clears your token (so you are logged out) and moves you to the login page.
+ */
 export function logout() {
     try { sessionStorage.removeItem("allocraft_token"); } catch { }
     window.location.href = "/login";
 }
 
+/**
+ * getMe
+ *
+ * Asks the server: "Who am I?" using your token.
+ * Returns your user info when logged in.
+ */
 export async function getMe() {
     const token = sessionStorage.getItem("allocraft_token");
     if (!token) throw new Error("Not authenticated");
@@ -67,6 +110,12 @@ export async function getMe() {
 }
 
 // Wheel cycles & events API
+/**
+ * wheelApi
+ *
+ * A collection of tiny functions that talk to the backend about
+ * wheel cycles, events, and lots. Each one does one small job.
+ */
 export const wheelApi = {
     async listCycles() {
         const res = await apiFetch('/wheels/wheel-cycles');

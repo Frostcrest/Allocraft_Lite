@@ -110,15 +110,21 @@ export default function Layout({ children, currentPageName }) {
               <h1 className="text-xl font-bold text-slate-900">Allocraft</h1>
             </div>
             <div className="flex items-center gap-4 ml-auto">
+              {/*
+                  Beginner note:
+                  This pill shows up only when the app detects you're talking to a locally
+                  running backend (http://localhost:8000). It's a gentle reminder that data
+                  and auth are local and safe to experiment with.
+                */}
               {isDevBackend() && (
                 <span title={`DEV backend: ${API_BASE}`} className="hidden md:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
                   DEV API
                 </span>
               )}
               <UserMenu onUserLoaded={() => {
-              try { sessionStorage.removeItem('allocraft_post_login_loading'); } catch { }
-              setTimeout(() => setShowLoader(false), 150);
-            }} />
+                try { sessionStorage.removeItem('allocraft_post_login_loading'); } catch { }
+                setTimeout(() => setShowLoader(false), 150);
+              }} />
             </div>
           </header>
 
