@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchFromAPI } from "@/api/fastapiClient";
+import { fetchJson, wheelApi } from "@/api/fastapiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -28,12 +28,12 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [stocks, options, wheels] = await Promise.all([
-          fetchFromAPI("/stocks/"),
-          fetchFromAPI("/options/"),
-          fetchFromAPI("/wheels/"),
+        const [stocks, options, cycles] = await Promise.all([
+          fetchJson("/stocks/?refresh_prices=true"),
+          fetchJson("/options/"),
+          wheelApi.listCycles(),
         ]);
-        setPortfolioData({ stocks, options, wheels });
+        setPortfolioData({ stocks, options, wheels: cycles });
         setLoading(false);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
@@ -47,14 +47,16 @@ export default function Dashboard() {
     let total = 0;
     // Stocks: shares * current_price
     portfolioData.stocks.forEach((stock) => {
-      if (stock.current_price && stock.status === "Open") {
-        total += stock.shares * stock.current_price;
+      if (stock.status === "Open") {
+        const price = typeof stock.current_price === "number" ? stock.current_price : stock.cost_basis;
+        total += (stock.shares || 0) * (price || 0);
       }
     });
     // Options: current_price * contracts * 100
     portfolioData.options.forEach((option) => {
-      if (option.current_price && option.status === "Open") {
-        total += option.contracts * option.current_price * 100;
+      if (option.status === "Open") {
+        const px = typeof option.market_price_per_contract === "number" ? option.market_price_per_contract : option.cost_basis;
+        total += (option.contracts || 0) * (px || 0) * 100;
       }
     });
     return total;
@@ -64,17 +66,17 @@ export default function Dashboard() {
     let totalPL = 0;
     // Stocks: (shares * market_price) - (shares * cost_basis)
     portfolioData.stocks.forEach((stock) => {
-      if (stock.market_price && stock.status === "Open") {
-        const marketValue = stock.shares * stock.market_price;
-        const costValue = stock.shares * stock.cost_basis;
+      if (stock.status === "Open" && typeof stock.current_price === "number") {
+        const marketValue = (stock.shares || 0) * stock.current_price;
+        const costValue = (stock.shares || 0) * (stock.cost_basis || 0);
         totalPL += marketValue - costValue;
       }
     });
     // Options: (current_price * contracts * 100) - (cost_basis * contracts * 100)
     portfolioData.options.forEach((option) => {
-      if (option.current_price && option.status === "Open") {
-        const netLiquidity = option.contracts * option.current_price * 100;
-        const totalCost = option.contracts * option.cost_basis * 100;
+      if (option.status === "Open" && typeof option.market_price_per_contract === "number") {
+        const netLiquidity = (option.contracts || 0) * option.market_price_per_contract * 100;
+        const totalCost = (option.contracts || 0) * (option.cost_basis || 0) * 100;
         totalPL += netLiquidity - totalCost;
       }
     });
@@ -98,13 +100,7 @@ export default function Dashboard() {
     },
     {
       name: "Wheels",
-      count: [
-        ...new Set(
-          portfolioData.wheels.filter((w) => w.status === "Active").map(
-            (w) => w.wheel_id
-          )
-        ),
-      ].length,
+  count: portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").length,
       icon: RotateCcw,
       gradient: "bg-gradient-to-br from-orange-500 to-orange-600",
       link: createPageUrl("Wheels"),
@@ -115,13 +111,13 @@ export default function Dashboard() {
   const getStocksTotalValue = () => {
     return portfolioData.stocks
       .filter((s) => s.status === "Open")
-      .reduce((sum, s) => sum + s.shares * s.current_price, 0);
+      .reduce((sum, s) => sum + (s.shares || 0) * (typeof s.current_price === "number" ? s.current_price : (s.cost_basis || 0)), 0);
   };
 
   const getOptionsTotalValue = () => {
     return portfolioData.options
       .filter((o) => o.status === "Open")
-      .reduce((sum, o) => sum + o.contracts * o.current_price * 100, 0);
+      .reduce((sum, o) => sum + (o.contracts || 0) * (typeof o.market_price_per_contract === "number" ? o.market_price_per_contract : (o.cost_basis || 0)) * 100, 0);
   };
 
   if (loading) {
@@ -145,6 +141,11 @@ export default function Dashboard() {
 
   const totalValue = calculateTotalValue();
   const totalPL = calculateTotalPL();
+  const investedBasis = (
+    portfolioData.stocks.filter(s => s.status === "Open").reduce((sum, s) => sum + (s.shares || 0) * (s.cost_basis || 0), 0) +
+    portfolioData.options.filter(o => o.status === "Open").reduce((sum, o) => sum + (o.contracts || 0) * (o.cost_basis || 0) * 100, 0)
+  );
+  const plPct = investedBasis > 0 ? ((totalPL / investedBasis) * 100) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
@@ -171,13 +172,7 @@ export default function Dashboard() {
           <StatCard
             title="Total P/L"
             value={formatCurrency(totalPL)}
-            change={
-              totalPL >= 0
-                ? "+" +
-                ((totalPL / (totalValue - totalPL)) * 100).toFixed(1) +
-                "%"
-                : ((totalPL / (totalValue - totalPL)) * 100).toFixed(1) + "%"
-            }
+            change={plPct === null ? "—" : `${plPct >= 0 ? "+" : ""}${plPct.toFixed(1)}%`}
             changeType={totalPL >= 0 ? "positive" : "negative"}
             icon={Activity}
             gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
@@ -211,7 +206,7 @@ export default function Dashboard() {
             } else if (asset.name === "Options") {
               totalValue = getOptionsTotalValue();
             } else if (asset.name === "Wheels") {
-              wheelsCollateral = true; // Placeholder flag
+              wheelsCollateral = true; // TODO: replace with real collateral metric from backend
             }
 
             return (
