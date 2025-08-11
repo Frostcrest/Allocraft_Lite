@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { isDevBackend, API_BASE } from "@/api/fastapiClient";
 import BrandedLoader from "@/components/ui/BrandedLoader";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -108,10 +109,17 @@ export default function Layout({ children, currentPageName }) {
               <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors duration-200" />
               <h1 className="text-xl font-bold text-slate-900">Allocraft</h1>
             </div>
-            <UserMenu onUserLoaded={() => {
+            <div className="flex items-center gap-4 ml-auto">
+              {isDevBackend() && (
+                <span title={`DEV backend: ${API_BASE}`} className="hidden md:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                  DEV API
+                </span>
+              )}
+              <UserMenu onUserLoaded={() => {
               try { sessionStorage.removeItem('allocraft_post_login_loading'); } catch { }
               setTimeout(() => setShowLoader(false), 150);
             }} />
+            </div>
           </header>
 
           <div className="flex-1 overflow-auto">

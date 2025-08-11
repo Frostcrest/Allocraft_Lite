@@ -13,7 +13,16 @@ function resolveApiBase() {
     return import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 }
 
-const API_BASE = resolveApiBase();
+export const API_BASE = resolveApiBase();
+
+export function isDevBackend() {
+    try {
+        const u = new URL(API_BASE);
+        return u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+    } catch {
+        return false;
+    }
+}
 
 export async function apiFetch(path, options = {}) {
     const token = sessionStorage.getItem("allocraft_token");
