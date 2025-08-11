@@ -28,12 +28,13 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [stocks, options, cycles] = await Promise.all([
+        const [stocks, options, cycles, wheelSummary] = await Promise.all([
           fetchJson("/stocks/?refresh_prices=true"),
-          fetchJson("/options/"),
+          fetchJson("/options/?refresh_prices=true"),
           wheelApi.listCycles(),
+          fetchJson("/wheels/summary"),
         ]);
-        setPortfolioData({ stocks, options, wheels: cycles });
+        setPortfolioData({ stocks, options, wheels: cycles, wheelSummary });
         setLoading(false);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
@@ -239,10 +240,10 @@ export default function Dashboard() {
                         </span>
                       </p>
                     )}
-                    {wheelsCollateral && (
+          {wheelsCollateral && (
                       <p className="text-xs text-slate-400 mt-2">
                         Total Collateral:{" "}
-                        <span className="font-medium">—</span>
+            <span className="font-medium">{formatCurrency(portfolioData?.wheelSummary?.total_collateral || 0)}</span>
                       </p>
                     )}
                   </CardContent>
