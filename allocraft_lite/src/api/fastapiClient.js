@@ -1,4 +1,19 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+function resolveApiBase() {
+    try {
+        if (typeof window !== "undefined") {
+            const { protocol, hostname, port } = window.location;
+            const origin = `${protocol}//${hostname}:${port}`;
+            // Force local API when running Vite dev server
+            if (origin === "http://localhost:5173" || origin === "http://127.0.0.1:5173") {
+                return "http://localhost:8000";
+            }
+        }
+    } catch { }
+    // Otherwise use configured API base or fallback to local
+    return import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+}
+
+const API_BASE = resolveApiBase();
 
 export async function apiFetch(path, options = {}) {
     const token = sessionStorage.getItem("allocraft_token");
@@ -11,8 +26,7 @@ export async function apiFetch(path, options = {}) {
 }
 
 export async function fetchFromAPI(endpoint, options = {}) {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-    const url = endpoint.startsWith("http") ? endpoint : `${baseUrl}${endpoint}`;
+    const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
     const opts = {
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
         credentials: "include",
@@ -34,10 +48,9 @@ export function logout() {
 }
 
 export async function getMe() {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
     const token = sessionStorage.getItem("allocraft_token");
     if (!token) throw new Error("Not authenticated");
-    const res = await fetch(`${baseUrl}/auth/me`, {
+    const res = await fetch(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(await res.text());
