@@ -21,20 +21,20 @@ export default function Dashboard() {
   const [portfolioData, setPortfolioData] = useState({
     stocks: [],
     options: [],
-    wheels: [],
+  wheels: [],
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadDashboardData() {
+  async function loadDashboardData() {
       try {
-        const [stocks, options, cycles, wheelSummary] = await Promise.all([
+    const [stocks, options, cycles, snapshot] = await Promise.all([
           fetchJson("/stocks/?refresh_prices=true"),
           fetchJson("/options/?refresh_prices=true"),
           wheelApi.listCycles(),
-          fetchJson("/wheels/summary"),
+          fetchJson("/dashboard/snapshot"),
         ]);
-        setPortfolioData({ stocks, options, wheels: cycles, wheelSummary });
+    setPortfolioData({ stocks, options, wheels: cycles, snapshot });
         setLoading(false);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
@@ -101,7 +101,7 @@ export default function Dashboard() {
     },
     {
       name: "Wheels",
-  count: portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").length,
+      count: (portfolioData?.snapshot?.wheels?.open_cycles ?? portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").length),
       icon: RotateCcw,
       gradient: "bg-gradient-to-br from-orange-500 to-orange-600",
       link: createPageUrl("Wheels"),
@@ -140,12 +140,14 @@ export default function Dashboard() {
     );
   }
 
-  const totalValue = calculateTotalValue();
-  const totalPL = calculateTotalPL();
-  const investedBasis = (
-    portfolioData.stocks.filter(s => s.status === "Open").reduce((sum, s) => sum + (s.shares || 0) * (s.cost_basis || 0), 0) +
-    portfolioData.options.filter(o => o.status === "Open").reduce((sum, o) => sum + (o.contracts || 0) * (o.cost_basis || 0) * 100, 0)
-  );
+  const totalValue = portfolioData.snapshot?.portfolio?.total_value ?? calculateTotalValue();
+  const totalPL = portfolioData.snapshot?.portfolio?.total_pl ?? calculateTotalPL();
+  const investedBasis = portfolioData.snapshot?.stocks?.invested_basis !== undefined || portfolioData.snapshot?.options?.invested_basis !== undefined
+    ? (portfolioData.snapshot?.stocks?.invested_basis || 0) + (portfolioData.snapshot?.options?.invested_basis || 0)
+    : (
+      portfolioData.stocks.filter(s => s.status === "Open").reduce((sum, s) => sum + (s.shares || 0) * (s.cost_basis || 0), 0) +
+      portfolioData.options.filter(o => o.status === "Open").reduce((sum, o) => sum + (o.contracts || 0) * (o.cost_basis || 0) * 100, 0)
+    );
   const plPct = investedBasis > 0 ? ((totalPL / investedBasis) * 100) : null;
 
   return (
@@ -180,17 +182,11 @@ export default function Dashboard() {
           />
           <StatCard
             title="Active Positions"
-            value={
+            value={portfolioData.snapshot?.portfolio?.active_positions ?? (
               portfolioData.stocks.filter((s) => s.status === "Open").length +
               portfolioData.options.filter((o) => o.status === "Open").length +
-              [
-                ...new Set(
-                  portfolioData.wheels.filter((w) => w.status === "Active").map(
-                    (w) => w.wheel_id
-                  )
-                ),
-              ].length
-            }
+              new Set(portfolioData.wheels.filter((c)=> (c.status || "Open") === "Open").map((c)=>c.id)).size
+            )}
             icon={PieChart}
             gradient="bg-gradient-to-br from-blue-500 to-blue-600"
           />
@@ -203,9 +199,9 @@ export default function Dashboard() {
             let totalValue = null;
             let wheelsCollateral = null;
             if (asset.name === "Stocks") {
-              totalValue = getStocksTotalValue();
+              totalValue = portfolioData?.snapshot?.stocks?.total_value ?? getStocksTotalValue();
             } else if (asset.name === "Options") {
-              totalValue = getOptionsTotalValue();
+              totalValue = portfolioData?.snapshot?.options?.total_value ?? getOptionsTotalValue();
             } else if (asset.name === "Wheels") {
               wheelsCollateral = true; // TODO: replace with real collateral metric from backend
             }
@@ -243,7 +239,7 @@ export default function Dashboard() {
           {wheelsCollateral && (
                       <p className="text-xs text-slate-400 mt-2">
                         Total Collateral:{" "}
-            <span className="font-medium">{formatCurrency(portfolioData?.wheelSummary?.total_collateral || 0)}</span>
+            <span className="font-medium">{formatCurrency(portfolioData?.snapshot?.wheels?.total_collateral || 0)}</span>
                       </p>
                     )}
                   </CardContent>
