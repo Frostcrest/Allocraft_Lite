@@ -101,7 +101,7 @@ export default function Dashboard() {
     },
     {
       name: "Wheels",
-  count: (portfolioData?.snapshot?.wheels?.open_tickers ?? new Set(portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").map((c) => c.ticker)).size),
+      count: (portfolioData?.snapshot?.wheels?.open_tickers ?? new Set(portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").map((c) => c.ticker)).size),
       icon: RotateCcw,
       gradient: "bg-gradient-to-br from-orange-500 to-orange-600",
       link: createPageUrl("Wheels"),

@@ -189,9 +189,9 @@ export default function Wheels() {
         setUiLots(showClosed ? base : base.filter((l) => !(l.status || '').startsWith('CLOSED')));
         return;
       }
-  const openPuts = (events || []).filter((e) => e.event_type === 'SELL_PUT_OPEN');
-  // Determine which open SELL_PUT_OPEN ids are considered closed (linked or heuristically matched)
-  const closedIds = findClosedPutOpenEventIds(events || []);
+      const openPuts = (events || []).filter((e) => e.event_type === 'SELL_PUT_OPEN');
+      // Determine which open SELL_PUT_OPEN ids are considered closed (linked or heuristically matched)
+      const closedIds = findClosedPutOpenEventIds(events || []);
       const syntheticOpen = openPuts
         .filter((op) => !closedIds.has(op.id))
         .map((op) => ({
@@ -369,7 +369,7 @@ export default function Wheels() {
         const tickers = Array.from(new Set(cycles.map(c => c.ticker)));
         const toFetch = tickers.filter(t => !(t in tickerSideStats));
         if (toFetch.length === 0) return;
-    const pairs = await Promise.all(
+        const pairs = await Promise.all(
           toFetch.map(async (t) => {
             const ids = getCycleIdsForTicker(t);
             try {
@@ -379,16 +379,16 @@ export default function Wheels() {
               ]);
               const ev = eventsArr.flat();
               const mAgg = aggregateMetrics(metricsArr.filter(Boolean));
-        const overallPL = sumNullable(mAgg?.unrealized_pl, mAgg?.total_realized_pl);
-        return [t, { collateral_reserved: computeCollateralReserved(ev), pl: overallPL }];
+              const overallPL = sumNullable(mAgg?.unrealized_pl, mAgg?.total_realized_pl);
+              return [t, { collateral_reserved: computeCollateralReserved(ev), pl: overallPL }];
             } catch {
-        return [t, { collateral_reserved: null, pl: null }];
+              return [t, { collateral_reserved: null, pl: null }];
             }
           })
         );
         setTickerSideStats((prev) => {
           const next = { ...prev };
-      for (const [t, v] of pairs) next[t] = v;
+          for (const [t, v] of pairs) next[t] = v;
           return next;
         });
       } catch (e) {
@@ -467,21 +467,22 @@ export default function Wheels() {
                 const started = group.map(c => c.started_at).filter(Boolean).sort()[0] || '—';
                 const selected = selectedTicker === tkr;
                 return (
-                <Card key={tkr} className={`cursor-pointer ${selected ? 'ring-2 ring-slate-900' : ''}`} onClick={() => setSelectedTicker(tkr)}>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-sm flex justify-between items-center">
-                      <span>{tkr}</span>
-                    </CardTitle>
-                    <div className="text-xs text-slate-500">Started {started}</div>
-                    <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                      <div className="text-slate-500">Collateral</div>
-                      <div className="text-right font-medium text-slate-900">{formatMaybeCurrency(tickerSideStats[tkr]?.collateral_reserved)}</div>
-                      <div className="text-slate-500">P/L</div>
-                      <div className={`text-right font-medium ${valSign(tickerSideStats[tkr]?.pl)}`}>{formatMaybeCurrency(tickerSideStats[tkr]?.pl)}</div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              )})}
+                  <Card key={tkr} className={`cursor-pointer ${selected ? 'ring-2 ring-slate-900' : ''}`} onClick={() => setSelectedTicker(tkr)}>
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-sm flex justify-between items-center">
+                        <span>{tkr}</span>
+                      </CardTitle>
+                      <div className="text-xs text-slate-500">Started {started}</div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                        <div className="text-slate-500">Collateral</div>
+                        <div className="text-right font-medium text-slate-900">{formatMaybeCurrency(tickerSideStats[tkr]?.collateral_reserved)}</div>
+                        <div className="text-slate-500">P/L</div>
+                        <div className={`text-right font-medium ${valSign(tickerSideStats[tkr]?.pl)}`}>{formatMaybeCurrency(tickerSideStats[tkr]?.pl)}</div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                )
+              })}
             </div>
 
             <div className="lg:col-span-3 space-y-7">
@@ -528,10 +529,10 @@ export default function Wheels() {
                         } catch (e) { console.error(e); }
                       }}
                     >
-          <Card className="border-0 shadow bg-white/80">
+                      <Card className="border-0 shadow bg-white/80">
                         <CardHeader className="py-4">
                           <div className="flex items-center justify-between gap-3">
-            <CardTitle className="text-xl">Lots</CardTitle>
+                            <CardTitle className="text-xl">Lots</CardTitle>
                             <div className="flex items-center gap-3">
                               <label className="inline-flex items-center gap-2 text-sm text-slate-600">
                                 <input
