@@ -841,12 +841,12 @@ function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, time
   const canClosePut = (acquisition?.type === 'CASH_SECURED_PUT' || status === 'CASH_RESERVED') && (coverage?.status !== 'CLOSED');
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-slate-900">{`Lot ${lotNo} — ${ticker}`}</h3>
+      <div className="mb-3 flex items-center justify-between gap-3 whitespace-nowrap">
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900 truncate">{`Lot ${lotNo} — ${ticker}`}</h3>
           <StatusChip status={status} />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {uncovered && (
             <button
               className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs text-white hover:bg-emerald-700"
@@ -855,24 +855,16 @@ function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, time
               Cover
             </button>
           )}
-          {canClosePut && (
-            <button
-              className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs text-white hover:bg-black"
-              onClick={() => actions.openClosePut({ lotNo, ticker, acquisition, costBasis, coverage, status, events: timeline })}
-            >
-              Close Put
-            </button>
-          )}
           <button
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
             aria-expanded={open}
             aria-controls={id}
           >
-            <span>{open ? "Hide timeline" : "Show timeline"}</span>
+            <span>{open ? "Hide" : "Timeline"}</span>
             <span className={`transition-transform ${open ? "rotate-180" : ""}`}>⌄</span>
           </button>
-          <button onClick={onClick} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Details</button>
+          <button onClick={onClick} className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50">Details</button>
         </div>
       </div>
       <div className="space-y-1.5">
@@ -888,7 +880,21 @@ function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, time
         {status === 'CLOSED_SOLD' || status === 'CLOSED_CALLED_AWAY' ? (
           <div className="text-sm text-slate-700"><span className="font-medium">Outcome:</span> {acquisition.outcome || 'Closed'}</div>
         ) : acquisition.type === 'CASH_SECURED_PUT' ? (
-          <div className="text-sm text-slate-700"><span className="font-medium">Put Sold:</span> {coverage?.strike || '—'} strike{coverage?.premium ? `, ${coverage.premium} premium` : ''}{coverage?.status === 'OPEN' && <span className="ml-2 rounded-md bg-sky-100 px-2 py-0.5 text-xs text-sky-800">Open</span>}</div>
+          <div className="text-sm text-slate-700 group"><span className="font-medium">Put Sold:</span> {coverage?.strike || '—'} strike{coverage?.premium ? `, ${coverage.premium} premium` : ''}
+            {coverage?.status === 'OPEN' && (
+              <span className="ml-2 inline-block relative">
+                <span className="rounded-md bg-sky-100 px-2 py-0.5 text-xs text-sky-800 transition-opacity duration-200 group-hover:opacity-0">Open</span>
+                <button
+                  type="button"
+                  className="absolute inset-0 rounded-md bg-slate-900 px-2 py-0.5 text-xs text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  onClick={() => actions.openClosePut({ lotNo, ticker, acquisition, costBasis, coverage, status, events: timeline })}
+                  aria-label={`Close short put on lot ${lotNo}`}
+                >
+                  Close
+                </button>
+              </span>
+            )}
+          </div>
         ) : coverage ? (
           <div className="text-sm text-slate-700"><span className="font-medium">Call Sold:</span> {coverage.strike || '—'} strike{coverage.premium ? `, ${coverage.premium} premium` : ''}{coverage.status === 'OPEN' && <span className="ml-2 rounded-md bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">Open</span>}{coverage.status === 'CLOSED' && <span className="ml-2 rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-700">Closed</span>}</div>
         ) : (
