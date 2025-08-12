@@ -13,7 +13,9 @@ export interface SellCoveredCallInput {
 
 export interface CloseCoveredCallInput {
     lotId: number;
+    tradeDate: string; // ISO
     limitDebit: number;
+    contracts: number; // number of contracts to close
     fees?: number;
     notes?: string;
 }
@@ -41,3 +43,12 @@ export interface CreateLotShortPutInput {
 }
 
 export type LotsUpdater = (update: (prev: LotVM[]) => LotVM[]) => void;
+
+export interface ClosePutInput {
+    lotId: number;
+    tradeDate: string; // ISO
+    limitDebit: number;
+    contracts: number; // to close
+    fees?: number;
+    notes?: string;
+}

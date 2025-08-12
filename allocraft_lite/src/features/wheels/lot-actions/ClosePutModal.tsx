@@ -1,21 +1,23 @@
 import React, { useId, useState } from "react";
 import type { LotVM } from "../types";
 import { useLotActions } from "./useLotActions";
-import type { CloseCoveredCallInput } from "./types";
-import { validateCloseCC } from "./validators";
+import type { ClosePutInput } from "./types";
+import { validateClosePut } from "./validators";
 
-export function CloseCallModal({ lot }: { lot: LotVM }) {
-    const { closeCoveredCall, closeModal } = useLotActions();
+export function ClosePutModal({ lot }: { lot: LotVM }) {
+    const { closeShortPut, closeModal } = useLotActions();
     const dateId = useId();
     const debitId = useId();
     const qtyId = useId();
     const feesId = useId();
     const notesId = useId();
-    const [form, setForm] = useState<{ tradeDate: string; limitDebit?: number; contracts: number; fees?: number; notes?: string }>({ tradeDate: new Date().toISOString().slice(0, 10), contracts: 1 });
+    const [form, setForm] = useState<{ tradeDate: string; limitDebit?: number; contracts: number; fees?: number; notes?: string }>(
+        { tradeDate: new Date().toISOString().slice(0, 10), contracts: 1 }
+    );
     const [error, setError] = useState<string | null>(null);
 
     const submit = async () => {
-        const payload: CloseCoveredCallInput = {
+        const payload: ClosePutInput = {
             lotId: lot.lotNo,
             tradeDate: form.tradeDate,
             limitDebit: form.limitDebit!,
@@ -23,12 +25,12 @@ export function CloseCallModal({ lot }: { lot: LotVM }) {
             fees: form.fees,
             notes: form.notes,
         };
-        if (!validateCloseCC(payload)) {
+        if (!validateClosePut(payload)) {
             setError("Please enter a valid date and debit; quantity must be > 0.");
             return;
         }
         setError(null);
-        await closeCoveredCall(payload).catch((e) => setError(e.message));
+        await closeShortPut(payload).catch((e) => setError(e.message));
     };
 
     return (
@@ -36,7 +38,7 @@ export function CloseCallModal({ lot }: { lot: LotVM }) {
             <div className="absolute inset-0 bg-black/30" onClick={closeModal} />
             <div className="absolute inset-0 flex items-center justify-center p-4">
                 <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-                    <h2 className="text-lg font-semibold text-slate-900">Buy to Close (Short Call)</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">Buy to Close (Short Put)</h2>
                     <p className="mt-1 text-sm text-slate-600">Lot {lot.lotNo} — {lot.ticker}</p>
                     <div className="mt-4 space-y-3">
                         <div>

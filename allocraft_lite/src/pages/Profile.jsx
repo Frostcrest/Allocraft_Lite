@@ -4,7 +4,6 @@ import { getMe, logout } from '@/api/fastapiClient';
 export default function Profile() {
     const [user, setUser] = useState(null);
     const [error, setError] = useState('');
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
     useEffect(() => {
         getMe()

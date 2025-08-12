@@ -4,6 +4,7 @@ import type {
     RollCoveredCallInput,
     CreateLotBuyInput,
     CreateLotShortPutInput,
+    ClosePutInput,
 } from "./types";
 
 export const isPositive = (n?: number) => typeof n === "number" && n > 0;
@@ -15,7 +16,7 @@ export function validateSellCC(p: SellCoveredCallInput) {
     return isPositive(p.strike) && isNonNegative(p.limitPremium) && isFutureOrToday(p.expiry);
 }
 export function validateCloseCC(p: CloseCoveredCallInput) {
-    return isNonNegative(p.limitDebit);
+    return isNonNegative(p.limitDebit) && typeof p.tradeDate === "string" && !!p.tradeDate && (p.contracts ?? 1) > 0;
 }
 export function validateRoll(p: RollCoveredCallInput) {
     return (
@@ -30,4 +31,8 @@ export function validateBuyLot(p: CreateLotBuyInput) {
 }
 export function validateShortPut(p: CreateLotShortPutInput) {
     return isPositive(p.strike) && isNonNegative(p.premium) && isFutureOrToday(p.expiry);
+}
+
+export function validateClosePut(p: ClosePutInput) {
+    return isNonNegative(p.limitDebit) && typeof p.tradeDate === "string" && !!p.tradeDate && (p.contracts ?? 1) > 0;
 }

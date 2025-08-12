@@ -1,5 +1,7 @@
 export type EventType =
     | "SELL_PUT"
+    | "SELL_PUT_CLOSE"
+    | "BUY_PUT_CLOSE"
     | "PUT_ASSIGNMENT"
     | "BUY_SHARES"
     | "SELL_CALL_OPEN"
@@ -19,11 +21,13 @@ export interface LotEvent {
     notes?: string;
 }
 
-export type AcquisitionType = "PUT_ASSIGNMENT" | "OUTRIGHT_PURCHASE";
+export type AcquisitionType = "PUT_ASSIGNMENT" | "OUTRIGHT_PURCHASE" | "CASH_SECURED_PUT";
 
 export type LotStatus =
     | "OPEN_COVERED"
     | "OPEN_UNCOVERED"
+    | "CASH_RESERVED"
+    | "CLOSED_SOLD"
     | "CLOSED_CALLED_AWAY";
 
 export interface Coverage {
@@ -40,6 +44,10 @@ export interface LotVM {
     coverage?: Coverage;
     status: LotStatus;
     events: LotEvent[];
+    // optional metadata used by UI-only flows (e.g., linking close PUT to its open id)
+    meta?: {
+        putOpenEventId?: number;
+    };
 }
 
 export interface CycleVM {

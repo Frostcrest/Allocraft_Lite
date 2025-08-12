@@ -4,6 +4,7 @@ import {
     RollCoveredCallInput,
     CreateLotBuyInput,
     CreateLotShortPutInput,
+    ClosePutInput,
 } from "./types";
 
 export async function sellCoveredCall(lotId: number, p: SellCoveredCallInput) {
@@ -20,4 +21,8 @@ export async function createLotBuy(p: CreateLotBuyInput) {
 }
 export async function createLotShortPut(p: CreateLotShortPutInput) {
     return { ok: true, lotId: Math.floor(Math.random() * 1e6) };
+}
+
+export async function closeShortPut(lotId: number, p: ClosePutInput) {
+    return { ok: true, id: crypto.randomUUID() };
 }

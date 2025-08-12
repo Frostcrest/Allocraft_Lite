@@ -55,7 +55,12 @@ export default function Layout({ children, currentPageName }) {
   // Show loader immediately after login until initial user data loads or a fallback timeout
   useEffect(() => {
     const shouldShow = sessionStorage.getItem('allocraft_post_login_loading') === '1';
-    if (shouldShow) setShowLoader(true);
+    if (shouldShow) {
+      setShowLoader(true);
+      // Fallback: hide after a few seconds even if user fetch fails
+      const t = setTimeout(() => setShowLoader(false), 5000);
+      return () => clearTimeout(t);
+    }
   }, []);
 
   return (
@@ -145,8 +150,7 @@ function UserMenu({ onUserLoaded }) {
     async function load() {
       if (!token) return;
       try {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-        const res = await fetch(`${baseUrl}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const me = await res.json();
           setUsername(me?.username || "");

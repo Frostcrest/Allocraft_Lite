@@ -7,6 +7,7 @@ import { LotActionsProvider, useLotActionsContext } from "./lot-actions/LotActio
 import { ActionButtonsRow } from "./lot-actions/ActionButtonsRow";
 import { CoverLotModal } from "./lot-actions/CoverLotModal";
 import { CloseCallModal } from "./lot-actions/CloseCallModal";
+import { ClosePutModal } from "./lot-actions/ClosePutModal";
 import { RollCallModal } from "./lot-actions/RollCallModal";
 import { NewLotWizard } from "./lot-actions/NewLotWizard";
 
@@ -46,7 +47,8 @@ function PageInner({ initial }: { initial: PageVM }) {
             </div>
 
             {modal?.type === "cover" && modal.lot && <CoverLotModal lot={modal.lot} />}
-            {modal?.type === "close" && modal.lot && <CloseCallModal lot={modal.lot} />}
+            {modal?.type === "closeCall" && modal.lot && <CloseCallModal lot={modal.lot} />}
+            {modal?.type === "closePut" && modal.lot && <ClosePutModal lot={modal.lot} />}
             {modal?.type === "roll" && modal.lot && <RollCallModal lot={modal.lot} />}
             {modal?.type === "new" && <NewLotWizard />}
         </div>
@@ -58,7 +60,7 @@ export default function LotTimelinePage({ vm = SAMPLE_VM }: { vm?: PageVM }) {
     const [model, setModel] = useState<PageVM>(vm);
     const value = useMemo(() => ({ lots: model.lots, setLots: (updater: any) => setModel((prev) => ({ ...prev, lots: typeof updater === 'function' ? updater(prev.lots) : updater })) }), [model]);
     return (
-        <LotActionsProvider {...value}>
+        <LotActionsProvider {...value} cycleId={1} ticker={model.cycle?.title?.split('•')?.[0]?.trim() || 'TICKER'} onEventCreated={() => { }}>
             <PageInner initial={model} />
         </LotActionsProvider>
     );

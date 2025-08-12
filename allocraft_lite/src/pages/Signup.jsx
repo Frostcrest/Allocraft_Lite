@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { fetchFromAPI } from '@/api/fastapiClient';
 import { Link, useNavigate } from 'react-router-dom';
+import { API_BASE } from '@/api/fastapiClient';
 
 export default function Signup() {
     const [username, setUsername] = useState('');
@@ -13,7 +14,7 @@ export default function Signup() {
         e.preventDefault();
         setError('');
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/register`, {
+            const res = await fetch(`${API_BASE}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password }),
@@ -23,7 +24,7 @@ export default function Signup() {
             const form = new URLSearchParams();
             form.append('username', username);
             form.append('password', password);
-            const loginRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/login`, {
+            const loginRes = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: form,

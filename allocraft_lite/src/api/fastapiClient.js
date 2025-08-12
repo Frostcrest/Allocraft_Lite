@@ -14,11 +14,10 @@
 function resolveApiBase() {
     try {
         if (typeof window !== "undefined") {
-            const { protocol, hostname, port } = window.location;
-            const origin = `${protocol}//${hostname}:${port}`;
-            // Force local API when running Vite dev server
-            if (origin === "http://localhost:5173" || origin === "http://127.0.0.1:5173") {
-                return "http://localhost:8000";
+            const { protocol, hostname } = window.location;
+            // If we're on localhost (any port), target the local backend.
+            if (hostname === "localhost" || hostname === "127.0.0.1") {
+                return `${protocol}//localhost:8000`;
             }
         }
     } catch { }

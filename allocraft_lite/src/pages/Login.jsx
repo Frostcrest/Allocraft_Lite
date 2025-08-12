@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fetchFromAPI } from '@/api/fastapiClient';
+import { API_BASE } from '@/api/fastapiClient';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function Login() {
@@ -15,7 +15,7 @@ export default function Login() {
             const form = new URLSearchParams();
             form.append('username', username);
             form.append('password', password);
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/auth/login`, {
+            const res = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: form,

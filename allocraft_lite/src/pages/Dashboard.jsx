@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchJson, wheelApi } from "@/api/fastapiClient";
+import { fetchJson, wheelApi, API_BASE } from "@/api/fastapiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -101,7 +101,7 @@ export default function Dashboard() {
     },
     {
       name: "Wheels",
-      count: (portfolioData?.snapshot?.wheels?.open_cycles ?? portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").length),
+  count: (portfolioData?.snapshot?.wheels?.open_tickers ?? new Set(portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").map((c) => c.ticker)).size),
       icon: RotateCcw,
       gradient: "bg-gradient-to-br from-orange-500 to-orange-600",
       link: createPageUrl("Wheels"),
@@ -185,7 +185,7 @@ export default function Dashboard() {
             value={portfolioData.snapshot?.portfolio?.active_positions ?? (
               portfolioData.stocks.filter((s) => s.status === "Open").length +
               portfolioData.options.filter((o) => o.status === "Open").length +
-              new Set(portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").map((c) => c.id)).size
+              new Set(portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").map((c) => c.ticker)).size
             )}
             icon={PieChart}
             gradient="bg-gradient-to-br from-blue-500 to-blue-600"
@@ -308,13 +308,13 @@ function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState("");
   const [newUser, setNewUser] = useState({ username: "", email: "", password: "" });
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  const base = API_BASE;
 
   async function load() {
     setError("");
     try {
       const token = sessionStorage.getItem("allocraft_token");
-      const res = await fetch(`${API_BASE}/users/`, {
+      const res = await fetch(`${base}/users/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(await res.text());
@@ -338,7 +338,7 @@ function AdminUsers() {
       is_active: u.is_active,
       ...(u._password ? { password: u._password } : {}),
     };
-    const res = await fetch(`${API_BASE}/users/${u.id}`, {
+    const res = await fetch(`${base}/users/${u.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -370,7 +370,7 @@ function AdminUsers() {
           <button className="px-3 py-1 bg-slate-900 text-white rounded" onClick={async () => {
             try {
               const token = sessionStorage.getItem("allocraft_token");
-              const res = await fetch(`${API_BASE}/users/`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(newUser) });
+              const res = await fetch(`${base}/users/`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(newUser) });
               if (!res.ok) throw new Error(await res.text());
               setNewUser({ username: "", email: "", password: "" });
               load();
@@ -401,7 +401,7 @@ function AdminUsers() {
         <button className="px-3 py-1 bg-slate-900 text-white rounded" onClick={async () => {
           try {
             const token = sessionStorage.getItem("allocraft_token");
-            const res = await fetch(`${API_BASE}/users/`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(newUser) });
+            const res = await fetch(`${base}/users/`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(newUser) });
             if (!res.ok) throw new Error(await res.text());
             setNewUser({ username: "", email: "", password: "" });
             load();
