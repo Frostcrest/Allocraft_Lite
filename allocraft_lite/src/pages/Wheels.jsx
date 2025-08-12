@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, RotateCcw } from "lucide-react";
+import { Plus, Edit, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { wheelApi } from "@/api/fastapiClient";
@@ -42,6 +42,9 @@ export default function Wheels() {
   const [events, setEvents] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [lots, setLots] = useState([]);
+  // Sorting for sidebar tickers
+  const [sortBy, setSortBy] = useState('alphabetical'); // 'alphabetical' | 'started' | 'pl' | 'collateral'
+  const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
   // Extra stats to show on the cycle selector cards
   // { [cycleId]: { collateral_reserved: number|null, unrealized_pl: number|null } }
   const [tickerSideStats, setTickerSideStats] = useState({}); // { [ticker]: { collateral_reserved, pl } }
@@ -65,8 +68,9 @@ export default function Wheels() {
         const data = await wheelApi.listCycles();
         setCycles(data);
         if (data.length) {
-          const firstTicker = data[0]?.ticker || null;
-          setSelectedTicker(firstTicker);
+          // Default selection to the first ticker alphabetically to match default sort
+          const tickers = Array.from(new Set(data.map(c => c.ticker))).sort((a, b) => a.localeCompare(b));
+          setSelectedTicker(tickers[0] || null);
         }
       } catch (e) {
         console.error(e);
@@ -435,7 +439,33 @@ export default function Wheels() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="space-y-2">
-              {Array.from(new Set(cycles.map(c => c.ticker))).map((tkr) => {
+              {/* Sorting controls */}
+              <div className="flex items-center justify-between gap-2 pb-1">
+                <label className="text-xs text-slate-600">Sort</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="input h-8 text-xs"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="alphabetical">Alphabetical</option>
+                    <option value="started">Date Started</option>
+                    <option value="pl">P/L</option>
+                    <option value="collateral">Collateral</option>
+                  </select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                    className="h-8 text-xs"
+                    title={`Sort ${sortDir === 'asc' ? 'ascending' : 'descending'}`}
+                  >
+                    {sortDir === 'asc' ? 'Asc' : 'Desc'}
+                  </Button>
+                </div>
+              </div>
+              {getSortedTickers(cycles, tickerSideStats, sortBy, sortDir).map((tkr) => {
                 const group = cycles.filter(c => c.ticker === tkr);
                 const started = group.map(c => c.started_at).filter(Boolean).sort()[0] || '—';
                 const selected = selectedTicker === tkr;
@@ -1071,4 +1101,51 @@ function sumNullable(a, b) {
   const aNum = a == null ? 0 : Number(a) || 0;
   const bNum = b == null ? 0 : Number(b) || 0;
   return aNum + bNum;
+}
+
+// ---- sorting helpers for sidebar tickers ----
+function getSortedTickers(cycles, tickerSideStats, sortBy, sortDir) {
+  const tickers = Array.from(new Set((cycles || []).map((c) => c.ticker)));
+  const dir = sortDir === 'desc' ? -1 : 1;
+  const earliestStarted = (ticker) => {
+    const dates = (cycles || []).filter((c) => c.ticker === ticker).map((c) => c.started_at).filter(Boolean);
+    if (dates.length === 0) return Number.POSITIVE_INFINITY; // push unknown to end for asc
+    const ts = dates.map((d) => safeDateMs(d)).filter((n) => Number.isFinite(n));
+    if (ts.length === 0) return Number.POSITIVE_INFINITY;
+    return Math.min(...ts);
+  };
+  const safeNum = (v, forDir) => {
+    if (v == null || Number.isNaN(Number(v))) return forDir === 'desc' ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
+    return Number(v);
+  };
+  tickers.sort((a, b) => {
+    switch (sortBy) {
+      case 'started': {
+        const av = earliestStarted(a);
+        const bv = earliestStarted(b);
+        return dir * (av - bv);
+      }
+      case 'pl': {
+        const av = safeNum(tickerSideStats?.[a]?.pl, sortDir);
+        const bv = safeNum(tickerSideStats?.[b]?.pl, sortDir);
+        return dir * (av - bv);
+      }
+      case 'collateral': {
+        const av = safeNum(tickerSideStats?.[a]?.collateral_reserved, sortDir);
+        const bv = safeNum(tickerSideStats?.[b]?.collateral_reserved, sortDir);
+        return dir * (av - bv);
+      }
+      case 'alphabetical':
+      default:
+        return dir * String(a).localeCompare(String(b));
+    }
+  });
+  return tickers;
+}
+
+function safeDateMs(s) {
+  if (!s) return Number.NaN;
+  // s expected ISO yyyy-mm-dd
+  const ms = Date.parse(s);
+  return Number.isNaN(ms) ? Number.NaN : ms;
 }
