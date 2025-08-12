@@ -21,20 +21,20 @@ export default function Dashboard() {
   const [portfolioData, setPortfolioData] = useState({
     stocks: [],
     options: [],
-  wheels: [],
+    wheels: [],
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  async function loadDashboardData() {
+    async function loadDashboardData() {
       try {
-    const [stocks, options, cycles, snapshot] = await Promise.all([
+        const [stocks, options, cycles, snapshot] = await Promise.all([
           fetchJson("/stocks/?refresh_prices=true"),
           fetchJson("/options/?refresh_prices=true"),
           wheelApi.listCycles(),
           fetchJson("/dashboard/snapshot"),
         ]);
-    setPortfolioData({ stocks, options, wheels: cycles, snapshot });
+        setPortfolioData({ stocks, options, wheels: cycles, snapshot });
         setLoading(false);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
@@ -185,7 +185,7 @@ export default function Dashboard() {
             value={portfolioData.snapshot?.portfolio?.active_positions ?? (
               portfolioData.stocks.filter((s) => s.status === "Open").length +
               portfolioData.options.filter((o) => o.status === "Open").length +
-              new Set(portfolioData.wheels.filter((c)=> (c.status || "Open") === "Open").map((c)=>c.id)).size
+              new Set(portfolioData.wheels.filter((c) => (c.status || "Open") === "Open").map((c) => c.id)).size
             )}
             icon={PieChart}
             gradient="bg-gradient-to-br from-blue-500 to-blue-600"
@@ -236,10 +236,10 @@ export default function Dashboard() {
                         </span>
                       </p>
                     )}
-          {wheelsCollateral && (
+                    {wheelsCollateral && (
                       <p className="text-xs text-slate-400 mt-2">
                         Total Collateral:{" "}
-            <span className="font-medium">{formatCurrency(portfolioData?.snapshot?.wheels?.total_collateral || 0)}</span>
+                        <span className="font-medium">{formatCurrency(portfolioData?.snapshot?.wheels?.total_collateral || 0)}</span>
                       </p>
                     )}
                   </CardContent>

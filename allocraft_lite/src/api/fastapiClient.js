@@ -69,18 +69,18 @@ export async function fetchJson(path, options = {}) {
     let bodyText = null;
     if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-            try { sessionStorage.removeItem("allocraft_token"); } catch {}
+            try { sessionStorage.removeItem("allocraft_token"); } catch { }
             // Redirect to login for auth errors
             if (typeof window !== 'undefined') {
                 window.location.href = '/login';
             }
         }
-        try { bodyText = await res.text(); } catch {}
+        try { bodyText = await res.text(); } catch { }
         let message = bodyText || `Request failed with ${res.status}`;
         try {
             const maybeJson = JSON.parse(bodyText);
             message = maybeJson.detail || maybeJson.error || message;
-        } catch {}
+        } catch { }
         throw new Error(message);
     }
     const ct = res.headers.get('content-type') || '';
@@ -143,54 +143,54 @@ export async function getMe() {
  */
 export const wheelApi = {
     async listCycles() {
-    return fetchJson('/wheels/wheel-cycles');
+        return fetchJson('/wheels/wheel-cycles');
     },
     async createCycle(data) {
-    return fetchJson('/wheels/wheel-cycles', { method: 'POST', body: JSON.stringify(data) });
+        return fetchJson('/wheels/wheel-cycles', { method: 'POST', body: JSON.stringify(data) });
     },
     async updateCycle(id, data) {
-    return fetchJson(`/wheels/wheel-cycles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+        return fetchJson(`/wheels/wheel-cycles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
     },
     async deleteCycle(id) {
-    return fetchJson(`/wheels/wheel-cycles/${id}`, { method: 'DELETE' });
+        return fetchJson(`/wheels/wheel-cycles/${id}`, { method: 'DELETE' });
     },
     async listEvents(cycleId) {
-    const url = cycleId ? `/wheels/wheel-events?cycle_id=${cycleId}` : '/wheels/wheel-events';
-    return fetchJson(url);
+        const url = cycleId ? `/wheels/wheel-events?cycle_id=${cycleId}` : '/wheels/wheel-events';
+        return fetchJson(url);
     },
     async createEvent(data) {
-    return fetchJson('/wheels/wheel-events', { method: 'POST', body: JSON.stringify(data) });
+        return fetchJson('/wheels/wheel-events', { method: 'POST', body: JSON.stringify(data) });
     },
     async updateEvent(id, data) {
-    return fetchJson(`/wheels/wheel-events/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+        return fetchJson(`/wheels/wheel-events/${id}`, { method: 'PUT', body: JSON.stringify(data) });
     },
     async deleteEvent(id) {
-    return fetchJson(`/wheels/wheel-events/${id}`, { method: 'DELETE' });
+        return fetchJson(`/wheels/wheel-events/${id}`, { method: 'DELETE' });
     },
     async metrics(cycleId) {
-    return fetchJson(`/wheels/wheel-metrics/${cycleId}`);
+        return fetchJson(`/wheels/wheel-metrics/${cycleId}`);
     },
     // Lots
     async listLots(cycleId, params = {}) {
         const qs = new URLSearchParams(params).toString();
-    return fetchJson(`/wheels/cycles/${cycleId}/lots${qs ? `?${qs}` : ''}`);
+        return fetchJson(`/wheels/cycles/${cycleId}/lots${qs ? `?${qs}` : ''}`);
     },
     async getLot(lotId) {
-    return fetchJson(`/wheels/lots/${lotId}`);
+        return fetchJson(`/wheels/lots/${lotId}`);
     },
     async lotMetrics(lotId) {
-    return fetchJson(`/wheels/lots/${lotId}/metrics`);
+        return fetchJson(`/wheels/lots/${lotId}/metrics`);
     },
     async getLotLinks(lotId) {
-    return fetchJson(`/wheels/lots/${lotId}/links`);
+        return fetchJson(`/wheels/lots/${lotId}/links`);
     },
     async rebuildLots(cycleId) {
-    return fetchJson(`/wheels/lots/rebuild?cycle_id=${cycleId}`, { method: 'POST' });
+        return fetchJson(`/wheels/lots/rebuild?cycle_id=${cycleId}`, { method: 'POST' });
     },
     async bindCall(lotId, optionEventId) {
-    return fetchJson(`/wheels/lots/${lotId}/bind-call`, { method: 'POST', body: JSON.stringify({ option_event_id: optionEventId }) });
+        return fetchJson(`/wheels/lots/${lotId}/bind-call`, { method: 'POST', body: JSON.stringify({ option_event_id: optionEventId }) });
     },
     async unbindCall(lotId) {
-    return fetchJson(`/wheels/lots/${lotId}/unbind-call`, { method: 'POST' });
+        return fetchJson(`/wheels/lots/${lotId}/unbind-call`, { method: 'POST' });
     }
 };
