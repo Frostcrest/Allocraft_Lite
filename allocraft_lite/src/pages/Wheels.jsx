@@ -320,7 +320,7 @@ export default function Wheels() {
     try {
       const targetCycleId = getPreferredCycleId(selectedTicker);
       if (!targetCycleId) throw new Error('No cycle available for this ticker. Create one first.');
-      const payload = { ...eventForm, cycle_id: targetCycleId };
+  const payload = sanitizeEventPayload(eventForm, targetCycleId);
       if (editingEvent) {
         await wheelApi.updateEvent(editingEvent.id, payload);
       } else {
@@ -1099,6 +1099,46 @@ function sumNullable(a, b) {
   const aNum = a == null ? 0 : Number(a) || 0;
   const bNum = b == null ? 0 : Number(b) || 0;
   return aNum + bNum;
+}
+
+// Normalize event form into backend payload types and required fields
+function sanitizeEventPayload(form, cycleId) {
+  const toNum = (v) => (v === '' || v == null ? null : Number(v));
+  const clean = {
+    cycle_id: cycleId,
+    event_type: form.event_type,
+    trade_date: form.trade_date && String(form.trade_date).trim() !== '' ? form.trade_date : null,
+    quantity_shares: toNum(form.quantity_shares),
+    contracts: form.contracts === '' || form.contracts == null ? null : parseInt(form.contracts, 10),
+    price: toNum(form.price),
+    strike: toNum(form.strike),
+    premium: toNum(form.premium),
+    fees: toNum(form.fees),
+    link_event_id: form.link_event_id === '' || form.link_event_id == null ? null : parseInt(form.link_event_id, 10),
+    notes: form.notes && String(form.notes).trim() !== '' ? form.notes : null,
+  };
+  // Ensure required fields for certain event types
+  if (clean.event_type === 'CALLED_AWAY') {
+    // Called away implies 100 shares called per 1 contract unless user specified
+    if (clean.quantity_shares == null || Number.isNaN(clean.quantity_shares)) {
+      const ctr = clean.contracts != null ? clean.contracts : 1;
+      clean.quantity_shares = 100 * ctr;
+    }
+    // Prefer strike if price not set
+    if (clean.price == null && clean.strike != null) {
+      clean.price = clean.strike;
+    }
+  }
+  if (clean.event_type === 'ASSIGNMENT') {
+    if (clean.quantity_shares == null || Number.isNaN(clean.quantity_shares)) {
+      const ctr = clean.contracts != null ? clean.contracts : 1;
+      clean.quantity_shares = 100 * ctr;
+    }
+    if (clean.price == null && clean.strike != null) {
+      clean.price = clean.strike;
+    }
+  }
+  return clean;
 }
 
 // ---- sorting helpers for sidebar tickers ----

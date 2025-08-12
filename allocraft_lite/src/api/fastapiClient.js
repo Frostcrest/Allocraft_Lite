@@ -78,7 +78,12 @@ export async function fetchJson(path, options = {}) {
         let message = bodyText || `Request failed with ${res.status}`;
         try {
             const maybeJson = JSON.parse(bodyText);
-            message = maybeJson.detail || maybeJson.error || message;
+            if (Array.isArray(maybeJson.detail)) {
+                // FastAPI validation errors
+                message = maybeJson.detail.map((d) => `${d.loc?.join('.')}: ${d.msg}`).join('\n');
+            } else {
+                message = maybeJson.detail || maybeJson.error || message;
+            }
         } catch { }
         throw new Error(message);
     }
