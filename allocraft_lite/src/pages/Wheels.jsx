@@ -497,6 +497,14 @@ export default function Wheels() {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-base">
                           <div><div className="text-slate-500">Shares Owned</div><div className="font-semibold">{metrics.shares_owned}</div></div>
                           <div><div className="text-slate-500">Avg Cost Basis</div><div className="font-semibold">{formatCurrency(metrics.average_cost_basis)}</div></div>
+                          <div>
+                            <div className="text-slate-500">Adjusted Cost Basis</div>
+                            <div className="font-semibold">
+                              {metrics.shares_owned > 0
+                                ? formatCurrency(metrics.average_cost_basis - (Number(metrics.net_options_cashflow || 0) / Number(metrics.shares_owned || 1)))
+                                : '—'}
+                            </div>
+                          </div>
                           <div><div className="text-slate-500">Cost Remaining</div><div className="font-semibold">{formatCurrency(metrics.total_cost_remaining)}</div></div>
                           <div><div className="text-slate-500">Net Options Cashflow</div><div className="font-semibold">{formatCurrency(metrics.net_options_cashflow)}</div></div>
                           <div><div className="text-slate-500">Realized Stock P/L</div><div className="font-semibold">{formatCurrency(metrics.realized_stock_pl)}</div></div>
@@ -645,7 +653,7 @@ export default function Wheels() {
                                 {events.map((e) => (
                                   <tr key={e.id} className="border-t">
                                     <td className="py-2 pr-4">{e.trade_date || '—'}</td>
-                                    <td className="py-2 pr-4">{e.event_type}</td>
+                                    <td className="py-2 pr-4">{displayEventType(e.event_type)}</td>
                                     <td className="py-2 pr-4">{e.quantity_shares ?? ''}</td>
                                     <td className="py-2 pr-4">{e.contracts ?? ''}</td>
                                     <td className="py-2 pr-4">{e.price != null && e.price !== '' ? formatCurrency(Number(e.price)) : ''}</td>
@@ -1017,7 +1025,7 @@ function mapEventLabel(type) {
     case 'PUT_ASSIGNMENT': return 'PUT Assigned';
     case 'BUY_SHARES': return 'Bought Shares';
     case 'SELL_CALL_OPEN': return 'Sold CALL';
-    case 'SELL_CALL_CLOSE': return 'Closed CALL';
+    case 'SELL_CALL_CLOSE': return 'Buy to Close Call';
     case 'CALL_ASSIGNMENT': return 'CALL Assigned';
     case 'FEE': return 'Fee';
     default: return type;
@@ -1099,6 +1107,13 @@ function sumNullable(a, b) {
   const aNum = a == null ? 0 : Number(a) || 0;
   const bNum = b == null ? 0 : Number(b) || 0;
   return aNum + bNum;
+}
+
+// UI label for event_type in Events table
+function displayEventType(et) {
+  if (et === 'SELL_CALL_CLOSE') return 'BUY_CALL_CLOSE';
+  if (et === 'SELL_PUT_CLOSE') return 'BUY_PUT_CLOSE';
+  return et;
 }
 
 // Normalize event form into backend payload types and required fields
