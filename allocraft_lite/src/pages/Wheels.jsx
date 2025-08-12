@@ -143,7 +143,7 @@ export default function Wheels() {
               const links = await wheelApi.getLotLinks(l.id);
               const evts = links?.events || [];
               const callOpen = evts.find((e) => e.event_type === 'SELL_CALL_OPEN');
-              const callClose = evts.find((e) => e.event_type === 'SELL_CALL_CLOSE' || e.event_type === 'CALL_ASSIGNED');
+              const callClose = evts.find((e) => e.event_type === 'SELL_CALL_CLOSE' || e.event_type === 'CALLED_AWAY' || e.event_type === 'CALL_ASSIGNED');
               const putOpen = evts.find((e) => e.event_type === 'SELL_PUT_OPEN');
               let coverage = null;
               if (callOpen) {
@@ -325,6 +325,11 @@ export default function Wheels() {
         await wheelApi.updateEvent(editingEvent.id, payload);
       } else {
         await wheelApi.createEvent(payload);
+      }
+      // For events that impact lot composition or status, rebuild lots for this cycle
+      const impactTypes = new Set(['ASSIGNMENT', 'BUY_SHARES', 'SELL_CALL_OPEN', 'SELL_CALL_CLOSE', 'CALLED_AWAY']);
+      if (impactTypes.has(payload.event_type)) {
+        try { await wheelApi.rebuildLots(targetCycleId); } catch { /* best effort */ }
       }
       // Refresh for ticker
       const ids = getCycleIdsForTicker(selectedTicker);
@@ -1011,6 +1016,7 @@ function mapEventForTimeline(e) {
 function mapEventType(t) {
   if (t === 'SELL_PUT_OPEN' || t === 'SELL_PUT_CLOSE' || t === 'BUY_PUT_CLOSE') return 'SELL_PUT';
   if (t === 'PUT_ASSIGNED' || t === 'PUT_ASSIGNMENT') return 'PUT_ASSIGNMENT';
+  if (t === 'CALLED_AWAY') return 'CALLED_AWAY';
   if (t === 'CALL_ASSIGNED' || t === 'CALL_ASSIGNMENT') return 'CALL_ASSIGNMENT';
   if (t === 'BUY_SHARES') return 'BUY_SHARES';
   if (t === 'SELL_CALL_OPEN') return 'SELL_CALL_OPEN';
@@ -1026,6 +1032,7 @@ function mapEventLabel(type) {
     case 'BUY_SHARES': return 'Bought Shares';
     case 'SELL_CALL_OPEN': return 'Sold CALL';
     case 'SELL_CALL_CLOSE': return 'Buy to Close Call';
+  case 'CALLED_AWAY': return 'Called Away';
     case 'CALL_ASSIGNMENT': return 'CALL Assigned';
     case 'FEE': return 'Fee';
     default: return type;
