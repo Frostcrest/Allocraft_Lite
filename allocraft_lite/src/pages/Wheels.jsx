@@ -189,12 +189,9 @@ export default function Wheels() {
         setUiLots(showClosed ? base : base.filter((l) => !(l.status || '').startsWith('CLOSED')));
         return;
       }
-      const openPuts = (events || []).filter((e) => e.event_type === 'SELL_PUT_OPEN');
-      const closedIds = new Set(
-        (events || [])
-          .filter((e) => (e.event_type === 'SELL_PUT_CLOSE' || e.event_type === 'BUY_PUT_CLOSE') && e.link_event_id)
-          .map((e) => e.link_event_id)
-      );
+  const openPuts = (events || []).filter((e) => e.event_type === 'SELL_PUT_OPEN');
+  // Determine which open SELL_PUT_OPEN ids are considered closed (linked or heuristically matched)
+  const closedIds = findClosedPutOpenEventIds(events || []);
       const syntheticOpen = openPuts
         .filter((op) => !closedIds.has(op.id))
         .map((op) => ({
@@ -1036,8 +1033,8 @@ function computeCollateralReserved(events) {
       openById.set(e.id, { strike: Number(e.strike), contracts: Number(e.contracts) });
     }
   }
-  // If a SELL_PUT_CLOSE links to an open, treat as closed
-  const closedLinks = new Set(events.filter((e) => (e.event_type === 'SELL_PUT_CLOSE' || e.event_type === 'BUY_PUT_CLOSE') && e.link_event_id).map((e) => e.link_event_id));
+  // Determine closed open events using links and heuristic matching
+  const closedLinks = findClosedPutOpenEventIds(events);
   let total = 0;
   for (const [id, v] of openById) {
     if (!closedLinks.has(id)) {
@@ -1148,4 +1145,39 @@ function safeDateMs(s) {
   // s expected ISO yyyy-mm-dd
   const ms = Date.parse(s);
   return Number.isNaN(ms) ? Number.NaN : ms;
+}
+
+// Heuristic to pair BUY_PUT_CLOSE without link to an earlier unmatched SELL_PUT_OPEN.
+// Returns Set of SELL_PUT_OPEN ids that are considered closed.
+function findClosedPutOpenEventIds(events) {
+  const all = Array.isArray(events) ? events : [];
+  const open = all.filter((e) => e.event_type === 'SELL_PUT_OPEN');
+  const closes = all.filter((e) => e.event_type === 'SELL_PUT_CLOSE' || e.event_type === 'BUY_PUT_CLOSE');
+  const openSorted = [...open].sort((a, b) => (safeDateMs(a.trade_date) - safeDateMs(b.trade_date)) || (a.id - b.id));
+  const matched = new Set(closes.filter((c) => c.link_event_id).map((c) => c.link_event_id));
+  const openUsed = new Set(matched);
+  // Pre-index opens by date for quick lookup
+  for (const c of closes.filter((c) => !c.link_event_id).sort((a, b) => (safeDateMs(a.trade_date) - safeDateMs(b.trade_date)) || (a.id - b.id))) {
+    // Find the latest open before or on close date that isn't matched yet
+    const cMs = safeDateMs(c.trade_date);
+    let candidate = null;
+    for (let i = openSorted.length - 1; i >= 0; i--) {
+      const o = openSorted[i];
+      if (openUsed.has(o.id)) continue;
+      const oMs = safeDateMs(o.trade_date);
+      if (!Number.isNaN(cMs) && !Number.isNaN(oMs) && oMs <= cMs) {
+        candidate = o;
+        break;
+      }
+    }
+    // Fallback: if dates are missing, just take the earliest unmatched open
+    if (!candidate) {
+      candidate = openSorted.find((o) => !openUsed.has(o.id)) || null;
+    }
+    if (candidate) {
+      openUsed.add(candidate.id);
+      matched.add(candidate.id);
+    }
+  }
+  return matched;
 }
