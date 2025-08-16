@@ -50,6 +50,8 @@ export default function Wheels() {
   const [tickerSideStats, setTickerSideStats] = useState({}); // { [ticker]: { collateral_reserved, pl } }
   const [coverageMap, setCoverageMap] = useState({}); // lotId -> { strike, premium, status }
   const [lotEventsMap, setLotEventsMap] = useState({}); // lotId -> LotEvent[] mapped for timeline
+  // Shares remaining per real lot (computed from linked events). Synthetic CSP lots always 0 shares.
+  const [lotSharesMap, setLotSharesMap] = useState({}); // lotId -> number
   const [uiLots, setUiLots] = useState([]); // includes synthetic CSP lots
   const [actionLots, setActionLots] = useState([]); // LotVMs for actions mock
   const [viewMode, setViewMode] = useState("lots"); // 'lots' | 'events'
@@ -133,12 +135,13 @@ export default function Wheels() {
     if (!lots || lots.length === 0) {
       setCoverageMap({});
       setLotEventsMap({});
+      setLotSharesMap({});
       return;
     }
     (async () => {
       try {
         const pairs = await Promise.all(
-          lots.slice(0, 20).map(async (l) => {
+          lots.map(async (l) => {
             try {
               const links = await wheelApi.getLotLinks(l.id);
               const evts = links?.events || [];
@@ -159,22 +162,62 @@ export default function Wheels() {
                   status: 'OPEN',
                 };
               }
+              // compute shares remaining for this lot from linked events
+              let shares = 0;
+              for (const e of evts) {
+                const qty = Number(e.quantity_shares || 0);
+                const ctr = Number(e.contracts || 0);
+                switch (e.event_type) {
+                  case 'BUY_SHARES':
+                    shares += qty || 0;
+                    break;
+                  case 'ASSIGNMENT':
+                  case 'PUT_ASSIGNMENT':
+                    shares += qty || (ctr ? 100 * ctr : 0);
+                    break;
+                  case 'SELL_SHARES':
+                    shares -= qty || 0;
+                    break;
+                  case 'CALLED_AWAY':
+                  case 'CALL_ASSIGNED':
+                    shares -= qty || (ctr ? 100 * ctr : 0);
+                    break;
+                  default:
+                    break;
+                }
+              }
+              // Fallbacks if links don't include all share-modifying events
+              if (!Number.isFinite(shares)) shares = 0;
+              if (shares === 0) {
+                // If lot is closed, keep 0. If it's an active stock lot with no linked share events, assume 100.
+                const closed = (l.status || '').startsWith('CLOSED');
+                const isStockLot = l.acquisition_method !== 'CASH_SECURED_PUT' && l.status !== 'CASH_RESERVED';
+                if (!closed && isStockLot) shares = 100;
+              }
               // map events for timeline UI
               const eventsVM = evts.map((e) => mapEventForTimeline(e));
-              return [l.id, { coverage, eventsVM }];
+              return [l.id, { coverage, eventsVM, shares }];
             } catch {
-              return [l.id, { coverage: null, eventsVM: [] }];
+              // Fallback shares guess based on lot status
+              let shares = 0;
+              const closed = (l.status || '').startsWith('CLOSED');
+              const isStockLot = l.acquisition_method !== 'CASH_SECURED_PUT' && l.status !== 'CASH_RESERVED';
+              if (!closed && isStockLot) shares = 100;
+              return [l.id, { coverage: null, eventsVM: [], shares }];
             }
           })
         );
         const cov = {};
         const emap = {};
+        const smap = {};
         for (const [id, v] of pairs) {
           cov[id] = v.coverage;
           emap[id] = v.eventsVM;
+          smap[id] = v.shares;
         }
         setCoverageMap(cov);
         setLotEventsMap(emap);
+        setLotSharesMap(smap);
       } catch (e) {
         console.error(e);
       }
@@ -247,13 +290,23 @@ export default function Wheels() {
       } else {
         tl = lotEventsMap[l.id] || [];
       }
+      const sharesRemain = l._synthetic ? 0 : (lotSharesMap[l.id] ?? 100);
+      // Map coverage and hide it if closed
+      const mappedCov = mapCoverage(covSrc);
+      const displayCoverage = mappedCov && mappedCov.status === 'CLOSED' ? undefined : mappedCov;
+      // Derive display status: if backend says covered but no active coverage or shares suggest not covered, flip to uncovered
+      let displayStatus = mapStatus(l.status);
+      if (displayStatus === 'OPEN_COVERED' && (!displayCoverage || displayCoverage.status === 'CLOSED')) {
+        displayStatus = sharesRemain >= 100 ? 'OPEN_UNCOVERED' : 'OPEN_UNCOVERED';
+      }
       return {
         lotNo: idx + 1,
         ticker,
         acquisition: mapAcquisition(l, covSrc),
         costBasis: l.cost_basis_effective != null ? formatCurrency(l.cost_basis_effective) : '—',
-        coverage: mapCoverage(covSrc),
-        status: mapStatus(l.status),
+        coverage: displayCoverage,
+        status: displayStatus,
+        shares: sharesRemain,
         events: tl,
         meta: l._synthetic ? { putOpenEventId: l._sourceEventId } : undefined,
       };
@@ -874,7 +927,7 @@ function StatusChip({ status }) {
   );
 }
 
-function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, timeline = [], onClick }) {
+function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, shares, timeline = [], onClick }) {
   const [open, setOpen] = useState(false);
   const id = `lot-${lotNo}-timeline`;
   const actions = useLotActions();
@@ -917,6 +970,9 @@ function LotCard({ lotNo, ticker, acquisition, costBasis, coverage, status, time
           <div className="text-sm text-slate-600">Cash Collateral Reserved: <span className="font-medium text-slate-900">{acquisition.collateral || '—'}</span></div>
         ) : (
           <div className="text-sm text-slate-600">Cost Basis: <span className="font-medium text-slate-900">{costBasis}</span></div>
+        )}
+        {acquisition.type !== 'CASH_SECURED_PUT' && (
+          <div className="text-sm text-slate-600">Shares: <span className="font-medium text-slate-900">{Number.isFinite(shares) ? `${shares} sh` : '—'}</span></div>
         )}
         {status === 'CLOSED_SOLD' || status === 'CLOSED_CALLED_AWAY' ? (
           <div className="text-sm text-slate-700"><span className="font-medium">Outcome:</span> {acquisition.outcome || 'Closed'}</div>
