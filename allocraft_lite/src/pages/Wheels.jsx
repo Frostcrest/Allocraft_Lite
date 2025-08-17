@@ -373,7 +373,7 @@ export default function Wheels() {
     try {
       const targetCycleId = getPreferredCycleId(selectedTicker);
       if (!targetCycleId) throw new Error('No cycle available for this ticker. Create one first.');
-  const payload = sanitizeEventPayload(eventForm, targetCycleId);
+      const payload = sanitizeEventPayload(eventForm, targetCycleId);
       if (editingEvent) {
         await wheelApi.updateEvent(editingEvent.id, payload);
       } else {
@@ -1088,7 +1088,7 @@ function mapEventLabel(type) {
     case 'BUY_SHARES': return 'Bought Shares';
     case 'SELL_CALL_OPEN': return 'Sold CALL';
     case 'SELL_CALL_CLOSE': return 'Buy to Close Call';
-  case 'CALLED_AWAY': return 'Called Away';
+    case 'CALLED_AWAY': return 'Called Away';
     case 'CALL_ASSIGNMENT': return 'CALL Assigned';
     case 'FEE': return 'Fee';
     default: return type;
