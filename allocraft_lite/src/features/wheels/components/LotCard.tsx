@@ -6,8 +6,19 @@ function StatusChip({ status }: { status: LotVM["status"] }) {
     const map = {
         OPEN_COVERED: { cls: "border-emerald-300 bg-emerald-50 text-emerald-700", label: "Covered" },
         OPEN_UNCOVERED: { cls: "border-amber-300 bg-amber-50 text-amber-700", label: "Uncovered" },
+        CASH_RESERVED: { cls: "border-blue-300 bg-blue-50 text-blue-700", label: "Cash Reserved" },
+        CLOSED_SOLD: { cls: "border-green-300 bg-green-50 text-green-700", label: "Sold" },
         CLOSED_CALLED_AWAY: { cls: "border-slate-300 bg-slate-100 text-slate-700", label: "Called Away" },
     }[status];
+    
+    if (!map) {
+        return (
+            <span className="inline-flex items-center rounded-xl border border-gray-300 bg-gray-50 text-gray-700 px-2.5 py-1 text-xs font-medium">
+                {status}
+            </span>
+        );
+    }
+    
     return (
         <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${map.cls}`}>
             {map.label}

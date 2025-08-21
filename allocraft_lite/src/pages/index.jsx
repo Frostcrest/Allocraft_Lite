@@ -2,7 +2,7 @@ import Layout from "./Layout.jsx";
 
 import Dashboard from "./Dashboard";
 
-import Stocks from "./Stocks";
+import Stocks from "./Stocks.tsx";
 
 import Options from "./Options";
 
@@ -10,6 +10,7 @@ import Wheels from "./Wheels";
 import WheelsLotsMock from "./WheelsLotsMock.jsx";
 import LotTimelinePage from "@/features/wheels/LotTimelinePage";
 import Profile from "./Profile";
+import SchwabCallback from "./SchwabCallback";
 
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import Login from "../pages/Login.jsx";
@@ -61,6 +62,8 @@ function PagesContent() {
         <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            {/* Schwab OAuth callback route */}
+            <Route path="/auth/callback" element={<SchwabCallback />} />
             {/* Public mock route for easy design preview */}
             <Route path="/WheelsLotsMock" element={<WheelsLotsMock />} />
             <Route path="/LotTimelineMock" element={<LotTimelinePage />} />

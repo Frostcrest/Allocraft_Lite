@@ -10,7 +10,7 @@ import type {
 } from "./types";
 import {
     sellCoveredCall as apiSellCC,
-    closeCoveredCall as apiCloseCC,
+    // closeCoveredCall as apiCloseCC, // Currently unused
     rollCoveredCall as apiRollCC,
     createLotBuy as apiCreateBuy,
     createLotShortPut as apiCreateShortPut,
@@ -38,7 +38,7 @@ interface LotActionsContextValue {
 
 const LotActionsContext = createContext<LotActionsContextValue | undefined>(undefined);
 
-export function LotActionsProvider({ children, lots, setLots, cycleId, ticker, onEventCreated }:
+export function LotActionsProvider({ children, lots, setLots, cycleId, ticker: _ticker, onEventCreated }:
     {
         children: React.ReactNode; lots: LotVM[]; setLots: (lots: LotVM[]) => void | ((updater: (prev: LotVM[]) => LotVM[]) => void);
         cycleId: number; ticker?: string; onEventCreated?: (e: any) => void;

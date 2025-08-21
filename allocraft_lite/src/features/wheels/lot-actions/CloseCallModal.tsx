@@ -1,4 +1,4 @@
-import React, { useId, useState } from "react";
+import { useId, useState } from "react";
 import type { LotVM } from "../types";
 import { useLotActions } from "./useLotActions";
 import type { CloseCoveredCallInput } from "./types";

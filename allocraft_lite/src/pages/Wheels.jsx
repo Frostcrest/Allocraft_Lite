@@ -4,7 +4,9 @@ import { Plus, Edit, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { wheelApi } from "@/api/fastapiClient";
+import { useWheelCycles, useWheelDataForTicker, useCreateWheelEvent } from "@/api/enhancedClient";
 import { formatCurrency } from "@/lib/utils";
+import { computeLotCoverageAndShares } from "@/utils/lotHelpers";
 import WheelEventForm from "@/components/forms/WheelEventForm";
 import { Timeline as LotTimeline } from "@/features/wheels/components/Timeline";
 import { LotActionsProvider } from "@/features/wheels/lot-actions/LotActionsProvider";
@@ -37,11 +39,31 @@ const initialEvent = {
 };
 
 export default function Wheels() {
-  const [cycles, setCycles] = useState([]);
+  // Use React Query for cycles
+  const { 
+    data: cycles = [], 
+    isLoading: cyclesLoading, 
+    error: cyclesError 
+  } = useWheelCycles();
+  
   const [selectedTicker, setSelectedTicker] = useState(null);
-  const [events, setEvents] = useState([]);
-  const [metrics, setMetrics] = useState(null);
-  const [lots, setLots] = useState([]);
+  
+  // Use React Query for ticker-specific data
+  const { 
+    data: tickerData, 
+    isLoading: tickerDataLoading, 
+    error: tickerDataError,
+    refetch: refetchTickerData
+  } = useWheelDataForTicker(selectedTicker, {
+    enabled: !!selectedTicker
+  });
+  
+  // Extract data from optimized response
+  const events = tickerData?.events || [];
+  const metrics = tickerData?.metrics;
+  const lots = tickerData?.lots || [];
+  const eventsByLot = tickerData?.events_by_lot || {};
+  
   // Sorting for sidebar tickers
   const [sortBy, setSortBy] = useState('alphabetical'); // 'alphabetical' | 'started' | 'pl' | 'collateral'
   const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
@@ -57,30 +79,22 @@ export default function Wheels() {
   const [viewMode, setViewMode] = useState("lots"); // 'lots' | 'events'
   const [showClosed, setShowClosed] = useState(false);
   const [lotDetails, setLotDetails] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showCycleDialog, setShowCycleDialog] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [cycleForm, setCycleForm] = useState(initialCycle);
   const [eventForm, setEventForm] = useState(initialEvent);
+  
+  // Computed loading state
+  const loading = cyclesLoading || (selectedTicker && tickerDataLoading);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await wheelApi.listCycles();
-        setCycles(data);
-        if (data.length) {
-          // Default selection to the first ticker alphabetically to match default sort
-          const tickers = Array.from(new Set(data.map(c => c.ticker))).sort((a, b) => a.localeCompare(b));
-          setSelectedTicker(tickers[0] || null);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    // Auto-select first ticker when cycles load
+    if (cycles.length > 0 && !selectedTicker) {
+      const tickers = Array.from(new Set(cycles.map(c => c.ticker))).sort((a, b) => a.localeCompare(b));
+      setSelectedTicker(tickers[0] || null);
+    }
+  }, [cycles, selectedTicker]);
 
   // Helper: get all cycle IDs for a ticker
   const getCycleIdsForTicker = (ticker) => (cycles || []).filter((c) => c.ticker === ticker).map((c) => c.id);
@@ -94,43 +108,23 @@ export default function Wheels() {
     return group.reduce((max, c) => (c.id > max ? c.id : max), group[0].id);
   };
 
+  // Update side stats when ticker data changes
   useEffect(() => {
-    if (!selectedTicker) return;
-    const ids = getCycleIdsForTicker(selectedTicker);
-    if (ids.length === 0) {
-      setEvents([]);
-      setMetrics(null);
-      setLots([]);
-      return;
+    if (!selectedTicker || !tickerData) return;
+    
+    try {
+      const col = computeCollateralReserved(events);
+      const overallPL = sumNullable(metrics?.unrealized_pl, metrics?.total_realized_pl);
+      setTickerSideStats((prev) => ({ 
+        ...prev, 
+        [selectedTicker]: { collateral_reserved: col, pl: overallPL } 
+      }));
+    } catch (e) {
+      console.error("Error computing side stats:", e);
     }
-    (async () => {
-      try {
-        // Fetch events and lots for all cycles under this ticker
-        const [allEventsArrays, allLotsArrays, metricsArrays] = await Promise.all([
-          Promise.all(ids.map((id) => wheelApi.listEvents(id))),
-          Promise.all(ids.map((id) => wheelApi.listLots(id))),
-          Promise.all(ids.map((id) => wheelApi.metrics(id).catch(() => null))),
-        ]);
-        const evts = allEventsArrays.flat();
-        const ls = allLotsArrays.flat();
-        // Aggregate metrics across cycles for this ticker
-        const agg = aggregateMetrics(metricsArrays.filter(Boolean));
-        setEvents(evts);
-        setMetrics(agg);
-        setLots(ls);
-        // Update cached side stats for the selected ticker
-        try {
-          const col = computeCollateralReserved(evts);
-          const overallPL = sumNullable(agg?.unrealized_pl, agg?.total_realized_pl);
-          setTickerSideStats((prev) => ({ ...prev, [selectedTicker]: { collateral_reserved: col, pl: overallPL } }));
-        } catch { /* noop */ }
-      } catch (e) {
-        console.error(e);
-      }
-    })();
-  }, [selectedTicker, cycles]);
+  }, [selectedTicker, tickerData, events, metrics]);
 
-  // Enrich coverage info (strike/premium) and collect per-lot events for timeline by looking at linked events
+  // Process lots and events when data changes (simplified since we have events_by_lot)
   useEffect(() => {
     if (!lots || lots.length === 0) {
       setCoverageMap({});
@@ -138,91 +132,29 @@ export default function Wheels() {
       setLotSharesMap({});
       return;
     }
-    (async () => {
-      try {
-        const pairs = await Promise.all(
-          lots.map(async (l) => {
-            try {
-              const links = await wheelApi.getLotLinks(l.id);
-              const evts = links?.events || [];
-              const callOpen = evts.find((e) => e.event_type === 'SELL_CALL_OPEN');
-              const callClose = evts.find((e) => e.event_type === 'SELL_CALL_CLOSE' || e.event_type === 'CALLED_AWAY' || e.event_type === 'CALL_ASSIGNED');
-              const putOpen = evts.find((e) => e.event_type === 'SELL_PUT_OPEN');
-              let coverage = null;
-              if (callOpen) {
-                coverage = {
-                  strike: callOpen.strike ?? null,
-                  premium: callOpen.premium ?? null,
-                  status: callClose ? 'CLOSED' : 'OPEN',
-                };
-              } else if (putOpen && (l.status === 'CASH_RESERVED' || l.acquisition_method === 'CASH_SECURED_PUT')) {
-                coverage = {
-                  strike: putOpen.strike ?? null,
-                  premium: putOpen.premium ?? null,
-                  status: 'OPEN',
-                };
-              }
-              // compute shares remaining for this lot from linked events
-              let shares = 0;
-              for (const e of evts) {
-                const qty = Number(e.quantity_shares || 0);
-                const ctr = Number(e.contracts || 0);
-                switch (e.event_type) {
-                  case 'BUY_SHARES':
-                    shares += qty || 0;
-                    break;
-                  case 'ASSIGNMENT':
-                  case 'PUT_ASSIGNMENT':
-                    shares += qty || (ctr ? 100 * ctr : 0);
-                    break;
-                  case 'SELL_SHARES':
-                    shares -= qty || 0;
-                    break;
-                  case 'CALLED_AWAY':
-                  case 'CALL_ASSIGNED':
-                    shares -= qty || (ctr ? 100 * ctr : 0);
-                    break;
-                  default:
-                    break;
-                }
-              }
-              // Fallbacks if links don't include all share-modifying events
-              if (!Number.isFinite(shares)) shares = 0;
-              if (shares === 0) {
-                // If lot is closed, keep 0. If it's an active stock lot with no linked share events, assume 100.
-                const closed = (l.status || '').startsWith('CLOSED');
-                const isStockLot = l.acquisition_method !== 'CASH_SECURED_PUT' && l.status !== 'CASH_RESERVED';
-                if (!closed && isStockLot) shares = 100;
-              }
-              // map events for timeline UI
-              const eventsVM = evts.map((e) => mapEventForTimeline(e));
-              return [l.id, { coverage, eventsVM, shares }];
-            } catch {
-              // Fallback shares guess based on lot status
-              let shares = 0;
-              const closed = (l.status || '').startsWith('CLOSED');
-              const isStockLot = l.acquisition_method !== 'CASH_SECURED_PUT' && l.status !== 'CASH_RESERVED';
-              if (!closed && isStockLot) shares = 100;
-              return [l.id, { coverage: null, eventsVM: [], shares }];
-            }
-          })
-        );
-        const cov = {};
-        const emap = {};
-        const smap = {};
-        for (const [id, v] of pairs) {
-          cov[id] = v.coverage;
-          emap[id] = v.eventsVM;
-          smap[id] = v.shares;
-        }
-        setCoverageMap(cov);
-        setLotEventsMap(emap);
-        setLotSharesMap(smap);
-      } catch (e) {
-        console.error(e);
-      }
-    })();
-  }, [lots]);
+    
+    // Build coverage map and lot events from the optimized data
+    const newCoverageMap = {};
+    const newLotEventsMap = {};
+    const newLotSharesMap = {};
+    
+    lots.forEach(lot => {
+      const lotEvents = eventsByLot[lot.id] || [];
+      
+      // Build coverage info and shares using the helper function
+      const { coverage, shares } = computeLotCoverageAndShares(lot, lotEvents);
+      newCoverageMap[lot.id] = coverage;
+      newLotSharesMap[lot.id] = shares;
+      
+      // Map events for timeline UI
+      const eventsVM = lotEvents.map(mapEventForTimeline);
+      newLotEventsMap[lot.id] = eventsVM;
+    });
+    
+    setCoverageMap(newCoverageMap);
+    setLotEventsMap(newLotEventsMap);
+    setLotSharesMap(newLotSharesMap);
+  }, [lots, eventsByLot]);
 
   // Build UI lots: backend lots (+/- closed) + synthetic CSP lots (open always, closed when toggled)
   useEffect(() => {
@@ -454,6 +386,54 @@ export default function Wheels() {
       }
     })();
   }, [cycles]);
+
+  // Handle errors from React Query
+  if (cyclesError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Cycles</h2>
+            <p className="text-red-600">{cyclesError.message || 'Failed to load wheel cycles'}</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 bg-red-600 hover:bg-red-700"
+            >
+              Reload Page
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedTicker && tickerDataError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+            <h2 className="text-lg font-semibold text-yellow-800 mb-2">Error Loading Ticker Data</h2>
+            <p className="text-yellow-600">Failed to load data for ticker {selectedTicker}</p>
+            <p className="text-sm text-yellow-500 mt-1">{tickerDataError.message}</p>
+            <div className="mt-4 space-x-2">
+              <Button 
+                onClick={() => refetchTickerData()} 
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                Retry
+              </Button>
+              <Button 
+                onClick={() => setSelectedTicker(null)} 
+                variant="outline"
+              >
+                Select Different Ticker
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">

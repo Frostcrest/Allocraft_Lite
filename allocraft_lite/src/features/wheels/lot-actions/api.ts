@@ -7,22 +7,22 @@ import {
     ClosePutInput,
 } from "./types";
 
-export async function sellCoveredCall(lotId: number, p: SellCoveredCallInput) {
+export async function sellCoveredCall(_lotId: number, _p: SellCoveredCallInput) {
     return { ok: true, id: crypto.randomUUID() };
 }
-export async function closeCoveredCall(lotId: number, p: CloseCoveredCallInput) {
+export async function closeCoveredCall(_lotId: number, _p: CloseCoveredCallInput) {
     return { ok: true, id: crypto.randomUUID() };
 }
-export async function rollCoveredCall(lotId: number, p: RollCoveredCallInput) {
+export async function rollCoveredCall(_lotId: number, _p: RollCoveredCallInput) {
     return { ok: true, closeId: crypto.randomUUID(), openId: crypto.randomUUID() };
 }
-export async function createLotBuy(p: CreateLotBuyInput) {
+export async function createLotBuy(_p: CreateLotBuyInput) {
     return { ok: true, lotId: Math.floor(Math.random() * 1e6) };
 }
-export async function createLotShortPut(p: CreateLotShortPutInput) {
+export async function createLotShortPut(_p: CreateLotShortPutInput) {
     return { ok: true, lotId: Math.floor(Math.random() * 1e6) };
 }
 
-export async function closeShortPut(lotId: number, p: ClosePutInput) {
+export async function closeShortPut(_lotId: number, _p: ClosePutInput) {
     return { ok: true, id: crypto.randomUUID() };
 }

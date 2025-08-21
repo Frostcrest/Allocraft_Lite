@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { PageVM, LotVM } from "./types";
 import { SAMPLE_VM } from "./sample";
 import { CyclePickerCard } from "./components/CyclePickerCard";
@@ -12,15 +12,11 @@ import { RollCallModal } from "./lot-actions/RollCallModal";
 import { NewLotWizard } from "./lot-actions/NewLotWizard";
 
 function PageInner({ initial }: { initial: PageVM }) {
-    const [model, setModel] = useState<PageVM>(initial);
+    const [model] = useState<PageVM>(initial);
     const [selected, setSelected] = useState<string | null>(null);
     const actions = useLotActionsContext();
 
     const lots = model.lots;
-
-    const setLots = (updater: (prev: LotVM[]) => LotVM[]) => {
-        setModel((prev) => ({ ...prev, lots: updater(prev.lots) }));
-    };
 
     const modal = actions.modal;
 

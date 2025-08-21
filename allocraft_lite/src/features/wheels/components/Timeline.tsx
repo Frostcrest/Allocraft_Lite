@@ -1,15 +1,21 @@
-import React from "react";
+// Remove unused React import
 import type { LotEvent, EventType } from "../types";
 
-const dotClass = (t: EventType) => ({
-    SELL_PUT: "bg-purple-500",
-    PUT_ASSIGNMENT: "bg-fuchsia-600",
-    BUY_SHARES: "bg-blue-500",
-    SELL_CALL_OPEN: "bg-emerald-600",
-    SELL_CALL_CLOSE: "bg-emerald-300",
-    CALL_ASSIGNMENT: "bg-emerald-800",
-    FEE: "bg-slate-400",
-}[t]);
+const dotClass = (t: EventType) => {
+    const map = {
+        SELL_PUT: "bg-purple-500",
+        SELL_PUT_CLOSE: "bg-purple-300",
+        BUY_PUT_CLOSE: "bg-purple-200",
+        PUT_ASSIGNMENT: "bg-fuchsia-600",
+        BUY_SHARES: "bg-blue-500",
+        SELL_CALL_OPEN: "bg-emerald-600",
+        SELL_CALL_CLOSE: "bg-emerald-300",
+        CALL_ASSIGNMENT: "bg-emerald-800",
+        FEE: "bg-slate-400",
+    }[t];
+    
+    return map || "bg-gray-400"; // fallback color
+};
 
 export function Timeline({ events }: { events: LotEvent[] }) {
     return (

@@ -1,4 +1,4 @@
-import React from "react";
+// Removed unused React import
 import type { LotVM } from "../types";
 import { useLotActions } from "./useLotActions";
 

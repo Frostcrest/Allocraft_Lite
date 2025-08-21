@@ -1,4 +1,4 @@
-import React, { useId, useState } from "react";
+import { useId, useState } from "react";
 import { useLotActions } from "./useLotActions";
 
 export function NewLotWizard({ ticker }: { ticker?: string }) {
