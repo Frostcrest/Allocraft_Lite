@@ -22,13 +22,18 @@ if (!isReady) {
 }
 
 // Test Schwab API service initialization
-try {
-  const { schwabApi } = await import('@/services/schwabApi');
-  console.log('\n📡 Schwab API Service:', schwabApi ? '✅ Loaded' : '❌ Failed to load');
-} catch (error) {
-  console.log('\n📡 Schwab API Service: ❌ Error loading service');
-  console.error('Error:', error);
+async function testSchwabApiService() {
+  try {
+    const { schwabApi } = await import('@/services/schwabApi');
+    console.log('\n📡 Schwab API Service:', schwabApi ? '✅ Loaded' : '❌ Failed to load');
+  } catch (error) {
+    console.log('\n📡 Schwab API Service: ❌ Error loading service');
+    console.error('Error:', error);
+  }
 }
+
+// Call the async function
+testSchwabApiService();
 
 export default function SchwabConfigTest() {
   return (

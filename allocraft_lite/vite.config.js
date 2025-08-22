@@ -9,4 +9,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  build: {
+    target: 'esnext', // Support modern features including top-level await
+    minify: 'esbuild',
+  },
 });
