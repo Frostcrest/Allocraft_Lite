@@ -99,7 +99,7 @@ export class SchwabApiService {
             response_type: 'code',
             client_id: SCHWAB_CONFIG.clientId,
             redirect_uri: SCHWAB_CONFIG.redirectUri,
-            scope: 'readonly'  // Adjust scope as needed
+            scope: 'AccountsAndTrading readonly'  // Updated scope for account access
         });
 
         const authUrl = `${SCHWAB_CONFIG.authUrl}?${params.toString()}`;

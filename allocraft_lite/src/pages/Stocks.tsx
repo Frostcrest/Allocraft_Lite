@@ -9,6 +9,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Stock, ApiError } from "@/types";
 import SchwabIntegration from "@/components/SchwabIntegration";
 import SchwabConfigTest from "@/components/SchwabConfigTest";
+import SchwabTestRunner from "@/components/SchwabTestRunner";
+import OAuthDiagnostic from "@/components/OAuthDiagnostic";
+import ApiModeSwitcher from "@/components/ApiModeSwitcher";
 
 // Error display component
 interface ErrorDisplayProps {
@@ -167,11 +170,20 @@ export default function Stocks() {
             </Button>
           </div>
 
+          {/* API Mode Switcher */}
+          <ApiModeSwitcher />
+
           {/* Schwab Integration Section */}
           <SchwabIntegration />
 
+          {/* OAuth Diagnostic Tool */}
+          <OAuthDiagnostic />
+
           {/* Schwab Configuration Test */}
           <SchwabConfigTest />
+
+          {/* Schwab Integration Tests */}
+          <SchwabTestRunner />
 
           {/* Manual Stocks Section */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
