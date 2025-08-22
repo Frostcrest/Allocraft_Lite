@@ -1,4 +1,13 @@
 {
+    "builds": [
+        {
+            "src": "package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "dist"
+            }
+        }
+    ],
     "rewrites": [
         {
             "source": "/api/:path*",
@@ -8,5 +17,11 @@
             "source": "/(.*)",
             "destination": "/index.html"
         }
-    ]
+    ],
+    "env": {
+        "VITE_API_BASE_URL": "https://allocraft-backend.onrender.com",
+        "VITE_SCHWAB_CLIENT_ID": "z39NyhcZwoSlmpZNYstf38Fidd0V0HeTWGMfD9AhWGUj0uOG",
+        "VITE_SCHWAB_CLIENT_SECRET": "Ls1QL7VER1GENslDeoN8Wd8GhkEw5qxboS2OEIsZ6ANtCqxTGBW2ZY6KEcVLCTUU",
+        "VITE_SCHWAB_REDIRECT_URI": "https://allocraft.app/auth/callback"
+    }
 }
