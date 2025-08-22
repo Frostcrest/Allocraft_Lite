@@ -18,7 +18,7 @@ const SCHWAB_CONFIG = {
     clientId: (import.meta as any).env?.VITE_SCHWAB_CLIENT_ID || 'z39NyhcZwoSlmpZNYstf38Fidd0V0HeTWGMfD9AhWGUj0uOG',
     clientSecret: (import.meta as any).env?.VITE_SCHWAB_CLIENT_SECRET || 'Ls1QL7VER1GENslDeoN8Wd8GhkEw5qxboS2OEIsZ6ANtCqxTGBW2ZY6KEcVLCTUU',
     redirectUri: (import.meta as any).env?.VITE_SCHWAB_REDIRECT_URI ||
-        (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : 'http://localhost:5173/auth/callback')
+        (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : 'https://allocraft.app/auth/callback')
 };
 
 export interface SchwabPosition {
