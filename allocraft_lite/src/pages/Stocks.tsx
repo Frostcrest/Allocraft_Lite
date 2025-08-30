@@ -8,7 +8,7 @@ import SchwabIntegration from '@/components/SchwabIntegration';
 import SchwabConfigTest from '@/components/SchwabConfigTest';
 import SchwabIntegrationTests from '@/components/SchwabIntegrationTests';
 import APISwitcher from '@/components/APISwitcher';
-import { schwabApi } from '@/services/schwabApi';
+import { backendSchwabApi } from '../services/backendSchwabApi';
 
 interface Position {
   id: string;
@@ -102,27 +102,9 @@ const Stocks: React.FC = () => {
         return;
       }
 
-      // Fetch accounts first with direct API call for better error handling
-      const accountsResponse = await fetch('https://api.schwabapi.com/trader/v1/accounts', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!accountsResponse.ok) {
-        if (accountsResponse.status === 401) {
-          console.log('❌ Token expired, clearing...');
-          localStorage.removeItem('schwab_access_token');
-          localStorage.removeItem('schwab_refresh_token');
-          setSchwabPositions([]);
-          return;
-        }
-        throw new Error(`Failed to fetch accounts: ${accountsResponse.status}`);
-      }
-
-      const accounts = await accountsResponse.json();
+      // Use the Backend Schwab API service instead of direct fetch calls
+      console.log('📡 Fetching accounts via Backend Schwab API service...');
+      const accounts = await backendSchwabApi.getAccounts();
       console.log('✅ Schwab accounts fetched:', accounts);
 
       if (!Array.isArray(accounts) || accounts.length === 0) {
@@ -136,39 +118,14 @@ const Stocks: React.FC = () => {
 
       for (const account of accounts) {
         try {
-          const accountNumber = account.accountNumber || account.hashValue;
+          const accountNumber = account.accountId;
           const accountType = account.type || 'Unknown';
 
           console.log(`🔍 Fetching positions for account: ${accountNumber}`);
 
-          const positionsResponse = await fetch(
-            `https://api.schwabapi.com/trader/v1/accounts/${accountNumber}/positions`,
-            {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
-              }
-            }
-          );
-
-          if (!positionsResponse.ok) {
-            console.log(`⚠️ Could not fetch positions for ${accountNumber}: ${positionsResponse.status}`);
-            continue;
-          }
-
-          const positionsData = await positionsResponse.json();
-          console.log(`📊 Raw positions data for ${accountNumber}:`, positionsData);
-
-          // Handle different response structures
-          let positions = [];
-          if (Array.isArray(positionsData)) {
-            positions = positionsData;
-          } else if (positionsData.securitiesAccount?.positions) {
-            positions = positionsData.securitiesAccount.positions;
-          } else if (positionsData.positions) {
-            positions = positionsData.positions;
-          }
+          // Use the backend API service method instead of direct fetch
+          const positions = await backendSchwabApi.getPositions(accountNumber);
+          console.log(`📊 Positions data for ${accountNumber}:`, positions);
 
           if (positions && positions.length > 0) {
             const transformedPositions = positions
@@ -196,7 +153,7 @@ const Stocks: React.FC = () => {
       setError(error instanceof Error ? error.message : 'Failed to load Schwab positions');
 
       // If token is invalid, clear it
-      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+      if (error instanceof Error && (error.message?.includes('401') || error.message?.includes('Unauthorized'))) {
         console.log('🔄 Token appears invalid, clearing...');
         localStorage.removeItem('schwab_access_token');
         localStorage.removeItem('schwab_refresh_token');
