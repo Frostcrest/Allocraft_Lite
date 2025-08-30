@@ -92,9 +92,9 @@ export class SchwabApiService {
     }
 
     /**
-     * Start the OAuth flow by redirecting to Schwab's authorization page
+     * Get the OAuth authorization URL without redirecting
      */
-    initiateOAuth(): void {
+    getAuthUrl(): string {
         const params = new URLSearchParams({
             response_type: 'code',
             client_id: SCHWAB_CONFIG.clientId,
@@ -102,7 +102,14 @@ export class SchwabApiService {
             scope: 'AccountsAndTrading readonly'  // Updated scope for account access
         });
 
-        const authUrl = `${SCHWAB_CONFIG.authUrl}?${params.toString()}`;
+        return `${SCHWAB_CONFIG.authUrl}?${params.toString()}`;
+    }
+
+    /**
+     * Start the OAuth flow by redirecting to Schwab's authorization page
+     */
+    initiateOAuth(): void {
+        const authUrl = this.getAuthUrl();
         window.location.href = authUrl;
     }
 
