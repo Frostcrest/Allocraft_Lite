@@ -50,7 +50,12 @@ export class BackendSchwabApiService {
    * Get authorization URL from backend
    */
   async getAuthUrl(): Promise<string> {
-    const response = await fetch(`${API_BASE_URL}/schwab/auth-url`);
+    const response = await fetch(`${API_BASE_URL}/schwab/auth-url`, {
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+        'Content-Type': 'application/json'
+      }
+    });
     if (!response.ok) {
       throw new Error(`Failed to get auth URL: ${response.statusText}`);
     }

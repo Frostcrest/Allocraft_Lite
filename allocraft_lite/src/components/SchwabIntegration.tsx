@@ -82,9 +82,10 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
     const handleOAuthCallback = () => {
       // Check if we're returning from OAuth
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('success') === 'true') {
+      if (urlParams.get('schwab_connected') === 'true') {
         console.log('✅ Schwab OAuth completed successfully');
         checkConnectionStatus(); // Recheck status after OAuth
+        setIsConnecting(false);
 
         // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
