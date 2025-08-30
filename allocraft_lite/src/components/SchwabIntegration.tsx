@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
-import { schwabApi } from '@/services/schwabApi';
+import { backendSchwabApi } from '../services/backendSchwabApi';
 
 interface SchwabIntegrationProps {
   onConnectionSuccess?: () => void;
@@ -19,56 +19,28 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
 
   const checkConnectionStatus = async () => {
     try {
-      const token = localStorage.getItem('schwab_access_token');
-      if (!token) {
-        setConnectionStatus('disconnected');
-        return;
-      }
-
-      // Test if token is still valid by making a simple API call
-      console.log('🔍 Checking token validity...');
-
-      // Try to fetch accounts to validate token
-      const isValid = await testTokenValidity(token);
-
-      if (isValid) {
-        console.log('✅ Token is valid, user is connected');
+      console.log('🔍 Checking Schwab connection status...');
+      const status = await backendSchwabApi.getStatus();
+      
+      if (status.connected) {
+        console.log('✅ User is connected to Schwab');
         setConnectionStatus('connected');
         setError('');
+        
+        // Trigger callback if provided
+        if (onConnectionSuccess) {
+          setTimeout(() => {
+            onConnectionSuccess();
+          }, 1000);
+        }
       } else {
-        console.log('❌ Token is invalid, clearing...');
-        clearSchwabData();
+        console.log('❌ User is not connected to Schwab');
         setConnectionStatus('disconnected');
       }
     } catch (error) {
       console.error('Error checking connection status:', error);
       setConnectionStatus('disconnected');
     }
-  };
-
-  const testTokenValidity = async (token: string): Promise<boolean> => {
-    try {
-      const response = await fetch('https://api.schwabapi.com/trader/v1/accounts', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error('Token validation failed:', error);
-      return false;
-    }
-  };
-
-  const clearSchwabData = () => {
-    localStorage.removeItem('schwab_access_token');
-    localStorage.removeItem('schwab_refresh_token');
-    localStorage.removeItem('schwab_accounts');
-    localStorage.removeItem('schwab_oauth_callback');
-    localStorage.removeItem('schwab_token_expires');
   };
 
   const handleConnect = async () => {
@@ -79,15 +51,8 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
 
       console.log('🔄 Initiating Schwab OAuth...');
 
-      // Generate OAuth URL and redirect
-      const authUrl = schwabApi.getAuthUrl();
-      console.log('🔗 Redirecting to:', authUrl);
-
-      // Store callback to trigger after OAuth completes
-      localStorage.setItem('schwab_oauth_callback', 'refresh_positions');
-
-      // Redirect to Schwab OAuth
-      window.location.href = authUrl;
+      // Use backend service to initiate OAuth
+      await backendSchwabApi.initiateOAuth();
 
     } catch (error) {
       console.error('❌ OAuth initiation failed:', error);
@@ -97,140 +62,120 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
     }
   };
 
-  const handleDisconnect = () => {
-    clearSchwabData();
-    setConnectionStatus('disconnected');
-    setError('');
-    console.log('🔄 Schwab account disconnected');
+  const handleDisconnect = async () => {
+    try {
+      await backendSchwabApi.disconnect();
+      setConnectionStatus('disconnected');
+      setError('');
+      console.log('🔄 Schwab account disconnected');
 
-    // Refresh the page to clear any cached data
-    window.location.reload();
+      // Refresh the page to clear any cached data
+      window.location.reload();
+    } catch (error) {
+      console.error('❌ Disconnect failed:', error);
+      setError('Failed to disconnect Schwab account');
+    }
   };
 
-  // Listen for OAuth completion and storage changes
+  // Listen for OAuth completion - backend will redirect to callback page
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'schwab_access_token') {
-        if (e.newValue) {
-          console.log('✅ Schwab OAuth completed successfully');
-          setConnectionStatus('connected');
-          setIsConnecting(false);
-          setError('');
-
-          // Store token expiration (typically 30 minutes for Schwab)
-          const expirationTime = Date.now() + (30 * 60 * 1000); // 30 minutes
-          localStorage.setItem('schwab_token_expires', expirationTime.toString());
-
-          // Trigger callback if provided
-          if (onConnectionSuccess) {
-            setTimeout(() => {
-              onConnectionSuccess();
-            }, 1000); // Small delay to ensure token is fully processed
-          }
-
-          // Emit custom event
-          window.dispatchEvent(new CustomEvent('schwab-connected'));
-
-          // Clear callback flag
-          localStorage.removeItem('schwab_oauth_callback');
-        } else {
-          // Token was removed
-          setConnectionStatus('disconnected');
-        }
+    const handleOAuthCallback = () => {
+      // Check if we're returning from OAuth
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('success') === 'true') {
+        console.log('✅ Schwab OAuth completed successfully');
+        checkConnectionStatus(); // Recheck status after OAuth
+        
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (urlParams.get('error')) {
+        const error = urlParams.get('error');
+        console.error('❌ OAuth error:', error);
+        setError(`OAuth failed: ${error}`);
+        setIsConnecting(false);
+        setConnectionStatus('disconnected');
+        
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [onConnectionSuccess]);
+    handleOAuthCallback();
+  }, []);
 
-  // Auto-refresh token before expiration
+  // Auto-refresh connection status periodically
   useEffect(() => {
     if (connectionStatus === 'connected') {
-      const checkTokenExpiration = () => {
-        const expirationTime = localStorage.getItem('schwab_token_expires');
-        if (expirationTime && Date.now() > parseInt(expirationTime) - (5 * 60 * 1000)) { // 5 minutes before expiration
-          console.log('🔄 Token expiring soon, need to refresh...');
-          // For now, just disconnect. In production, you'd implement refresh token logic
-          handleDisconnect();
-        }
-      };
-
-      const interval = setInterval(checkTokenExpiration, 60000); // Check every minute
+      const interval = setInterval(checkConnectionStatus, 5 * 60 * 1000); // Check every 5 minutes
       return () => clearInterval(interval);
     }
   }, [connectionStatus]);
 
-  if (error) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <h3 className="font-semibold text-red-800">❌ Connection Error</h3>
-        <p className="text-sm text-red-600 mt-1">{error}</p>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setError('');
-            checkConnectionStatus();
-          }}
-          size="sm"
-          className="mt-2"
-        >
-          Try Again
-        </Button>
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Connect Your Schwab Account</h3>
+        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+          connectionStatus === 'connected' 
+            ? 'bg-green-100 text-green-700' 
+            : connectionStatus === 'connecting'
+            ? 'bg-yellow-100 text-yellow-700'
+            : 'bg-gray-100 text-gray-700'
+        }`}>
+          {connectionStatus === 'connected' && '✅ Schwab Account Connected'}
+          {connectionStatus === 'connecting' && '🔄 Connecting...'}
+          {connectionStatus === 'disconnected' && '❌ Not Connected'}
+        </div>
       </div>
-    );
-  }
 
-  if (connectionStatus === 'connected') {
-    return (
-      <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-        <div>
-          <h3 className="font-semibold text-green-800">✅ Schwab Account Connected</h3>
-          <p className="text-sm text-green-600">Your positions are being imported automatically.</p>
-          <p className="text-xs text-green-500 mt-1">
-            Connected at {new Date(localStorage.getItem('schwab_token_expires') ?
-              parseInt(localStorage.getItem('schwab_token_expires')!) - (30 * 60 * 1000) :
-              Date.now()).toLocaleTimeString()}
+      <p className="text-sm text-gray-600">
+        Link your Schwab account to automatically import your positions and keep them up to date.
+      </p>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {connectionStatus === 'disconnected' && (
+          <Button 
+            onClick={handleConnect} 
+            disabled={isConnecting}
+            className="flex items-center gap-2"
+          >
+            <ExternalLink size={16} />
+            {isConnecting ? 'Connecting...' : 'Connect to Schwab'}
+          </Button>
+        )}
+
+        {connectionStatus === 'connected' && (
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => checkConnectionStatus()} 
+              variant="outline"
+              size="sm"
+            >
+              Refresh Status
+            </Button>
+            <Button 
+              onClick={handleDisconnect} 
+              variant="destructive"
+              size="sm"
+            >
+              Disconnect
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {connectionStatus === 'connected' && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+          <p className="text-sm text-green-700">
+            ✅ Your Schwab account is successfully connected. You can now refresh your positions to import your portfolio.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onConnectionSuccess?.()}
-            size="sm"
-          >
-            Refresh Positions
-          </Button>
-          <Button variant="outline" onClick={handleDisconnect} size="sm">
-            Disconnect
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="text-center space-y-4">
-      <div className="space-y-2">
-        <ExternalLink className="h-12 w-12 mx-auto text-blue-600" />
-        <h3 className="text-lg font-semibold">Connect Your Schwab Account</h3>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Link your Charles Schwab account to automatically import your positions and keep your portfolio in sync.
-        </p>
-      </div>
-
-      <Button
-        onClick={handleConnect}
-        disabled={isConnecting}
-        className="bg-blue-600 hover:bg-blue-700"
-      >
-        {isConnecting ? 'Connecting...' : 'Connect Schwab Account'}
-      </Button>
-
-      {connectionStatus === 'connecting' && (
-        <p className="text-sm text-blue-600">
-          🔄 Redirecting to Schwab for authentication...
-        </p>
       )}
     </div>
   );
