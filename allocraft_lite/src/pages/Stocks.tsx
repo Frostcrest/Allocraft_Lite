@@ -30,6 +30,7 @@ const Stocks: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [schwabPositions, setSchwabPositions] = useState<Position[]>([]);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [error, setError] = useState<string>('');
 
   // Load manual positions from localStorage
   useEffect(() => {
@@ -45,9 +46,51 @@ const Stocks: React.FC = () => {
     }
   }, []);
 
-  // Load Schwab positions
+  // Safe position transformation with error handling
+  const transformSchwabPosition = (pos: any, accountNumber: string, accountType: string, index: number): Position | null => {
+    try {
+      // Safely extract values with fallbacks
+      const instrument = pos.instrument || {};
+      const symbol = instrument.symbol || instrument.cusip || `UNKNOWN_${index}`;
+      const longQuantity = parseFloat(pos.longQuantity || 0);
+      const shortQuantity = parseFloat(pos.shortQuantity || 0);
+      const quantity = longQuantity || shortQuantity || 0;
+
+      if (quantity === 0) {
+        return null; // Skip positions with no quantity
+      }
+
+      const marketValue = parseFloat(pos.marketValue || 0);
+      const averagePrice = parseFloat(pos.averagePrice || 0);
+      const marketPrice = quantity > 0 ? marketValue / quantity : 0;
+
+      const profitLoss = marketValue - (averagePrice * quantity);
+      const profitLossPercent = averagePrice > 0 ? ((marketPrice - averagePrice) / averagePrice) * 100 : 0;
+
+      return {
+        id: `schwab-${accountNumber}-${symbol}-${index}`,
+        symbol: symbol,
+        shares: quantity,
+        costBasis: averagePrice,
+        marketPrice: marketPrice,
+        marketValue: marketValue,
+        profitLoss: profitLoss,
+        profitLossPercent: profitLossPercent,
+        source: 'schwab' as const,
+        accountType: accountType,
+        accountNumber: accountNumber
+      };
+    } catch (error) {
+      console.error('Error transforming position:', error, pos);
+      return null;
+    }
+  };
+
+  // Load Schwab positions with better error handling
   const loadSchwabPositions = async () => {
     setIsLoading(true);
+    setError('');
+
     try {
       console.log('🔍 Loading Schwab positions...');
 
@@ -55,15 +98,36 @@ const Stocks: React.FC = () => {
       const token = localStorage.getItem('schwab_access_token');
       if (!token) {
         console.log('❌ No Schwab token found');
+        setSchwabPositions([]);
         return;
       }
 
-      // Fetch accounts first
-      const accounts = await schwabApi.getAccounts();
+      // Fetch accounts first with direct API call for better error handling
+      const accountsResponse = await fetch('https://api.schwabapi.com/trader/v1/accounts', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!accountsResponse.ok) {
+        if (accountsResponse.status === 401) {
+          console.log('❌ Token expired, clearing...');
+          localStorage.removeItem('schwab_access_token');
+          localStorage.removeItem('schwab_refresh_token');
+          setSchwabPositions([]);
+          return;
+        }
+        throw new Error(`Failed to fetch accounts: ${accountsResponse.status}`);
+      }
+
+      const accounts = await accountsResponse.json();
       console.log('✅ Schwab accounts fetched:', accounts);
 
-      if (!accounts || accounts.length === 0) {
+      if (!Array.isArray(accounts) || accounts.length === 0) {
         console.log('❌ No Schwab accounts found');
+        setSchwabPositions([]);
         return;
       }
 
@@ -72,31 +136,54 @@ const Stocks: React.FC = () => {
 
       for (const account of accounts) {
         try {
-          console.log(`🔍 Fetching positions for account: ${account.accountNumber}`);
-          const accountPositions = await schwabApi.getPositions(account.accountNumber);
+          const accountNumber = account.accountNumber || account.hashValue;
+          const accountType = account.type || 'Unknown';
 
-          if (accountPositions && accountPositions.length > 0) {
-            // Transform Schwab positions to our format
-            const transformedPositions = accountPositions.map((pos: any, index: number) => ({
-              id: `schwab-${account.accountNumber}-${pos.instrument?.symbol || index}`,
-              symbol: pos.instrument?.symbol || 'Unknown',
-              shares: pos.longQuantity || pos.shortQuantity || 0,
-              costBasis: pos.averagePrice || 0,
-              marketPrice: pos.marketValue / (pos.longQuantity || 1) || 0,
-              marketValue: pos.marketValue || 0,
-              profitLoss: (pos.marketValue || 0) - ((pos.averagePrice || 0) * (pos.longQuantity || 0)),
-              profitLossPercent: pos.averagePrice ?
-                (((pos.marketValue / (pos.longQuantity || 1)) - pos.averagePrice) / pos.averagePrice) * 100 : 0,
-              source: 'schwab' as const,
-              accountType: account.type,
-              accountNumber: account.accountNumber
-            }));
+          console.log(`🔍 Fetching positions for account: ${accountNumber}`);
+
+          const positionsResponse = await fetch(
+            `https://api.schwabapi.com/trader/v1/accounts/${accountNumber}/positions`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+              }
+            }
+          );
+
+          if (!positionsResponse.ok) {
+            console.log(`⚠️ Could not fetch positions for ${accountNumber}: ${positionsResponse.status}`);
+            continue;
+          }
+
+          const positionsData = await positionsResponse.json();
+          console.log(`📊 Raw positions data for ${accountNumber}:`, positionsData);
+
+          // Handle different response structures
+          let positions = [];
+          if (Array.isArray(positionsData)) {
+            positions = positionsData;
+          } else if (positionsData.securitiesAccount?.positions) {
+            positions = positionsData.securitiesAccount.positions;
+          } else if (positionsData.positions) {
+            positions = positionsData.positions;
+          }
+
+          if (positions && positions.length > 0) {
+            const transformedPositions = positions
+              .map((pos: any, index: number) =>
+                transformSchwabPosition(pos, accountNumber, accountType, index)
+              )
+              .filter((pos: Position | null) => pos !== null) as Position[];
 
             allPositions.push(...transformedPositions);
-            console.log(`✅ Added ${transformedPositions.length} positions from ${account.accountNumber}`);
+            console.log(`✅ Added ${transformedPositions.length} positions from ${accountNumber}`);
+          } else {
+            console.log(`ℹ️ No positions found in account ${accountNumber}`);
           }
         } catch (error) {
-          console.error(`❌ Error fetching positions for account ${account.accountNumber}:`, error);
+          console.error(`❌ Error fetching positions for account:`, error);
         }
       }
 
@@ -106,6 +193,7 @@ const Stocks: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error loading Schwab positions:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load Schwab positions');
 
       // If token is invalid, clear it
       if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
@@ -119,11 +207,14 @@ const Stocks: React.FC = () => {
     }
   };
 
-  // Load Schwab positions on component mount and when token changes
+  // Load Schwab positions on component mount
   useEffect(() => {
     const token = localStorage.getItem('schwab_access_token');
     if (token) {
-      loadSchwabPositions();
+      // Small delay to ensure component is fully mounted
+      setTimeout(() => {
+        loadSchwabPositions();
+      }, 500);
     }
   }, []);
 
@@ -131,20 +222,14 @@ const Stocks: React.FC = () => {
   useEffect(() => {
     const handleSchwabConnection = () => {
       console.log('🔄 Schwab connection detected, refreshing positions...');
-      loadSchwabPositions();
+      setTimeout(() => {
+        loadSchwabPositions();
+      }, 1000); // Give OAuth time to complete
     };
 
-    // Listen for custom events or storage changes
     window.addEventListener('schwab-connected', handleSchwabConnection);
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'schwab_access_token' && e.newValue) {
-        handleSchwabConnection();
-      }
-    });
-
     return () => {
       window.removeEventListener('schwab-connected', handleSchwabConnection);
-      window.removeEventListener('storage', handleSchwabConnection);
     };
   }, []);
 
@@ -171,9 +256,12 @@ const Stocks: React.FC = () => {
     localStorage.setItem('stockPositions', JSON.stringify([...updatedPositions, ...schwabPositions]));
   };
 
-  // Combine manual and Schwab positions
+  // Combine manual and Schwab positions safely
   const allPositions = [...positions, ...schwabPositions];
-  const totalValue = allPositions.reduce((sum, pos) => sum + pos.marketValue, 0);
+  const totalValue = allPositions.reduce((sum, pos) => {
+    const value = isNaN(pos.marketValue) ? 0 : pos.marketValue;
+    return sum + value;
+  }, 0);
 
   return (
     <div className="space-y-6">
@@ -197,6 +285,31 @@ const Stocks: React.FC = () => {
 
       {/* API Mode Switcher */}
       <APISwitcher />
+
+      {/* Error Display */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-red-800">❌ Error Loading Positions</h3>
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setError('');
+                  loadSchwabPositions();
+                }}
+                className="border-red-300"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Schwab Integration Section */}
       <Card>
@@ -274,7 +387,12 @@ const Stocks: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {allPositions.length === 0 ? (
+          {isLoading && allPositions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="animate-spin h-6 w-6 mx-auto mb-2 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+              <p>Loading Schwab positions...</p>
+            </div>
+          ) : allPositions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <p>No positions found.</p>
               <p className="text-sm mt-2">
