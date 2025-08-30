@@ -43,7 +43,7 @@ export default function SchwabConfigTest() {
         Verify your Schwab API credentials are configured correctly.
         Check the browser console (F12) for detailed validation.
       </p>
-      
+
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <span className={config.clientId && !config.clientId.includes('your_') ? 'text-green-600' : 'text-red-600'}>
@@ -53,7 +53,7 @@ export default function SchwabConfigTest() {
             <strong>Client ID:</strong> {config.clientId && !config.clientId.includes('your_') ? 'Configured' : 'Missing or placeholder'}
           </span>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className={config.clientSecret && !config.clientSecret.includes('your_') ? 'text-green-600' : 'text-red-600'}>
             {config.clientSecret && !config.clientSecret.includes('your_') ? '✅' : '❌'}
@@ -62,7 +62,7 @@ export default function SchwabConfigTest() {
             <strong>Client Secret:</strong> {config.clientSecret && !config.clientSecret.includes('your_') ? 'Configured' : 'Missing or placeholder'}
           </span>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className={config.redirectUri?.includes('localhost:5173') ? 'text-green-600' : 'text-red-600'}>
             {config.redirectUri?.includes('localhost:5173') ? '✅' : '❌'}
@@ -75,7 +75,7 @@ export default function SchwabConfigTest() {
         {isReady && (
           <div className="mt-4 p-3 bg-green-100 border border-green-400 rounded">
             <p className="text-green-800 text-sm">
-              <strong>🎉 Ready!</strong> Your Schwab API credentials are configured. 
+              <strong>🎉 Ready!</strong> Your Schwab API credentials are configured.
               You can now test the OAuth flow by clicking "Connect to Schwab" below.
             </p>
           </div>
@@ -93,7 +93,7 @@ export default function SchwabConfigTest() {
                 ))}
               </ul>
             </div>
-            
+
             <div className="p-3 bg-blue-100 border border-blue-400 rounded">
               <p className="text-blue-800 text-sm">
                 <strong>📝 Next Steps:</strong>

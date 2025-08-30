@@ -10,7 +10,7 @@ function StatusChip({ status }: { status: LotVM["status"] }) {
         CLOSED_SOLD: { cls: "border-green-300 bg-green-50 text-green-700", label: "Sold" },
         CLOSED_CALLED_AWAY: { cls: "border-slate-300 bg-slate-100 text-slate-700", label: "Called Away" },
     }[status];
-    
+
     if (!map) {
         return (
             <span className="inline-flex items-center rounded-xl border border-gray-300 bg-gray-50 text-gray-700 px-2.5 py-1 text-xs font-medium">
@@ -18,7 +18,7 @@ function StatusChip({ status }: { status: LotVM["status"] }) {
             </span>
         );
     }
-    
+
     return (
         <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${map.cls}`}>
             {map.label}

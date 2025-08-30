@@ -29,12 +29,12 @@ vi.mock('@/api/enhancedClient', () => ({
 
 // Mock the components
 vi.mock('@/components/forms/OptionForm', () => ({
-  default: ({ isOpen, onSubmit, onClose, option, disabled }) => 
+  default: ({ isOpen, onSubmit, onClose, option, disabled }) =>
     isOpen ? (
       <div data-testid="option-form">
         <h3 role="heading">{option ? 'Edit Option' : 'Add Option'}</h3>
-        <button 
-          onClick={() => onSubmit({ 
+        <button
+          onClick={() => onSubmit({
             ticker: 'AAPL',
             option_type: 'Call',
             strike_price: 150.00,
@@ -101,7 +101,7 @@ const createWrapper = () => {
       },
     },
   })
-  
+
   return ({ children }) => (
     <QueryClientProvider client={queryClient}>
       {children}
@@ -182,7 +182,7 @@ describe('Options Component - React Query Integration', () => {
     expect(screen.getByText('AAPL')).toBeInTheDocument()
     expect(screen.getByText('GOOGL')).toBeInTheDocument()
     expect(screen.getByText('MSFT')).toBeInTheDocument()
-    
+
     // Check for option types
     expect(screen.getAllByText('Call')).toHaveLength(2)
     expect(screen.getByText('Put')).toBeInTheDocument()
@@ -217,7 +217,7 @@ describe('Options Component - React Query Integration', () => {
     // Since the table rendering is complex, we'll verify basic functionality
     expect(screen.getByText('Options Positions')).toBeInTheDocument()
     expect(screen.getByText('AAPL')).toBeInTheDocument()
-    
+
     // Check for any date-like content (loosely)
     const tableElement = screen.getByRole('table')
     expect(tableElement).toBeInTheDocument()
@@ -243,7 +243,7 @@ describe('Options Component - React Query Integration', () => {
     expect(screen.getByText('AAPL')).toBeInTheDocument()
     expect(screen.getByText('GOOGL')).toBeInTheDocument()
     expect(screen.getByText('MSFT')).toBeInTheDocument()
-    
+
     // Verify form state management works by checking the Add Option button exists
     const addButton = screen.getByRole('button', { name: /add option/i })
     expect(addButton).toBeInTheDocument()
@@ -295,14 +295,14 @@ describe('Options Component - React Query Integration', () => {
 
     // Look for any button that might be a delete button
     const buttons = screen.getAllByRole('button')
-    const actionButtons = buttons.filter(btn => 
-      btn.className.includes('h-8 w-8') && 
+    const actionButtons = buttons.filter(btn =>
+      btn.className.includes('h-8 w-8') &&
       btn.className.includes('text-red-600')
     )
-    
+
     if (actionButtons.length > 0) {
       await user.click(actionButtons[0])
-      
+
       await waitFor(() => {
         expect(window.confirm).toHaveBeenCalled()
       })
@@ -339,7 +339,7 @@ describe('Options Component - React Query Integration', () => {
     render(<Options />, { wrapper: createWrapper() })
 
     expect(screen.getByText(/processing changes/i)).toBeInTheDocument()
-    
+
     // Buttons should be disabled
     const addButton = screen.getByText(/add option/i)
     expect(addButton).toBeDisabled()
@@ -355,7 +355,7 @@ describe('Options Component - React Query Integration', () => {
     render(<Options />, { wrapper: createWrapper() })
 
     expect(screen.getByText(/refreshing prices/i)).toBeInTheDocument()
-    
+
     // Refresh button should show spinning icon
     const refreshButton = screen.getByText(/refresh prices/i)
     expect(refreshButton).toBeDisabled()
@@ -380,7 +380,7 @@ describe('Options Component - React Query Integration', () => {
 
     // Verify that React Query hooks are called
     expect(enhancedClient.useOptions).toHaveBeenCalled()
-    
+
     // The data should be properly cached and available
     expect(screen.getByText('AAPL')).toBeInTheDocument()
   })

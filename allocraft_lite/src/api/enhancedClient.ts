@@ -4,12 +4,12 @@
 
 import { QueryClient, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './fastapiClient';
-import { 
-    Stock, 
-    Option, 
-    WheelCycle, 
-    WheelTickerData, 
-    CreateStockRequest, 
+import {
+    Stock,
+    Option,
+    WheelCycle,
+    WheelTickerData,
+    CreateStockRequest,
     UpdateStockRequest,
     CreateOptionRequest,
     UpdateOptionRequest,
@@ -115,7 +115,7 @@ export const useStockSectors = () => {
 
 export const useCreateStock = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<Stock, ApiError, CreateStockRequest>({
         mutationFn: (stockData) => enhancedFetch<Stock>('/stocks/', {
             method: 'POST',
@@ -131,7 +131,7 @@ export const useCreateStock = () => {
 
 export const useUpdateStock = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<Stock, ApiError, { id: number; data: UpdateStockRequest }>({
         mutationFn: ({ id, data }) => enhancedFetch<Stock>(`/stocks/${id}`, {
             method: 'PUT',
@@ -147,7 +147,7 @@ export const useUpdateStock = () => {
 
 export const useDeleteStock = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<void, ApiError, number>({
         mutationFn: (id) => enhancedFetch(`/stocks/${id}`, { method: 'DELETE' }),
         onSuccess: () => {
@@ -159,7 +159,7 @@ export const useDeleteStock = () => {
 
 export const useRefreshStockPrices = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<{ updated: number }, ApiError>({
         mutationFn: () => enhancedFetch('/stocks/refresh-prices/', { method: 'POST' }),
         onSuccess: () => {
@@ -188,7 +188,7 @@ export const useOptionExpiries = () => {
 
 export const useCreateOption = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<Option, ApiError, CreateOptionRequest>({
         mutationFn: (optionData) => enhancedFetch<Option>('/options/', {
             method: 'POST',
@@ -204,7 +204,7 @@ export const useCreateOption = () => {
 
 export const useUpdateOption = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<Option, ApiError, { id: number; data: UpdateOptionRequest }>({
         mutationFn: ({ id, data }) => enhancedFetch<Option>(`/options/${id}`, {
             method: 'PUT',
@@ -219,7 +219,7 @@ export const useUpdateOption = () => {
 
 export const useDeleteOption = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<void, ApiError, number>({
         mutationFn: (id) => enhancedFetch(`/options/${id}`, { method: 'DELETE' }),
         onSuccess: () => {
@@ -230,7 +230,7 @@ export const useDeleteOption = () => {
 
 export const useRefreshOptionPrices = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<{ updated: number }, ApiError>({
         mutationFn: () => enhancedFetch('/options/refresh-prices/', { method: 'POST' }),
         onSuccess: () => {
@@ -260,7 +260,7 @@ export const useWheelDataForTicker = (ticker?: string) => {
 
 export const useCreateWheelEvent = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<any, ApiError, CreateWheelEventRequest>({
         mutationFn: (eventData) => enhancedFetch('/wheels/events/', {
             method: 'POST',

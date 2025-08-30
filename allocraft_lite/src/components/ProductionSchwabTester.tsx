@@ -36,13 +36,13 @@ export default function ProductionSchwabTester() {
     schwabConfig: null,
     oauth: null
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
 
   // Environment check
   useEffect(() => {
     const { config, isReady, issues } = validateSchwabCredentials();
-    
+
     setTestResults(prev => ({
       ...prev,
       environment: {
@@ -59,15 +59,15 @@ export default function ProductionSchwabTester() {
     setIsLoading(true);
     try {
       const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'https://allocraft-backend.onrender.com';
-      
+
       // Test general health
       const healthResponse = await fetch(`${apiBase}/healthz`);
       const healthData = await healthResponse.json();
-      
+
       // Test Schwab-specific health
       const schwabResponse = await fetch(`${apiBase}/schwab/health`);
       const schwabData = await schwabResponse.json();
-      
+
       setTestResults(prev => ({
         ...prev,
         backend: {
@@ -92,17 +92,17 @@ export default function ProductionSchwabTester() {
     setIsLoading(true);
     try {
       const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'https://allocraft-backend.onrender.com';
-      
+
       const response = await fetch(`${apiBase}/schwab/auth-url`);
       const data = await response.json();
-      
+
       setTestResults(prev => ({
         ...prev,
         oauth: {
           status: 'success',
           authUrl: data.auth_url,
-          containsHTTPS: data.auth_url?.includes('https://allocraft.app/auth/callback') || 
-                        data.auth_url?.includes('https://allocraft-backend.onrender.com/schwab/callback')
+          containsHTTPS: data.auth_url?.includes('https://allocraft.app/auth/callback') ||
+            data.auth_url?.includes('https://allocraft-backend.onrender.com/schwab/callback')
         }
       }));
     } catch (error) {
@@ -206,7 +206,7 @@ fetch(\`\${config.apiBase}/schwab/health\`)
             {isLoading ? 'Testing...' : 'Run Health Check'}
           </button>
         </div>
-        
+
         {testResults.backend && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ fetch(\`\${config.apiBase}/schwab/health\`)
               </span>
               <span>Backend Status: {testResults.backend.status}</span>
             </div>
-            
+
             {testResults.backend.status === 'healthy' && (
               <div className="text-sm space-y-2">
                 <div className="p-2 bg-green-50 border border-green-200 rounded">
@@ -228,7 +228,7 @@ fetch(\`\${config.apiBase}/schwab/health\`)
                 </div>
               </div>
             )}
-            
+
             {testResults.backend.error && (
               <div className="p-2 bg-red-50 border border-red-200 rounded">
                 <p className="text-red-700">Error: {testResults.backend.error}</p>
@@ -250,7 +250,7 @@ fetch(\`\${config.apiBase}/schwab/health\`)
             {isLoading ? 'Testing...' : 'Test OAuth URL'}
           </button>
         </div>
-        
+
         {testResults.oauth && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -259,7 +259,7 @@ fetch(\`\${config.apiBase}/schwab/health\`)
               </span>
               <span>OAuth URL Generation: {testResults.oauth.status}</span>
             </div>
-            
+
             {testResults.oauth.authUrl && (
               <div className="space-y-2">
                 <div className="p-2 bg-gray-50 border rounded">
@@ -282,7 +282,7 @@ fetch(\`\${config.apiBase}/schwab/health\`)
                 </button>
               </div>
             )}
-            
+
             {testResults.oauth.error && (
               <div className="p-2 bg-red-50 border border-red-200 rounded">
                 <p className="text-red-700">Error: {testResults.oauth.error}</p>

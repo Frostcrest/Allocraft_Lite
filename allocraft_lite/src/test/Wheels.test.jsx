@@ -122,7 +122,7 @@ const createWrapper = () => {
       },
     },
   })
-  
+
   return ({ children }) => (
     <QueryClientProvider client={queryClient}>
       {children}
@@ -231,7 +231,7 @@ describe('Wheels Component - React Query Integration', () => {
 
     // Verify that React Query hooks are called
     expect(enhancedClient.useWheelCycles).toHaveBeenCalled()
-    
+
     // The data should be properly cached and available
     expect(screen.getByText('AAPL')).toBeInTheDocument()
   })
@@ -254,7 +254,7 @@ describe('Wheels Component - React Query Integration', () => {
     // Open event form (this would be through some UI interaction)
     // For this test, we'll simulate the form being open
     // The actual implementation might have a different trigger
-    
+
     // This test verifies the structure is in place for optimistic updates
     expect(enhancedClient.useCreateWheelEvent).toHaveBeenCalled()
   })

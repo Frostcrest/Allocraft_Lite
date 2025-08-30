@@ -12,13 +12,13 @@
 export function computeLotCoverageAndShares(lot, events) {
   // Build coverage info
   const callOpen = events.find((e) => e.event_type === 'SELL_CALL_OPEN');
-  const callClose = events.find((e) => 
-    e.event_type === 'SELL_CALL_CLOSE' || 
-    e.event_type === 'CALLED_AWAY' || 
+  const callClose = events.find((e) =>
+    e.event_type === 'SELL_CALL_CLOSE' ||
+    e.event_type === 'CALLED_AWAY' ||
     e.event_type === 'CALL_ASSIGNED'
   );
   const putOpen = events.find((e) => e.event_type === 'SELL_PUT_OPEN');
-  
+
   let coverage = null;
   if (callOpen) {
     coverage = {
@@ -33,7 +33,7 @@ export function computeLotCoverageAndShares(lot, events) {
       status: 'OPEN',
     };
   }
-  
+
   // Compute shares remaining for this lot from linked events
   let shares = 0;
   for (const e of events) {
@@ -58,7 +58,7 @@ export function computeLotCoverageAndShares(lot, events) {
         break;
     }
   }
-  
+
   // Fallbacks if shares calculation isn't complete
   if (!Number.isFinite(shares)) shares = 0;
   if (shares === 0) {
@@ -67,7 +67,7 @@ export function computeLotCoverageAndShares(lot, events) {
     const isStockLot = lot.acquisition_method !== 'CASH_SECURED_PUT' && lot.status !== 'CASH_RESERVED';
     if (!closed && isStockLot) shares = 100;
   }
-  
+
   return { coverage, shares };
 }
 
@@ -118,14 +118,14 @@ export function sumNullable(...values) {
  */
 export function aggregateMetrics(metricsArray) {
   if (!metricsArray || metricsArray.length === 0) return null;
-  
+
   const result = {
     total_realized_pl: 0,
     unrealized_pl: 0,
     net_options_cashflow: 0,
     // Add other metrics as needed
   };
-  
+
   metricsArray.forEach(metrics => {
     if (metrics) {
       result.total_realized_pl += metrics.total_realized_pl || 0;
@@ -133,6 +133,6 @@ export function aggregateMetrics(metricsArray) {
       result.net_options_cashflow += metrics.net_options_cashflow || 0;
     }
   });
-  
+
   return result;
 }

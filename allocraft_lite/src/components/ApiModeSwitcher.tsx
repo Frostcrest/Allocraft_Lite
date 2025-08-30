@@ -19,7 +19,7 @@ export default function ApiModeSwitcher() {
       const health = await backendSchwabApi.checkHealth();
       setHealthStatus(health);
       setCurrentMode('backend');
-      
+
       console.log('🔄 Switched to Backend API Mode');
       console.log('Backend Health:', health);
     } catch (error) {
@@ -47,7 +47,7 @@ export default function ApiModeSwitcher() {
   return (
     <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
       <h3 className="font-bold text-lg mb-3 text-blue-800">🔄 API Mode Switcher</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* Direct API Mode */}
         <div className={`p-3 rounded-lg border-2 ${currentMode === 'direct' ? 'border-blue-500 bg-blue-100' : 'border-gray-300 bg-gray-50'}`}>
@@ -57,7 +57,7 @@ export default function ApiModeSwitcher() {
           <p className="text-xs text-gray-600 mb-3">
             Frontend calls Schwab API directly
           </p>
-          <Button 
+          <Button
             onClick={switchToDirect}
             disabled={currentMode === 'direct'}
             className="w-full text-xs"
@@ -75,7 +75,7 @@ export default function ApiModeSwitcher() {
           <p className="text-xs text-gray-600 mb-3">
             Frontend → Your Render Backend → Schwab API
           </p>
-          <Button 
+          <Button
             onClick={switchToBackend}
             disabled={currentMode === 'backend'}
             className="w-full text-xs"

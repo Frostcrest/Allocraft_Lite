@@ -22,13 +22,13 @@ import { Plus, Edit, Trash2, Target, RefreshCcw, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import OptionForm from "@/components/forms/OptionForm";
 import { formatCurrency } from "@/lib/utils";
-import { 
-  useOptions, 
-  useOptionExpiries, 
-  useCreateOption, 
-  useUpdateOption, 
-  useDeleteOption, 
-  useRefreshOptionPrices 
+import {
+  useOptions,
+  useOptionExpiries,
+  useCreateOption,
+  useUpdateOption,
+  useDeleteOption,
+  useRefreshOptionPrices
 } from "@/api/enhancedClient";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -58,11 +58,11 @@ export default function Options() {
   const [editingOption, setEditingOption] = useState(null);
 
   // React Query hooks
-  const { 
-    data: options = [], 
-    isLoading, 
+  const {
+    data: options = [],
+    isLoading,
     error,
-    refetch 
+    refetch
   } = useOptions();
 
   const createOptionMutation = useCreateOption();
@@ -99,10 +99,10 @@ export default function Options() {
   }
 
   // Check for mutation loading states
-  const isMutating = createOptionMutation.isPending || 
-                     updateOptionMutation.isPending || 
-                     deleteOptionMutation.isPending ||
-                     refreshPricesMutation.isPending;
+  const isMutating = createOptionMutation.isPending ||
+    updateOptionMutation.isPending ||
+    deleteOptionMutation.isPending ||
+    refreshPricesMutation.isPending;
 
   const handleSubmit = async (optionData) => {
     try {
@@ -241,10 +241,10 @@ export default function Options() {
                 </TableHeader>
                 <TableBody>
                   {options.map((option) => {
-                    const pl = option.current_price && option.cost_basis 
+                    const pl = option.current_price && option.cost_basis
                       ? (option.current_price - option.cost_basis) * option.contracts * 100
                       : 0;
-                    
+
                     return (
                       <TableRow key={option.id} className="hover:bg-slate-50">
                         <TableCell className="font-medium text-slate-900">

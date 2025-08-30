@@ -57,7 +57,7 @@ const createWrapper = () => {
       },
     },
   })
-  
+
   return ({ children }) => (
     <QueryClientProvider client={queryClient}>
       {children}
@@ -126,7 +126,7 @@ describe('Wheels Component - Basic React Query Integration', () => {
 
     // Verify that React Query hooks are called
     expect(enhancedClient.useWheelCycles).toHaveBeenCalled()
-    
+
     // The data should be properly cached and available
     expect(screen.getByText('AAPL')).toBeInTheDocument()
   })

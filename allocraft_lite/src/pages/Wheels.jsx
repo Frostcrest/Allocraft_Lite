@@ -40,30 +40,30 @@ const initialEvent = {
 
 export default function Wheels() {
   // Use React Query for cycles
-  const { 
-    data: cycles = [], 
-    isLoading: cyclesLoading, 
-    error: cyclesError 
+  const {
+    data: cycles = [],
+    isLoading: cyclesLoading,
+    error: cyclesError
   } = useWheelCycles();
-  
+
   const [selectedTicker, setSelectedTicker] = useState(null);
-  
+
   // Use React Query for ticker-specific data
-  const { 
-    data: tickerData, 
-    isLoading: tickerDataLoading, 
+  const {
+    data: tickerData,
+    isLoading: tickerDataLoading,
     error: tickerDataError,
     refetch: refetchTickerData
   } = useWheelDataForTicker(selectedTicker, {
     enabled: !!selectedTicker
   });
-  
+
   // Extract data from optimized response
   const events = tickerData?.events || [];
   const metrics = tickerData?.metrics;
   const lots = tickerData?.lots || [];
   const eventsByLot = tickerData?.events_by_lot || {};
-  
+
   // Sorting for sidebar tickers
   const [sortBy, setSortBy] = useState('alphabetical'); // 'alphabetical' | 'started' | 'pl' | 'collateral'
   const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
@@ -84,7 +84,7 @@ export default function Wheels() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [cycleForm, setCycleForm] = useState(initialCycle);
   const [eventForm, setEventForm] = useState(initialEvent);
-  
+
   // Computed loading state
   const loading = cyclesLoading || (selectedTicker && tickerDataLoading);
 
@@ -111,13 +111,13 @@ export default function Wheels() {
   // Update side stats when ticker data changes
   useEffect(() => {
     if (!selectedTicker || !tickerData) return;
-    
+
     try {
       const col = computeCollateralReserved(events);
       const overallPL = sumNullable(metrics?.unrealized_pl, metrics?.total_realized_pl);
-      setTickerSideStats((prev) => ({ 
-        ...prev, 
-        [selectedTicker]: { collateral_reserved: col, pl: overallPL } 
+      setTickerSideStats((prev) => ({
+        ...prev,
+        [selectedTicker]: { collateral_reserved: col, pl: overallPL }
       }));
     } catch (e) {
       console.error("Error computing side stats:", e);
@@ -132,25 +132,25 @@ export default function Wheels() {
       setLotSharesMap({});
       return;
     }
-    
+
     // Build coverage map and lot events from the optimized data
     const newCoverageMap = {};
     const newLotEventsMap = {};
     const newLotSharesMap = {};
-    
+
     lots.forEach(lot => {
       const lotEvents = eventsByLot[lot.id] || [];
-      
+
       // Build coverage info and shares using the helper function
       const { coverage, shares } = computeLotCoverageAndShares(lot, lotEvents);
       newCoverageMap[lot.id] = coverage;
       newLotSharesMap[lot.id] = shares;
-      
+
       // Map events for timeline UI
       const eventsVM = lotEvents.map(mapEventForTimeline);
       newLotEventsMap[lot.id] = eventsVM;
     });
-    
+
     setCoverageMap(newCoverageMap);
     setLotEventsMap(newLotEventsMap);
     setLotSharesMap(newLotSharesMap);
@@ -395,8 +395,8 @@ export default function Wheels() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
             <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Cycles</h2>
             <p className="text-red-600">{cyclesError.message || 'Failed to load wheel cycles'}</p>
-            <Button 
-              onClick={() => window.location.reload()} 
+            <Button
+              onClick={() => window.location.reload()}
               className="mt-4 bg-red-600 hover:bg-red-700"
             >
               Reload Page
@@ -416,14 +416,14 @@ export default function Wheels() {
             <p className="text-yellow-600">Failed to load data for ticker {selectedTicker}</p>
             <p className="text-sm text-yellow-500 mt-1">{tickerDataError.message}</p>
             <div className="mt-4 space-x-2">
-              <Button 
-                onClick={() => refetchTickerData()} 
+              <Button
+                onClick={() => refetchTickerData()}
                 className="bg-yellow-600 hover:bg-yellow-700"
               >
                 Retry
               </Button>
-              <Button 
-                onClick={() => setSelectedTicker(null)} 
+              <Button
+                onClick={() => setSelectedTicker(null)}
                 variant="outline"
               >
                 Select Different Ticker

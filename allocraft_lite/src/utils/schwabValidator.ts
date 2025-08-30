@@ -67,7 +67,7 @@ export function testSchwabApiConnection() {
 
   console.log('🔍 Schwab API Configuration Check');
   console.log('================================');
-  
+
   if (isReady) {
     console.log('✅ Configuration looks good!');
     console.log('🚀 Ready to test OAuth flow');

@@ -13,7 +13,7 @@ const dotClass = (t: EventType) => {
         CALL_ASSIGNMENT: "bg-emerald-800",
         FEE: "bg-slate-400",
     }[t];
-    
+
     return map || "bg-gray-400"; // fallback color
 };
 

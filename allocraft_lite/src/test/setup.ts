@@ -15,10 +15,10 @@ afterEach(() => {
 Object.defineProperty(global, 'IntersectionObserver', {
   writable: true,
   value: class IntersectionObserver {
-    constructor() {}
-    disconnect() {}
-    observe() {}
-    unobserve() {}
+    constructor() { }
+    disconnect() { }
+    observe() { }
+    unobserve() { }
   }
 })
 
@@ -26,10 +26,10 @@ Object.defineProperty(global, 'IntersectionObserver', {
 Object.defineProperty(global, 'ResizeObserver', {
   writable: true,
   value: class ResizeObserver {
-    constructor() {}
-    disconnect() {}
-    observe() {}
-    unobserve() {}
+    constructor() { }
+    disconnect() { }
+    observe() { }
+    unobserve() { }
   }
 })
 

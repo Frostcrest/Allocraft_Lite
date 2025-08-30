@@ -15,11 +15,11 @@ vi.mock('@/api/enhancedClient', () => ({
 
 // Mock the components
 vi.mock('../components/forms/StockForm', () => ({
-  default: ({ isOpen, onSubmit, onClose, stock, disabled }) => 
+  default: ({ isOpen, onSubmit, onClose, stock, disabled }) =>
     isOpen ? (
       <div data-testid="stock-form">
         <h3>{stock ? 'Edit Stock' : 'Add Stock'}</h3>
-        <button 
+        <button
           onClick={() => onSubmit({ symbol: 'TEST', shares: 100, cost_basis: 50.00 })}
           disabled={disabled}
           data-testid="submit-stock"
@@ -37,15 +37,15 @@ vi.mock('../components/tables/StockTable', () => ({
       {stocks.map(stock => (
         <div key={stock.id} data-testid={`stock-${stock.id}`}>
           <span>{stock.symbol}</span>
-          <button 
-            onClick={() => onEdit(stock)} 
+          <button
+            onClick={() => onEdit(stock)}
             disabled={disabled}
             data-testid={`edit-${stock.id}`}
           >
             Edit
           </button>
-          <button 
-            onClick={() => onDelete(stock.id)} 
+          <button
+            onClick={() => onDelete(stock.id)}
             disabled={disabled}
             data-testid={`delete-${stock.id}`}
           >
@@ -89,7 +89,7 @@ const createWrapper = () => {
       },
     },
   })
-  
+
   return ({ children }) => (
     <QueryClientProvider client={queryClient}>
       {children}
@@ -249,7 +249,7 @@ describe('Stocks Component - React Query Integration', () => {
     render(<Stocks />, { wrapper: createWrapper() })
 
     expect(screen.getByText(/processing changes/i)).toBeInTheDocument()
-    
+
     // Buttons should be disabled
     const addButton = screen.getByText(/add position/i)
     expect(addButton).toBeDisabled()
@@ -274,7 +274,7 @@ describe('Stocks Component - React Query Integration', () => {
 
     // Verify that React Query hooks are called
     expect(enhancedClient.useStocks).toHaveBeenCalled()
-    
+
     // The data should be properly cached and available
     expect(screen.getByText('AAPL')).toBeInTheDocument()
   })
