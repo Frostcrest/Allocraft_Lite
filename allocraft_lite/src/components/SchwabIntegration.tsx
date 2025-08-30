@@ -21,12 +21,12 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
     try {
       console.log('🔍 Checking Schwab connection status...');
       const status = await backendSchwabApi.getStatus();
-      
+
       if (status.connected) {
         console.log('✅ User is connected to Schwab');
         setConnectionStatus('connected');
         setError('');
-        
+
         // Trigger callback if provided
         if (onConnectionSuccess) {
           setTimeout(() => {
@@ -85,7 +85,7 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
       if (urlParams.get('success') === 'true') {
         console.log('✅ Schwab OAuth completed successfully');
         checkConnectionStatus(); // Recheck status after OAuth
-        
+
         // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
       } else if (urlParams.get('error')) {
@@ -94,7 +94,7 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
         setError(`OAuth failed: ${error}`);
         setIsConnecting(false);
         setConnectionStatus('disconnected');
-        
+
         // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -115,13 +115,12 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Connect Your Schwab Account</h3>
-        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-          connectionStatus === 'connected' 
-            ? 'bg-green-100 text-green-700' 
+        <div className={`px-2 py-1 rounded-full text-xs font-medium ${connectionStatus === 'connected'
+            ? 'bg-green-100 text-green-700'
             : connectionStatus === 'connecting'
-            ? 'bg-yellow-100 text-yellow-700'
-            : 'bg-gray-100 text-gray-700'
-        }`}>
+              ? 'bg-yellow-100 text-yellow-700'
+              : 'bg-gray-100 text-gray-700'
+          }`}>
           {connectionStatus === 'connected' && '✅ Schwab Account Connected'}
           {connectionStatus === 'connecting' && '🔄 Connecting...'}
           {connectionStatus === 'disconnected' && '❌ Not Connected'}
@@ -140,8 +139,8 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
 
       <div className="flex gap-2">
         {connectionStatus === 'disconnected' && (
-          <Button 
-            onClick={handleConnect} 
+          <Button
+            onClick={handleConnect}
             disabled={isConnecting}
             className="flex items-center gap-2"
           >
@@ -152,15 +151,15 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
 
         {connectionStatus === 'connected' && (
           <div className="flex gap-2">
-            <Button 
-              onClick={() => checkConnectionStatus()} 
+            <Button
+              onClick={() => checkConnectionStatus()}
               variant="outline"
               size="sm"
             >
               Refresh Status
             </Button>
-            <Button 
-              onClick={handleDisconnect} 
+            <Button
+              onClick={handleDisconnect}
               variant="destructive"
               size="sm"
             >

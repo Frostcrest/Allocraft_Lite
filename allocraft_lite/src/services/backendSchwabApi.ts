@@ -103,7 +103,7 @@ export class BackendSchwabApiService {
   /**
    * Check Schwab connection status
    */
-  async getStatus(): Promise<{connected: boolean, has_access_token: boolean, has_refresh_token: boolean, token_expires_at: string | null}> {
+  async getStatus(): Promise<{ connected: boolean, has_access_token: boolean, has_refresh_token: boolean, token_expires_at: string | null }> {
     try {
       return await fetchJson('/schwab/status');
     } catch (error) {
