@@ -4,8 +4,6 @@
  * Backend manages all tokens and authentication
  */
 
-import { fetchJson } from '../api/fastapiClient';
-
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://allocraft-backend.onrender.com';
 
 export interface SchwabAccount {
@@ -79,7 +77,20 @@ export class BackendSchwabApiService {
    */
   async getAccounts(): Promise<SchwabAccount[]> {
     try {
-      return await fetchJson('/schwab/accounts');
+      const response = await fetch(`${API_BASE_URL}/schwab/accounts`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        return await response.json();
+      } else if (response.status === 401 || response.status === 403) {
+        throw new Error('Not authenticated with Allocraft');
+      } else {
+        throw new Error(`Failed to fetch accounts: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error fetching accounts:', error);
       throw error;
@@ -92,8 +103,21 @@ export class BackendSchwabApiService {
    */
   async getPositions(accountId: string): Promise<SchwabPosition[]> {
     try {
-      const data = await fetchJson(`/schwab/accounts/${accountId}/positions`);
-      return data.securitiesAccount?.positions || [];
+      const response = await fetch(`${API_BASE_URL}/schwab/accounts/${accountId}/positions`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.securitiesAccount?.positions || [];
+      } else if (response.status === 401 || response.status === 403) {
+        throw new Error('Not authenticated with Allocraft');
+      } else {
+        throw new Error(`Failed to fetch positions: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error fetching positions:', error);
       throw error;
@@ -103,12 +127,37 @@ export class BackendSchwabApiService {
   /**
    * Check Schwab connection status
    */
-  async getStatus(): Promise<{ connected: boolean, has_access_token: boolean, has_refresh_token: boolean, token_expires_at: string | null }> {
+  async getStatus(): Promise<{connected: boolean, has_access_token: boolean, has_refresh_token: boolean, token_expires_at: string | null}> {
     try {
-      return await fetchJson('/schwab/status');
+      const response = await fetch(`${API_BASE_URL}/schwab/status`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        return await response.json();
+      } else if (response.status === 401 || response.status === 403) {
+        // User not authenticated with main app, return disconnected status
+        return {
+          connected: false,
+          has_access_token: false, 
+          has_refresh_token: false,
+          token_expires_at: null
+        };
+      } else {
+        throw new Error(`Status check failed: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error checking Schwab status:', error);
-      throw error;
+      // Return disconnected status on any error
+      return {
+        connected: false,
+        has_access_token: false,
+        has_refresh_token: false, 
+        token_expires_at: null
+      };
     }
   }
 
@@ -129,8 +178,15 @@ export class BackendSchwabApiService {
    */
   async refreshToken(): Promise<boolean> {
     try {
-      await fetchJson('/schwab/refresh-token', { method: 'POST' });
-      return true;
+      const response = await fetch(`${API_BASE_URL}/schwab/refresh-token`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.ok;
     } catch (error) {
       console.error('Token refresh failed:', error);
       return false;
@@ -142,7 +198,17 @@ export class BackendSchwabApiService {
    */
   async disconnect(): Promise<void> {
     try {
-      await fetchJson('/schwab/disconnect', { method: 'DELETE' });
+      const response = await fetch(`${API_BASE_URL}/schwab/disconnect`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok && response.status !== 401 && response.status !== 403) {
+        throw new Error(`Disconnect failed: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error disconnecting from Schwab:', error);
       throw error;
