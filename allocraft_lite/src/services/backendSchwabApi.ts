@@ -82,6 +82,7 @@ export class BackendSchwabApiService {
    */
   async getAccounts(): Promise<SchwabAccount[]> {
     try {
+      console.log('🔍 Fetching Schwab accounts from backend...');
       const response = await fetch(`${API_BASE_URL}/schwab/accounts`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
@@ -89,15 +90,23 @@ export class BackendSchwabApiService {
         }
       });
       
+      console.log('📡 Backend accounts response status:', response.status);
+      
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        console.log('✅ Accounts data received:', data);
+        return data;
       } else if (response.status === 401 || response.status === 403) {
+        const errorText = await response.text();
+        console.error('❌ Authentication error:', errorText);
         throw new Error('Not authenticated with Allocraft');
       } else {
-        throw new Error(`Failed to fetch accounts: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ Backend error response:', errorText);
+        throw new Error(`Failed to fetch accounts: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Error fetching accounts:', error);
+      console.error('❌ Error fetching accounts:', error);
       throw error;
     }
   }
@@ -108,6 +117,7 @@ export class BackendSchwabApiService {
    */
   async getPositions(accountId: string): Promise<SchwabPosition[]> {
     try {
+      console.log(`🔍 Fetching positions for account ${accountId}...`);
       const response = await fetch(`${API_BASE_URL}/schwab/accounts/${accountId}/positions`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
@@ -115,16 +125,25 @@ export class BackendSchwabApiService {
         }
       });
       
+      console.log(`📡 Backend positions response status for ${accountId}:`, response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        return data.securitiesAccount?.positions || [];
+        console.log(`✅ Positions data received for ${accountId}:`, data);
+        const positions = data.securitiesAccount?.positions || [];
+        console.log(`📊 Extracted ${positions.length} positions for ${accountId}`);
+        return positions;
       } else if (response.status === 401 || response.status === 403) {
+        const errorText = await response.text();
+        console.error('❌ Authentication error:', errorText);
         throw new Error('Not authenticated with Allocraft');
       } else {
-        throw new Error(`Failed to fetch positions: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error(`❌ Backend error response for ${accountId}:`, errorText);
+        throw new Error(`Failed to fetch positions: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Error fetching positions:', error);
+      console.error(`❌ Error fetching positions for ${accountId}:`, error);
       throw error;
     }
   }

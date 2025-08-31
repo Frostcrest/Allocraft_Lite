@@ -150,15 +150,23 @@ const Stocks: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error loading Schwab positions:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load Schwab positions');
-
-      // If token is invalid, clear it
-      if (error instanceof Error && (error.message?.includes('401') || error.message?.includes('Unauthorized'))) {
-        console.log('🔄 Token appears invalid, clearing...');
-        localStorage.removeItem('schwab_access_token');
-        localStorage.removeItem('schwab_refresh_token');
-        localStorage.removeItem('schwab_accounts');
+      let errorMessage = 'Failed to load Schwab positions';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('Full error details:', error);
+        
+        // Handle specific error types
+        if (error.message.includes('Not authenticated with Allocraft')) {
+          errorMessage = 'Please log in to your Allocraft account first';
+        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorMessage = 'Schwab connection expired. Please reconnect your account.';
+        } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          errorMessage = 'Access denied. Please check your Schwab account permissions.';
+        }
       }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -166,13 +174,24 @@ const Stocks: React.FC = () => {
 
   // Load Schwab positions on component mount
   useEffect(() => {
-    const token = localStorage.getItem('schwab_access_token');
-    if (token) {
-      // Small delay to ensure component is fully mounted
-      setTimeout(() => {
-        loadSchwabPositions();
-      }, 500);
-    }
+    // Check if user is connected to Schwab and auto-load positions
+    const checkAndLoadPositions = async () => {
+      try {
+        const status = await backendSchwabApi.getStatus();
+        if (status.connected) {
+          console.log('🔄 User is connected to Schwab, loading positions...');
+          setTimeout(() => {
+            loadSchwabPositions();
+          }, 500);
+        } else {
+          console.log('ℹ️ User not connected to Schwab, skipping position load');
+        }
+      } catch (error) {
+        console.log('ℹ️ Could not check Schwab status, user might not be logged in');
+      }
+    };
+    
+    checkAndLoadPositions();
   }, []);
 
   // Listen for Schwab connection events
