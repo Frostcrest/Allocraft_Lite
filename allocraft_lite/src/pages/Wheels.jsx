@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCcw } from "lucide-react";
+import { Plus, RotateCcw, Target } from "lucide-react";
 import { useWheelCycles } from "@/api/enhancedClient";
+import WheelBuilder from "@/components/WheelBuilder";
 
 // Gradually restoring Wheels component - Step 1: Basic data fetching
 export default function Wheels() {
@@ -15,6 +16,7 @@ export default function Wheels() {
   } = useWheelCycles();
 
   const [selectedTicker, setSelectedTicker] = useState(null);
+  const [showWheelBuilder, setShowWheelBuilder] = useState(false);
 
   // Simple computed values without complex useEffect
   const tickers = Array.from(new Set(cycles.map(c => c.ticker))).sort();
@@ -57,6 +59,12 @@ export default function Wheels() {
             <p className="text-slate-600 mt-2">All lots and events are grouped by ticker</p>
           </div>
           <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowWheelBuilder(true)}
+              className="bg-blue-600 hover:bg-blue-700 shadow-lg"
+            >
+              <Target className="w-5 h-5 mr-2" /> Build from Positions
+            </Button>
             <Button className="bg-slate-900 hover:bg-slate-800 shadow-lg">
               <Plus className="w-5 h-5 mr-2" /> New Ticker
             </Button>
@@ -66,24 +74,48 @@ export default function Wheels() {
         <div className="text-center py-12">
           {tickers.length === 0 ? (
             <>
-              <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-                <RotateCcw className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                <Target className="w-8 h-8 text-blue-600" />
               </div>
               <h3 className="text-lg font-medium text-slate-900 mb-2">No wheel cycles found</h3>
-              <p className="text-slate-500 mb-6">Create your first wheel cycle to get started.</p>
+              <p className="text-slate-500 mb-6">Click "Build from Positions" to analyze your Schwab account for wheel opportunities, or create a wheel cycle manually.</p>
+              <Button 
+                onClick={() => setShowWheelBuilder(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Target className="w-5 h-5 mr-2" /> Analyze Positions for Wheels
+              </Button>
             </>
           ) : (
             <>
               <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
                 <RotateCcw className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-lg font-medium text-slate-900 mb-2">Step 1: Basic data loading complete</h3>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">Wheel Cycles Active</h3>
               <p className="text-slate-500 mb-6">Found {tickers.length} tickers with wheel cycles: {tickers.join(', ')}</p>
-              <p className="text-xs text-gray-400">Navigation working properly. More features will be restored gradually.</p>
+              <p className="text-slate-500 mb-4">Use "Build from Positions" to find new wheel opportunities from your current holdings.</p>
+              <Button 
+                onClick={() => setShowWheelBuilder(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Target className="w-5 h-5 mr-2" /> Find More Opportunities
+              </Button>
             </>
           )}
         </div>
       </div>
+
+      {/* Wheel Builder Modal */}
+      {showWheelBuilder && (
+        <WheelBuilder 
+          onClose={() => setShowWheelBuilder(false)}
+          onWheelCreated={(wheelData) => {
+            console.log('Wheel created:', wheelData);
+            setShowWheelBuilder(false);
+            // TODO: Refresh wheel cycles data
+          }}
+        />
+      )}
     </div>
   );
 }
