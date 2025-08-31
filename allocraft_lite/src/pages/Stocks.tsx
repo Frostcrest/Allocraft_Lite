@@ -9,6 +9,36 @@ import SchwabIntegrationTests from '@/components/SchwabIntegrationTests';
 import APISwitcher from '@/components/APISwitcher';
 import { backendSchwabApi } from '../services/backendSchwabApi';
 
+// Option symbol parser for formats like "HIMS 251017P00037000"
+const parseOptionSymbol = (symbol: string) => {
+  // Match pattern: TICKER YYMMDDCPPPPPPPP or TICKER YYMMDDPPPPPPPPP
+  const optionMatch = symbol.match(/^([A-Z]+)\s+(\d{6})([CP])(\d{8})$/);
+  
+  if (!optionMatch) {
+    return { isOption: false, underlyingSymbol: symbol };
+  }
+
+  const [, underlying, dateStr, optionType, strikeStr] = optionMatch;
+  
+  // Parse date (YYMMDD)
+  const year = 2000 + parseInt(dateStr.substring(0, 2));
+  const month = parseInt(dateStr.substring(2, 4));
+  const day = parseInt(dateStr.substring(4, 6));
+  const expirationDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  
+  // Parse strike price (last 8 digits, divide by 1000)
+  const strikePrice = parseInt(strikeStr) / 1000;
+  
+  return {
+    isOption: true,
+    underlyingSymbol: underlying,
+    optionType: optionType === 'C' ? 'Call' : 'Put',
+    strikePrice,
+    expirationDate,
+    displaySymbol: `${underlying} ${expirationDate} ${optionType === 'C' ? 'Call' : 'Put'} $${strikePrice}`
+  };
+};
+
 interface Position {
   id: string;
   symbol: string;
@@ -21,6 +51,13 @@ interface Position {
   source: 'manual' | 'schwab';
   accountType?: string;
   accountNumber?: string;
+  // Option-specific fields
+  isOption?: boolean;
+  underlyingSymbol?: string;
+  optionType?: 'Call' | 'Put';
+  strikePrice?: number;
+  expirationDate?: string;
+  contracts?: number;
 }
 
 const Stocks: React.FC = () => {
@@ -66,7 +103,10 @@ const Stocks: React.FC = () => {
       const profitLoss = marketValue - (averagePrice * quantity);
       const profitLossPercent = averagePrice > 0 ? ((marketPrice - averagePrice) / averagePrice) * 100 : 0;
 
-      return {
+      // Parse option information
+      const optionInfo = parseOptionSymbol(symbol);
+
+      const basePosition: Position = {
         id: `schwab-${accountNumber}-${symbol}-${index}`,
         symbol: symbol,
         shares: quantity,
@@ -79,6 +119,21 @@ const Stocks: React.FC = () => {
         accountType: accountType,
         accountNumber: accountNumber
       };
+
+      // Add option-specific fields if it's an option
+      if (optionInfo.isOption) {
+        return {
+          ...basePosition,
+          isOption: true,
+          underlyingSymbol: optionInfo.underlyingSymbol,
+          optionType: optionInfo.optionType as 'Call' | 'Put',
+          strikePrice: optionInfo.strikePrice,
+          expirationDate: optionInfo.expirationDate,
+          contracts: Math.abs(quantity) / 100, // Convert shares to contracts
+        };
+      }
+
+      return basePosition;
     } catch (error) {
       console.error('Error transforming position:', error, pos);
       return null;
@@ -256,25 +311,51 @@ const Stocks: React.FC = () => {
 
   // Combine manual and Schwab positions safely
   const allPositions = [...positions, ...schwabPositions];
+  
+  // Group positions by underlying symbol
+  const groupedPositions = allPositions.reduce((groups, position) => {
+    const key = position.isOption ? position.underlyingSymbol! : position.symbol;
+    if (!groups[key]) {
+      groups[key] = { stocks: [], options: [] };
+    }
+    
+    if (position.isOption) {
+      groups[key].options.push(position);
+    } else {
+      groups[key].stocks.push(position);
+    }
+    
+    return groups;
+  }, {} as Record<string, { stocks: Position[], options: Position[] }>);
+
   const totalValue = allPositions.reduce((sum, pos) => {
     const value = isNaN(pos.marketValue) ? 0 : pos.marketValue;
     return sum + value;
   }, 0);
+
+  // Calculate statistics
+  const totalStocks = allPositions.filter(p => !p.isOption).length;
+  const totalOptions = allPositions.filter(p => p.isOption).length;
+  const stockValue = allPositions.filter(p => !p.isOption).reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
+  const optionValue = allPositions.filter(p => p.isOption).reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Stock Positions</h1>
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Stock & Options Portfolio</h1>
             <p className="text-slate-600 mt-2">
-              Manage your equity holdings • Total Value: <span className="font-semibold">${totalValue.toLocaleString()}</span>
-              {schwabPositions.length > 0 && (
-                <span className="ml-2 text-sm">
-                  ({positions.length} manual + {schwabPositions.length} Schwab positions)
-                </span>
-              )}
+              Total Value: <span className="font-semibold">${totalValue.toLocaleString()}</span>
             </p>
+            <div className="flex gap-6 mt-2 text-sm">
+              <div className="text-slate-600">
+                📈 <span className="font-medium">{totalStocks} Stocks</span> • ${stockValue.toLocaleString()}
+              </div>
+              <div className="text-slate-600">
+                📊 <span className="font-medium">{totalOptions} Options</span> • ${optionValue.toLocaleString()}
+              </div>
+            </div>
           </div>
           <Button onClick={() => setIsAddModalOpen(true)} className="bg-slate-900 hover:bg-slate-800 shadow-lg">
             <Plus className="h-5 w-5 mr-2" />
@@ -415,36 +496,59 @@ const Stocks: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-6">
-                {/* Schwab Positions */}
-                {schwabPositions.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-slate-900">📊 Schwab Positions</h3>
-                      <span className="text-sm text-slate-500">{schwabPositions.length} positions</span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {schwabPositions.map((position) => (
-                        <PositionCard key={position.id} position={position} canRemove={false} onRemove={() => {}} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="space-y-8">
+                {Object.entries(groupedPositions)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([symbol, group]) => (
+                    <div key={symbol} className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h3 className="text-xl font-semibold text-slate-900">{symbol}</h3>
+                        <span className="text-sm text-slate-500">
+                          {group.stocks.length} stock{group.stocks.length !== 1 ? 's' : ''} + {group.options.length} option{group.options.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
 
-                {/* Manual Positions */}
-                {positions.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-slate-900">✏️ Manual Positions</h3>
-                      <span className="text-sm text-slate-500">{positions.length} positions</span>
+                      {/* Stock positions for this symbol */}
+                      {group.stocks.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-lg font-medium text-slate-700 flex items-center gap-2">
+                            📈 Stock Positions
+                            <span className="text-sm font-normal text-slate-500">({group.stocks.length})</span>
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {group.stocks.map((position) => (
+                              <PositionCard 
+                                key={position.id} 
+                                position={position} 
+                                canRemove={position.source === 'manual'} 
+                                onRemove={removePosition} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Option positions for this symbol */}
+                      {group.options.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-lg font-medium text-slate-700 flex items-center gap-2">
+                            📊 Option Positions
+                            <span className="text-sm font-normal text-slate-500">({group.options.length})</span>
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {group.options.map((position) => (
+                              <OptionPositionCard 
+                                key={position.id} 
+                                position={position} 
+                                canRemove={position.source === 'manual'} 
+                                onRemove={removePosition} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {positions.map((position) => (
-                        <PositionCard key={position.id} position={position} canRemove={true} onRemove={removePosition} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  ))}
               </div>
             )}
           </CardContent>
@@ -534,6 +638,148 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, canRemove, onRemo
           <div>
             <div className="text-slate-500">Market Price</div>
             <div className="font-semibold text-slate-900">{formatCurrency(position.marketPrice)}</div>
+          </div>
+          <div>
+            <div className="text-slate-500">Market Value</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.marketValue)}</div>
+          </div>
+        </div>
+
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-slate-500 text-sm">Profit/Loss</div>
+              <div className={`font-semibold ${getProfitLossColor(position.profitLoss)}`}>
+                {formatCurrency(position.profitLoss)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-slate-500 text-sm">Percentage</div>
+              <div className={`font-semibold ${getProfitLossColor(position.profitLoss)}`}>
+                {formatPercent(position.profitLossPercent)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {position.source === 'schwab' && (
+          <div className="text-xs text-slate-500 pt-2 border-t border-slate-100">
+            Account: {position.accountNumber} ({position.accountType})
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Option Position Card Component
+interface OptionPositionCardProps {
+  position: Position;
+  canRemove: boolean;
+  onRemove: (id: string) => void;
+}
+
+const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRemove, onRemove }) => {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  const formatPercent = (value: number) => {
+    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  };
+
+  const getProfitLossColor = (value: number) => {
+    if (value > 0) return 'text-emerald-600';
+    if (value < 0) return 'text-red-600';
+    return 'text-slate-600';
+  };
+
+  const getOptionTypeChip = () => {
+    const isCall = position.optionType === 'Call';
+    const isProfit = position.profitLoss >= 0;
+    return (
+      <div className="flex gap-2">
+        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${
+          isCall 
+            ? 'border-blue-300 bg-blue-50 text-blue-700' 
+            : 'border-purple-300 bg-purple-50 text-purple-700'
+        }`}>
+          {position.optionType}
+        </span>
+        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${
+          isProfit 
+            ? 'border-emerald-300 bg-emerald-50 text-emerald-700' 
+            : 'border-red-300 bg-red-50 text-red-700'
+        }`}>
+          {isProfit ? 'Profit' : 'Loss'}
+        </span>
+      </div>
+    );
+  };
+
+  const formatExpirationDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const isShortPosition = position.shares < 0;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900 truncate">
+            {position.underlyingSymbol} ${position.strikePrice}
+          </h3>
+          {getOptionTypeChip()}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {canRemove && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onRemove(position.id)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="text-sm text-slate-600">
+          <div className="font-medium">
+            {position.optionType} • Exp: {formatExpirationDate(position.expirationDate!)}
+          </div>
+          <div className="text-xs text-slate-500 mt-1">
+            {isShortPosition ? 'Short' : 'Long'} {Math.abs(position.contracts!)} contract{Math.abs(position.contracts!) !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <div className="text-slate-500">Contracts</div>
+            <div className="font-semibold text-slate-900">
+              {isShortPosition ? '-' : '+'}{Math.abs(position.contracts!)}
+            </div>
+          </div>
+          <div>
+            <div className="text-slate-500">Avg Price</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(Math.abs(position.costBasis))}</div>
+          </div>
+          <div>
+            <div className="text-slate-500">Current Price</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(Math.abs(position.marketPrice))}</div>
           </div>
           <div>
             <div className="text-slate-500">Market Value</div>
