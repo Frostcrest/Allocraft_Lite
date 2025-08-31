@@ -1,30 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.jsx";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog.jsx";
-import { Badge } from "@/components/ui/badge.jsx";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Zap, TrendingUp, DollarSign, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { PositionDataService } from "@/services/positionDataService";
-import { WheelDetectionService, WheelDetectionResult } from "@/services/wheelDetection";
+import { WheelDetectionService } from "@/services/wheelDetection";
 import { formatCurrency } from "@/lib/utils";
 
-interface WheelBuilderProps {
-  onWheelCreated?: (wheelData: any) => void;
-}
-
-const WheelBuilder: React.FC<WheelBuilderProps> = ({ onWheelCreated }) => {
+const WheelBuilder = ({ onWheelCreated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [detectedWheels, setDetectedWheels] = useState<WheelDetectionResult[]>([]);
+  const [detectedWheels, setDetectedWheels] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [selectedResult, setSelectedResult] = useState<WheelDetectionResult | null>(null);
+  const [error, setError] = useState('');
+  const [selectedResult, setSelectedResult] = useState(null);
 
   // Check Schwab connection status
   useEffect(() => {
     const checkConnection = async () => {
-      const connected = await PositionDataService.isConnectedToSchwab();
-      setIsConnected(connected);
+      try {
+        const connected = await PositionDataService.isConnectedToSchwab();
+        setIsConnected(connected);
+      } catch (err) {
+        console.warn('Could not check Schwab connection status:', err);
+        setIsConnected(false);
+      }
     };
     checkConnection();
   }, []);
@@ -71,7 +72,7 @@ const WheelBuilder: React.FC<WheelBuilderProps> = ({ onWheelCreated }) => {
     setSelectedResult(null);
   };
 
-  const getStrategyIcon = (strategy: string) => {
+  const getStrategyIcon = (strategy) => {
     switch (strategy) {
       case 'full_wheel':
         return <Zap className="w-4 h-4 text-purple-600" />;
@@ -86,7 +87,7 @@ const WheelBuilder: React.FC<WheelBuilderProps> = ({ onWheelCreated }) => {
     }
   };
 
-  const getStrategyColor = (strategy: string) => {
+  const getStrategyColor = (strategy) => {
     switch (strategy) {
       case 'full_wheel':
         return 'bg-purple-100 text-purple-800 border-purple-200';
@@ -101,7 +102,7 @@ const WheelBuilder: React.FC<WheelBuilderProps> = ({ onWheelCreated }) => {
     }
   };
 
-  const getConfidenceColor = (confidence: string) => {
+  const getConfidenceColor = (confidence) => {
     switch (confidence) {
       case 'high':
         return 'bg-emerald-100 text-emerald-800';
@@ -114,7 +115,7 @@ const WheelBuilder: React.FC<WheelBuilderProps> = ({ onWheelCreated }) => {
     }
   };
 
-  const handleCreateWheel = (result: WheelDetectionResult) => {
+  const handleCreateWheel = (result) => {
     // This would integrate with the existing wheel creation system
     const suggestions = WheelDetectionService.generateWheelSuggestions(result);
     
