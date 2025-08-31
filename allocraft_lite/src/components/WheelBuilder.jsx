@@ -115,17 +115,20 @@ const WheelBuilder = ({ onWheelCreated }) => {
         }
     };
 
+    const handleSelectWheel = (result) => {
+        // Just select the wheel for preview, don't create it yet
+        console.log('🎯 Selected wheel for preview:', result);
+        setSelectedResult(result);
+    };
+
     const handleCreateWheel = (result) => {
-        // This would integrate with the existing wheel creation system
+        // This actually creates the wheel and calls the parent callback
         const suggestions = WheelDetectionService.generateWheelSuggestions(result);
 
-        console.log('🎯 Creating wheel from detection result:', result);
+        console.log('✅ Actually creating wheel from detection result:', result);
         console.log('💡 Suggested actions:', suggestions);
 
-        // For now, just show the user what would be created
-        setSelectedResult(result);
-
-        // Call parent callback if provided
+        // Call parent callback to create the wheel
         if (onWheelCreated) {
             onWheelCreated({
                 ticker: result.ticker,
@@ -235,7 +238,7 @@ const WheelBuilder = ({ onWheelCreated }) => {
                                                             </div>
                                                         </div>
                                                         <Button
-                                                            onClick={() => handleCreateWheel(result)}
+                                                            onClick={() => handleSelectWheel(result)}
                                                             size="sm"
                                                             className="bg-purple-600 hover:bg-purple-700"
                                                         >
@@ -295,7 +298,11 @@ const WheelBuilder = ({ onWheelCreated }) => {
                                                 Ready to create a {selectedResult.strategy.replace('_', ' ')} wheel for {selectedResult.ticker}.
                                             </p>
                                             <div className="flex gap-2">
-                                                <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                                <Button 
+                                                    size="sm" 
+                                                    className="bg-green-600 hover:bg-green-700"
+                                                    onClick={() => handleCreateWheel(selectedResult)}
+                                                >
                                                     Confirm Creation
                                                 </Button>
                                                 <Button size="sm" variant="outline" onClick={() => setSelectedResult(null)}>

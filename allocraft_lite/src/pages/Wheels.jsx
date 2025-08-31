@@ -110,9 +110,10 @@ export default function Wheels() {
         <WheelBuilder 
           onClose={() => setShowWheelBuilder(false)}
           onWheelCreated={(wheelData) => {
-            console.log('Wheel created:', wheelData);
+            console.log('Wheel successfully created:', wheelData);
+            // Only close modal when wheel is actually created, not just selected
             setShowWheelBuilder(false);
-            // TODO: Refresh wheel cycles data
+            // TODO: Refresh wheel cycles data to show the new wheel
           }}
         />
       )}
