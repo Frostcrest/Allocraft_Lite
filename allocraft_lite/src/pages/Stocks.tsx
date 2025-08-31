@@ -118,8 +118,28 @@ const Stocks: React.FC = () => {
 
       for (const account of accounts) {
         try {
-          const accountNumber = account.accountId;
-          const accountType = account.type || 'Unknown';
+          // Log the full account object to see its structure
+          console.log('🔍 Full account object:', JSON.stringify(account, null, 2));
+          
+          // Try different possible property names for account ID
+          const accountNumber = account.accountId || 
+                               account.accountNumber || 
+                               account.hashValue ||
+                               account.accountHash ||
+                               account.securitiesAccount?.accountId ||
+                               account.securitiesAccount?.accountNumber;
+                               
+          const accountType = account.type || 
+                            account.accountType || 
+                            account.securitiesAccount?.type || 
+                            'Unknown';
+
+          console.log(`🔍 Extracted accountNumber: ${accountNumber}, accountType: ${accountType}`);
+
+          if (!accountNumber) {
+            console.error('❌ Could not extract account number from account object:', account);
+            continue;
+          }
 
           console.log(`🔍 Fetching positions for account: ${accountNumber}`);
 
