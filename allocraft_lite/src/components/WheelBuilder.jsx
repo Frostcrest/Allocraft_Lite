@@ -138,10 +138,14 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
     const handleSelectWheel = (result) => {
         // Just select the wheel for preview, don't create it yet
         console.log('🎯 Selected wheel for preview:', result);
-        console.log('📋 Setting selectedResult state to:', result);
-        alert(`Testing click for ${result.ticker} - ${result.strategy}`);
+        console.log('📋 Current selectedResult before update:', selectedResult);
         setSelectedResult(result);
-        console.log('✅ selectedResult should now be set');
+        console.log('✅ setSelectedResult called with:', result);
+        
+        // Let's also check after a small delay to see if state updated
+        setTimeout(() => {
+            console.log('🔍 selectedResult after timeout:', selectedResult);
+        }, 100);
     };
 
     const handleCreateWheel = (result) => {
@@ -309,6 +313,13 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                                         ))}
                                     </div>
                                 )}
+
+                                {/* Debug before conditional render */}
+                                {(() => {
+                                    console.log('🔍 About to render selectedResult section. selectedResult is:', selectedResult);
+                                    console.log('🔍 selectedResult truthy?', !!selectedResult);
+                                    return null;
+                                })()}
 
                                 {selectedResult && (
                                     <Card className="border-green-200 bg-green-50">
