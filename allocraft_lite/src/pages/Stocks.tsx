@@ -102,88 +102,44 @@ const Stocks: React.FC = () => {
         return;
       }
 
-      // Use the Backend Schwab API service instead of direct fetch calls
-      console.log('📡 Fetching accounts via Backend Schwab API service...');
+      // Use the Backend Schwab API service with correct hash-based flow
+      console.log('📡 Fetching account summaries via Backend Schwab API service...');
       
-      // First try to get accounts with positions included
-      try {
-        console.log('🔍 Trying to fetch accounts with positions...');
-        const accountsWithPositions = await backendSchwabApi.getAccountsWithPositions();
-        console.log('✅ Accounts with positions fetched:', accountsWithPositions);
-        
-        if (Array.isArray(accountsWithPositions) && accountsWithPositions.length > 0) {
-          // Process accounts that might have positions
-          const allPositions: Position[] = [];
-          
-          for (const account of accountsWithPositions) {
-            const securitiesAccount = account.securitiesAccount;
-            if (!securitiesAccount) continue;
-            
-            const accountNumber = securitiesAccount.accountNumber;
-            const accountType = 'Securities';
-            
-            // Check if positions are included
-            if (securitiesAccount.positions && securitiesAccount.positions.length > 0) {
-              console.log(`📊 Found ${securitiesAccount.positions.length} positions in account ${accountNumber}`);
-              
-              const transformedPositions = securitiesAccount.positions
-                .map((pos: any, index: number) =>
-                  transformSchwabPosition(pos, accountNumber, accountType, index)
-                )
-                .filter((pos: Position | null) => pos !== null) as Position[];
+      // Step 1: Get account summaries (accountNumber + hashValue)
+      const accountSummaries = await backendSchwabApi.getAccountSummaries();
+      console.log('✅ Schwab account summaries fetched:', accountSummaries);
 
-              allPositions.push(...transformedPositions);
-            }
-          }
-          
-          if (allPositions.length > 0) {
-            console.log(`✅ Total Schwab positions loaded via accounts-with-positions: ${allPositions.length}`);
-            setSchwabPositions(allPositions);
-            return;
-          }
-        }
-      } catch (error) {
-        console.log('⚠️ Failed to get accounts with positions, falling back to separate calls:', error);
-      }
-      
-      // Fallback: get accounts separately and then fetch positions
-      const accounts = await backendSchwabApi.getAccounts();
-      console.log('✅ Schwab accounts fetched:', accounts);
-
-      if (!Array.isArray(accounts) || accounts.length === 0) {
-        console.log('❌ No Schwab accounts found');
+      if (!Array.isArray(accountSummaries) || accountSummaries.length === 0) {
+        console.log('❌ No Schwab account summaries found');
         setSchwabPositions([]);
         return;
       }
 
-      // Fetch positions for each account
+      // Step 2: Get full account details for each account using hash values
       const allPositions: Position[] = [];
 
-      for (const account of accounts) {
+      for (const accountSummary of accountSummaries) {
         try {
-          // Log the full account object to see its structure
-          console.log('🔍 Full account object:', JSON.stringify(account, null, 2));
+          console.log(`🔍 Processing account ${accountSummary.accountNumber} with hash ${accountSummary.hashValue}`);
           
-          // Extract account data from the securitiesAccount property
-          const securitiesAccount = account.securitiesAccount;
+          // Get full account details using the hash value
+          const accountDetails = await backendSchwabApi.getAccountByHash(accountSummary.hashValue);
+          console.log('🔍 Full account details:', JSON.stringify(accountDetails, null, 2));
+          
+          const securitiesAccount = accountDetails.securitiesAccount;
           if (!securitiesAccount) {
-            console.error('❌ No securitiesAccount found in account object:', account);
+            console.error('❌ No securitiesAccount found in account details:', accountDetails);
             continue;
           }
           
           const accountNumber = securitiesAccount.accountNumber;
           const accountType = 'Securities'; // Schwab accounts are securities accounts
           
-          console.log(`🔍 Extracted accountNumber: ${accountNumber}, accountType: ${accountType}`);
+          console.log(`🔍 Account ${accountNumber} processed with hash authentication`);
 
-          if (!accountNumber) {
-            console.error('❌ Could not extract account number from securitiesAccount:', securitiesAccount);
-            continue;
-          }
-
-          // Check if positions are already included in the account response
+          // Check if positions are included in the account details
           if (securitiesAccount.positions && securitiesAccount.positions.length > 0) {
-            console.log(`📊 Found ${securitiesAccount.positions.length} positions directly in account response`);
+            console.log(`📊 Found ${securitiesAccount.positions.length} positions in account ${accountNumber}`);
             
             const transformedPositions = securitiesAccount.positions
               .map((pos: any, index: number) =>
@@ -192,35 +148,18 @@ const Stocks: React.FC = () => {
               .filter((pos: Position | null) => pos !== null) as Position[];
 
             allPositions.push(...transformedPositions);
-            console.log(`✅ Added ${transformedPositions.length} positions from ${accountNumber}`);
           } else {
-            console.log(`🔍 Fetching positions separately for account: ${accountNumber}`);
-            
-            // Use the backend API service method to fetch positions separately
-            const positions = await backendSchwabApi.getPositions(accountNumber);
-            console.log(`📊 Positions data for ${accountNumber}:`, positions);
-
-            if (positions && positions.length > 0) {
-              const transformedPositions = positions
-                .map((pos: any, index: number) =>
-                  transformSchwabPosition(pos, accountNumber, accountType, index)
-                )
-                .filter((pos: Position | null) => pos !== null) as Position[];
-
-              allPositions.push(...transformedPositions);
-              console.log(`✅ Added ${transformedPositions.length} positions from ${accountNumber}`);
-            } else {
-              console.log(`ℹ️ No positions found in account ${accountNumber}`);
-            }
+            console.log(`ℹ️ No positions found in account ${accountNumber} (this is normal if account has no holdings)`);
           }
         } catch (error) {
-          console.error(`❌ Error fetching positions for account:`, error);
+          console.error(`❌ Error fetching details for account ${accountSummary.accountNumber}:`, error);
+          continue;
         }
       }
 
+      console.log(`✅ Total Schwab positions loaded: ${allPositions.length}`);
       setSchwabPositions(allPositions);
       setLastRefresh(new Date());
-      console.log(`✅ Total Schwab positions loaded: ${allPositions.length}`);
 
     } catch (error) {
       console.error('❌ Error loading Schwab positions:', error);

@@ -6,6 +6,13 @@
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://allocraft-backend.onrender.com';
 
+// Account list response interface (from GET /accounts)
+export interface SchwabAccountSummary {
+  accountNumber: string;
+  hashValue: string;
+}
+
+// Individual account response interface (from GET /accounts/{hashValue})
 export interface SchwabAccount {
   securitiesAccount: {
     accountNumber: string;
@@ -25,8 +32,28 @@ export interface SchwabAccount {
       cashReceipts: number;
       dayTradingBuyingPower: number;
       dayTradingBuyingPowerCall: number;
+      dayTradingEquityCall: number;
+      equity: number;
+      equityPercentage: number;
       liquidationValue: number;
+      longMarginValue: number;
+      longOptionMarketValue: number;
+      longStockValue: number;
+      maintenanceCall: number;
+      maintenanceRequirement: number;
+      margin: number;
+      marginEquity: number;
+      moneyMarketFund: number;
+      mutualFundValue: number;
+      regTCall: number;
+      shortMarginValue: number;
+      shortOptionMarketValue: number;
+      shortStockValue: number;
       totalCash: number;
+      isInCall: boolean;
+      pendingDeposits: number;
+      marginBalance: number;
+      shortBalance: number;
       accountValue: number;
     };
     currentBalances: {
@@ -159,7 +186,72 @@ export class BackendSchwabApiService {
   }
 
   /**
-   * Get user's Schwab accounts through backend
+   * Get user's Schwab account summaries (returns accountNumber and hashValue)
+   */
+  async getAccountSummaries(): Promise<SchwabAccountSummary[]> {
+    try {
+      console.log('🔍 Fetching Schwab account summaries from backend...');
+      const response = await fetch(`${API_BASE_URL}/schwab/accounts`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('📡 Backend account summaries response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Account summaries data received:', data);
+        return data;
+      } else if (response.status === 401 || response.status === 403) {
+        const errorText = await response.text();
+        console.log('❌ Authentication error:', errorText);
+        throw new Error('Authentication failed');
+      } else {
+        const errorText = await response.text();
+        console.log('❌ Backend error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching account summaries:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get full account details by hash value
+   */
+  async getAccountByHash(hashValue: string): Promise<SchwabAccount> {
+    try {
+      console.log(`🔍 Fetching account details for hash: ${hashValue}`);
+      const response = await fetch(`${API_BASE_URL}/schwab/accounts/${hashValue}`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log(`📡 Backend account details response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        console.log(`❌ Backend error response: ${JSON.stringify(errorData)}`);
+        throw new Error(`Failed to fetch account details: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Account details received:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error fetching account details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's Schwab accounts through backend (legacy method)
    * Backend manages all token handling
    */
   async getAccounts(): Promise<SchwabAccount[]> {
