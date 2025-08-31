@@ -108,6 +108,7 @@ const Stocks: React.FC = () => {
       // Step 1: Get account summaries (accountNumber + hashValue)
       const accountSummaries = await backendSchwabApi.getAccountSummaries();
       console.log('✅ Schwab account summaries fetched:', accountSummaries);
+      console.log('🔍 Raw account summaries structure:', JSON.stringify(accountSummaries, null, 2));
 
       if (!Array.isArray(accountSummaries) || accountSummaries.length === 0) {
         console.log('❌ No Schwab account summaries found');
@@ -120,6 +121,7 @@ const Stocks: React.FC = () => {
 
       for (const accountSummary of accountSummaries) {
         try {
+          console.log('🔍 Individual account summary:', JSON.stringify(accountSummary, null, 2));
           console.log(`🔍 Processing account ${accountSummary.accountNumber} with hash ${accountSummary.hashValue}`);
           
           // Get full account details using the hash value
