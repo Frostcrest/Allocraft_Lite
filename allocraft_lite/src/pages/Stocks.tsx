@@ -87,18 +87,46 @@ const Stocks: React.FC = () => {
       const symbol = instrument.symbol || instrument.cusip || `UNKNOWN_${index}`;
       const longQuantity = parseFloat(pos.longQuantity || 0);
       const shortQuantity = parseFloat(pos.shortQuantity || 0);
-      const quantity = longQuantity || shortQuantity || 0;
-
-      if (quantity === 0) {
-        return null; // Skip positions with no quantity
+      
+      // Determine if this is a long or short position and the net quantity
+      const isShortPosition = shortQuantity > 0;
+      const isLongPosition = longQuantity > 0;
+      
+      // Skip positions with no quantity
+      if (longQuantity === 0 && shortQuantity === 0) {
+        return null;
       }
 
-      const marketValue = parseFloat(pos.marketValue || 0);
-      const averagePrice = parseFloat(pos.averagePrice || 0);
-      const marketPrice = quantity > 0 ? marketValue / quantity : 0;
+      // Calculate the signed quantity (positive for long, negative for short)
+      const quantity = isLongPosition ? longQuantity : -shortQuantity;
 
-      const profitLoss = marketValue - (averagePrice * quantity);
-      const profitLossPercent = averagePrice > 0 ? ((marketPrice - averagePrice) / averagePrice) * 100 : 0;
+      const marketValue = parseFloat(pos.marketValue || 0);
+      
+      // Use the appropriate average price based on position type
+      let averagePrice;
+      if (isShortPosition) {
+        averagePrice = parseFloat(pos.averageShortPrice || pos.taxLotAverageShortPrice || pos.averagePrice || 0);
+      } else {
+        averagePrice = parseFloat(pos.averageLongPrice || pos.taxLotAverageLongPrice || pos.averagePrice || 0);
+      }
+
+      // For short positions, the market price calculation is different
+      const marketPrice = Math.abs(quantity) > 0 ? Math.abs(marketValue) / Math.abs(quantity) : 0;
+
+      // Calculate P&L - for short positions, this works differently
+      let profitLoss;
+      if (isShortPosition) {
+        // For short options: profit when current price < sold price
+        // Use shortOpenProfitLoss if available, otherwise calculate
+        profitLoss = parseFloat(pos.shortOpenProfitLoss || 0) || (averagePrice * Math.abs(quantity) * 100) - Math.abs(marketValue);
+      } else {
+        // For long options: profit when current price > bought price
+        // Use longOpenProfitLoss if available, otherwise calculate
+        profitLoss = parseFloat(pos.longOpenProfitLoss || 0) || marketValue - (averagePrice * Math.abs(quantity) * 100);
+      }
+
+      const costBasis = averagePrice * Math.abs(quantity) * 100; // Total cost basis
+      const profitLossPercent = costBasis > 0 ? (profitLoss / costBasis) * 100 : 0;
 
       // Parse option information
       const optionInfo = parseOptionSymbol(symbol);
@@ -106,7 +134,7 @@ const Stocks: React.FC = () => {
       const basePosition: Position = {
         id: `schwab-${accountNumber}-${symbol}-${index}`,
         symbol: symbol,
-        shares: quantity,
+        shares: quantity, // This will be negative for short positions
         costBasis: averagePrice,
         marketPrice: marketPrice,
         marketValue: marketValue,
@@ -126,7 +154,7 @@ const Stocks: React.FC = () => {
           optionType: optionInfo.optionType as 'Call' | 'Put',
           strikePrice: optionInfo.strikePrice,
           expirationDate: optionInfo.expirationDate,
-          contracts: Math.abs(quantity) / 100, // Convert shares to contracts
+          contracts: quantity / 100, // Convert shares to contracts (will be negative for short)
         };
       }
 
@@ -834,7 +862,7 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
             {position.optionType} • Exp: {formatExpirationDate(position.expirationDate!)}
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            {isShortPosition ? 'Short' : 'Long'} {Math.abs(position.contracts!)} contract{Math.abs(position.contracts!) !== 1 ? 's' : ''}
+            {isShortPosition ? 'Short' : 'Long'} {Math.abs(position.contracts!).toFixed(2)} contract{Math.abs(position.contracts!) !== 1 ? 's' : ''}
           </div>
         </div>
 
@@ -842,16 +870,16 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
           <div>
             <div className="text-slate-500">Contracts</div>
             <div className="font-semibold text-slate-900">
-              {isShortPosition ? '-' : '+'}{Math.abs(position.contracts!)}
+              {position.contracts! >= 0 ? '+' : ''}{position.contracts!.toFixed(2)}
             </div>
           </div>
           <div>
             <div className="text-slate-500">Avg Price</div>
-            <div className="font-semibold text-slate-900">{formatCurrency(Math.abs(position.costBasis))}</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.costBasis)}</div>
           </div>
           <div>
             <div className="text-slate-500">Current Price</div>
-            <div className="font-semibold text-slate-900">{formatCurrency(Math.abs(position.marketPrice))}</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.marketPrice)}</div>
           </div>
           <div>
             <div className="text-slate-500">Market Value</div>
