@@ -427,3 +427,76 @@ export class BackendSchwabApiService {
 
 // Export singleton instance
 export const backendSchwabApi = new BackendSchwabApiService();
+
+// Add new methods for stored position management
+
+export const getStoredPositions = async (fresh: boolean = false) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/schwab/positions?fresh=${fresh}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get stored positions: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Stored positions retrieved:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error getting stored positions:', error);
+    throw error;
+  }
+};
+
+export const syncPositions = async (force: boolean = false) => {
+  try {
+    console.log(`🔄 ${force ? 'Force ' : ''}syncing positions...`);
+
+    const response = await fetch(`${API_BASE_URL}/schwab/sync?force=${force}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to sync positions: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Position sync completed:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error syncing positions:', error);
+    throw error;
+  }
+};
+
+export const getSyncStatus = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/schwab/sync-status`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get sync status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📋 Sync status retrieved:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error getting sync status:', error);
+    throw error;
+  }
+};

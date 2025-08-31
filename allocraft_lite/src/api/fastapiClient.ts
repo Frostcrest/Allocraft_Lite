@@ -212,3 +212,36 @@ export const wheelApi = {
         return fetchJson(`/wheels/lots/${lotId}/unbind-call`, { method: 'POST' });
     }
 };
+
+// === SCHWAB INTEGRATION ===
+
+export const schwabApi = {
+    // Get stored positions from database with optional fresh sync
+    async getStoredPositions(fresh: boolean = false) {
+        return fetchJson(`/schwab/positions?fresh=${fresh}`);
+    },
+    
+    // Manually trigger position synchronization
+    async syncPositions(force: boolean = false) {
+        return fetchJson(`/schwab/sync?force=${force}`, { method: 'POST' });
+    },
+    
+    // Get synchronization status for all accounts
+    async getSyncStatus() {
+        return fetchJson(`/schwab/sync-status`);
+    },
+    
+    // Get account summaries from database with optional refresh
+    async getAccounts(refresh: boolean = false) {
+        return fetchJson(`/schwab/accounts?refresh=${refresh}`);
+    },
+    
+    // Legacy API endpoints (for backwards compatibility)
+    async getAccountSummaries() {
+        return fetchJson(`/schwab/account-summaries`);
+    },
+    
+    async getAccountPositions(accountHash: string) {
+        return fetchJson(`/schwab/account-positions/${accountHash}`);
+    }
+};

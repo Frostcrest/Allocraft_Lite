@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AddStockModal from '@/components/AddStockModal';
 import { backendSchwabApi } from '../services/backendSchwabApi';
+import { getStoredPositions, syncPositions, getSyncStatus } from '../services/backendSchwabApi';
 
 // Option symbol parser for formats like "HIMS 251017P00037000"
 const parseOptionSymbol = (symbol: string) => {
@@ -166,81 +167,60 @@ const Stocks: React.FC = () => {
   };
 
   // Load Schwab positions with better error handling
-  const loadSchwabPositions = async () => {
+  const loadSchwabPositions = async (forceRefresh: boolean = false) => {
     setIsLoading(true);
     setError('');
 
     try {
-      console.log('🔍 Loading Schwab positions...');
+      console.log(`🔍 Loading Schwab positions (${forceRefresh ? 'force refresh' : 'from cache'})...`);
 
-      // Check if user is connected to Schwab via backend
-      const status = await backendSchwabApi.getStatus();
-      if (!status.connected) {
-        console.log('❌ User not connected to Schwab');
-        setSchwabPositions([]);
-        return;
-      }
+      // Check sync status first
+      const syncStatus = await getSyncStatus();
+      console.log('📋 Current sync status:', syncStatus);
 
-      // Use the Backend Schwab API service with correct hash-based flow
-      console.log('📡 Fetching account summaries via Backend Schwab API service...');
+      // Get stored positions
+      const storedData = await getStoredPositions(forceRefresh);
 
-      // Step 1: Get account summaries - now correctly returning accountNumber + hashValue
-      const accountSummaries = await backendSchwabApi.getAccountSummaries();
-      console.log('✅ Schwab account summaries fetched:', accountSummaries);
-      console.log('🔍 Raw account summaries structure:', JSON.stringify(accountSummaries, null, 2));
-
-      if (!Array.isArray(accountSummaries) || accountSummaries.length === 0) {
-        console.log('❌ No Schwab account summaries found');
-        setSchwabPositions([]);
-        return;
-      }
-
-      // Step 2: Get full account details for each account using hash values
       const allPositions: Position[] = [];
 
-      for (const accountSummary of accountSummaries) {
-        try {
-          console.log('🔍 Individual account summary:', JSON.stringify(accountSummary, null, 2));
-          console.log(`🔍 Processing account ${accountSummary.accountNumber} with hash ${accountSummary.hashValue}`);
+      for (const accountData of storedData) {
+        console.log(`📊 Processing account ${accountData.accountNumber} with ${accountData.positions.length} stored positions`);
 
-          // Get full account details using the hash value
-          const accountDetails = await backendSchwabApi.getAccountByHash(accountSummary.hashValue);
-          console.log('🔍 Full account details:', JSON.stringify(accountDetails, null, 2));
+        for (const positionData of accountData.positions) {
+          const position: Position = {
+            id: `schwab-${accountData.accountNumber}-${positionData.symbol}`,
+            symbol: positionData.symbol,
+            quantity: positionData.quantity,
+            averagePrice: positionData.averagePrice,
+            currentPrice: positionData.marketValue / positionData.quantity,
+            marketValue: positionData.marketValue,
+            profitLoss: positionData.profitLoss,
+            profitLossPercentage: positionData.profitLossPercentage,
+            source: 'schwab',
+            accountNumber: accountData.accountNumber,
+            lastUpdated: positionData.lastUpdated,
+            // Option-specific fields
+            isOption: positionData.isOption || false,
+            underlyingSymbol: positionData.underlyingSymbol,
+            optionType: positionData.optionType,
+            strikePrice: positionData.strikePrice,
+            expirationDate: positionData.expirationDate,
+            contracts: positionData.contracts,
+            isShort: positionData.isShort || false
+          };
 
-          const securitiesAccount = accountDetails.securitiesAccount;
-          if (!securitiesAccount) {
-            console.error('❌ No securitiesAccount found in account details:', accountDetails);
-            continue;
-          }
-
-          const accountNumber = securitiesAccount.accountNumber;
-          const accountType = 'Securities'; // Schwab accounts are securities accounts
-
-          console.log(`🔍 Account ${accountNumber} processed with hash authentication`);
-
-          // Check if positions are included in the account details
-          if (securitiesAccount.positions && securitiesAccount.positions.length > 0) {
-            console.log(`📊 Found ${securitiesAccount.positions.length} positions in account ${accountNumber}`);
-
-            const transformedPositions = securitiesAccount.positions
-              .map((pos: any, index: number) =>
-                transformSchwabPosition(pos, accountNumber, accountType, index)
-              )
-              .filter((pos: Position | null) => pos !== null) as Position[];
-
-            allPositions.push(...transformedPositions);
-          } else {
-            console.log(`ℹ️ No positions found in account ${accountNumber} (this is normal if account has no holdings)`);
-          }
-        } catch (error) {
-          console.error(`❌ Error fetching details for account ${accountSummary.accountNumber}:`, error);
-          continue;
+          allPositions.push(position);
         }
       }
 
-      console.log(`✅ Total Schwab positions loaded: ${allPositions.length}`);
+      console.log(`✅ Total Schwab positions loaded from storage: ${allPositions.length}`);
       setSchwabPositions(allPositions);
-      setLastRefresh(new Date());
+
+      // Show sync status in UI
+      const totalAccounts = syncStatus.length;
+      const recentlySynced = syncStatus.filter(s => s.isRecentlySynced).length;
+
+      console.log(`📊 Sync Status: ${recentlySynced}/${totalAccounts} accounts recently synced`);
 
     } catch (error) {
       console.error('❌ Error loading Schwab positions:', error);
@@ -400,6 +380,27 @@ const Stocks: React.FC = () => {
     };
   };
 
+  const handleManualSync = async () => {
+    try {
+      setIsLoading(true);
+      console.log('🔄 Starting manual position sync...');
+
+      const syncResult = await syncPositions(true);
+      console.log('✅ Manual sync completed:', syncResult);
+
+      // Reload positions after sync
+      await loadSchwabPositions(false); // Use cached data since we just synced
+
+      toast.success(`Sync completed: ${syncResult.result.positions_added} added, ${syncResult.result.positions_updated} updated`);
+
+    } catch (error) {
+      console.error('❌ Error during manual sync:', error);
+      toast.error('Failed to sync positions');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -465,15 +466,23 @@ const Stocks: React.FC = () => {
                     </p>
                   )}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadSchwabPositions}
-                  disabled={isLoading}
-                  className="border-emerald-300"
-                >
-                  {isLoading ? 'Syncing...' : 'Sync Now'}
-                </Button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => loadSchwabPositions(false)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Loading...' : 'Load Cached'}
+                  </button>
+
+                  <button
+                    onClick={handleManualSync}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Syncing...' : 'Sync Fresh Data'}
+                  </button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -543,7 +552,7 @@ const Stocks: React.FC = () => {
             ) : allPositions.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-                  <Plus className="w-8 h-8 text-slate-400" />
+                  <Plus className="w-5 h-5 text-slate-400" />
                 </div>
                 <h3 className="text-lg font-medium text-slate-900 mb-2">No positions yet</h3>
                 <p className="text-slate-500 mb-6">Add positions manually or connect your Schwab account to import automatically.</p>
@@ -694,8 +703,8 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, canRemove, onRemo
     const isProfit = position.profitLoss >= 0;
     return (
       <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-          : 'border-red-300 bg-red-50 text-red-700'
+        ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+        : 'border-red-300 bg-red-50 text-red-700'
         }`}>
         {isProfit ? 'Profit' : 'Loss'}
       </span>
@@ -803,14 +812,14 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
     return (
       <div className="flex gap-2">
         <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isCall
-            ? 'border-blue-300 bg-blue-50 text-blue-700'
-            : 'border-purple-300 bg-purple-50 text-purple-700'
+          ? 'border-blue-300 bg-blue-50 text-blue-700'
+          : 'border-purple-300 bg-purple-50 text-purple-700'
           }`}>
           {position.optionType}
         </span>
         <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit
-            ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-            : 'border-red-300 bg-red-50 text-red-700'
+          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+          : 'border-red-300 bg-red-50 text-red-700'
           }`}>
           {isProfit ? 'Profit' : 'Loss'}
         </span>

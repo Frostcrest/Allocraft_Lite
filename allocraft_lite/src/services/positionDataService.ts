@@ -2,9 +2,10 @@
  * Position Data Service
  * 
  * Provides a centralized way to access Schwab positions across the application
+ * Now uses persistent storage for improved performance and reliability
  */
 
-import { backendSchwabApi } from './backendSchwabApi';
+import { schwabApi } from '../api/fastapiClient';
 
 export interface PositionData {
     id: string;
@@ -164,63 +165,79 @@ export class PositionDataService {
         }
 
         try {
-            console.log('🔍 Fetching fresh Schwab positions...');
+            console.log('🔍 Fetching Schwab positions from persistent storage...');
 
-            // Check if user is connected to Schwab
-            const status = await backendSchwabApi.getStatus();
-            if (!status.connected) {
-                console.log('❌ User not connected to Schwab');
+            // Use the new persistent storage API with fresh data option
+            const positions = await schwabApi.getStoredPositions(false);
+            
+            if (!Array.isArray(positions) || positions.length === 0) {
+                console.log('❌ No stored positions found');
                 return [];
             }
 
-            // Get account summaries
-            const accountSummaries = await backendSchwabApi.getAccountSummaries();
-            if (!Array.isArray(accountSummaries) || accountSummaries.length === 0) {
-                console.log('❌ No Schwab account summaries found');
-                return [];
-            }
-
-            // Get full account details for each account using hash values
-            const allPositions: PositionData[] = [];
-
-            for (const accountSummary of accountSummaries) {
-                try {
-                    // Get full account details using the hash value
-                    const accountDetails = await backendSchwabApi.getAccountByHash(accountSummary.hashValue);
-                    const securitiesAccount = accountDetails.securitiesAccount;
-
-                    if (!securitiesAccount || !securitiesAccount.positions) {
-                        console.log(`ℹ️ No positions found in account ${accountSummary.accountNumber}`);
-                        continue;
-                    }
-
-                    const accountNumber = securitiesAccount.accountNumber;
-                    const accountType = 'Securities';
-
-                    // Transform positions
-                    const transformedPositions = securitiesAccount.positions
-                        .map((pos: any, index: number) =>
-                            transformSchwabPosition(pos, accountNumber, accountType, index)
-                        )
-                        .filter((pos: PositionData | null) => pos !== null) as PositionData[];
-
-                    allPositions.push(...transformedPositions);
-                } catch (error) {
-                    console.error(`❌ Error fetching details for account ${accountSummary.accountNumber}:`, error);
-                    continue;
-                }
-            }
-
-            console.log(`✅ Loaded ${allPositions.length} Schwab positions`);
+            // Transform stored positions to our PositionData interface
+            const transformedPositions: PositionData[] = positions.map(pos => {
+                const parsedOption = parseOptionSymbol(pos.instrument?.symbol || '');
+                
+                return {
+                    id: `schwab-${pos.account_id}-${pos.instrument?.cusip || pos.instrument?.symbol}`,
+                    symbol: pos.instrument?.symbol || 'UNKNOWN',
+                    shares: Math.abs(pos.longQuantity || pos.shortQuantity || 0),
+                    costBasis: (pos.longQuantity || 0) * (pos.averagePrice || 0),
+                    marketPrice: pos.marketValue && pos.longQuantity 
+                        ? pos.marketValue / Math.abs(pos.longQuantity) 
+                        : pos.averagePrice || 0,
+                    marketValue: pos.marketValue || 0,
+                    profitLoss: (pos.marketValue || 0) - ((pos.longQuantity || 0) * (pos.averagePrice || 0)),
+                    profitLossPercent: pos.averagePrice 
+                        ? (((pos.marketValue || 0) / Math.abs(pos.longQuantity || 1)) - (pos.averagePrice || 0)) / (pos.averagePrice || 1) * 100
+                        : 0,
+                    source: 'schwab' as const,
+                    accountType: 'Securities',
+                    accountNumber: pos.account?.account_number || 'Unknown',
+                    // Option-specific fields from parser
+                    isOption: parsedOption.isOption,
+                    underlyingSymbol: parsedOption.underlyingSymbol,
+                    optionType: parsedOption.optionType,
+                    strikePrice: parsedOption.strikePrice,
+                    expirationDate: parsedOption.expirationDate,
+                    contracts: parsedOption.isOption ? Math.abs(pos.longQuantity || pos.shortQuantity || 0) : undefined
+                };
+            });
 
             // Update cache
-            this.cachedPositions = allPositions;
+            this.cachedPositions = transformedPositions;
             this.lastFetch = now;
 
-            return allPositions;
+            console.log(`✅ Successfully loaded ${transformedPositions.length} positions from storage`);
+            return transformedPositions;
+
         } catch (error) {
             console.error('❌ Error loading Schwab positions:', error);
             return [];
+        }
+    }
+
+    /**
+     * Force a fresh sync of positions from Schwab API
+     */
+    static async forceSyncPositions(): Promise<PositionData[]> {
+        try {
+            console.log('🔄 Forcing fresh sync of Schwab positions...');
+            
+            // Trigger backend sync
+            await schwabApi.syncPositions(true);
+            
+            // Clear cache to force fresh fetch
+            this.cachedPositions = [];
+            this.lastFetch = null;
+            
+            // Fetch fresh data
+            return await this.getSchwabPositions(true);
+            
+        } catch (error) {
+            console.error('❌ Error forcing sync:', error);
+            throw error;
         }
     }
 
@@ -259,8 +276,8 @@ export class PositionDataService {
      */
     static async isConnectedToSchwab(): Promise<boolean> {
         try {
-            const status = await backendSchwabApi.getStatus();
-            return status.connected;
+            const status = await schwabApi.getSyncStatus();
+            return status && status.accounts && status.accounts.length > 0;
         } catch (error) {
             console.error('Error checking Schwab status:', error);
             return false;

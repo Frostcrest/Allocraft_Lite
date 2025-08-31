@@ -141,7 +141,7 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
         console.log('📋 Current selectedResult before update:', selectedResult);
         setSelectedResult(result);
         console.log('✅ setSelectedResult called with:', result);
-        
+
         // Let's also check after a small delay to see if state updated
         setTimeout(() => {
             console.log('🔍 selectedResult after timeout:', selectedResult);
@@ -332,8 +332,8 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                                                 Ready to create a {selectedResult.strategy.replace('_', ' ')} wheel for {selectedResult.ticker}.
                                             </p>
                                             <div className="flex gap-2">
-                                                <Button 
-                                                    size="sm" 
+                                                <Button
+                                                    size="sm"
                                                     className="bg-green-600 hover:bg-green-700"
                                                     onClick={() => handleCreateWheel(selectedResult)}
                                                 >
