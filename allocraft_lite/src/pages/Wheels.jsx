@@ -59,7 +59,7 @@ export default function Wheels() {
             <p className="text-slate-600 mt-2">All lots and events are grouped by ticker</p>
           </div>
           <div className="flex gap-2">
-            <Button 
+            <Button
               onClick={() => setShowWheelBuilder(true)}
               className="bg-blue-600 hover:bg-blue-700 shadow-lg"
             >
@@ -79,7 +79,7 @@ export default function Wheels() {
               </div>
               <h3 className="text-lg font-medium text-slate-900 mb-2">No wheel cycles found</h3>
               <p className="text-slate-500 mb-6">Click "Build from Positions" to analyze your Schwab account for wheel opportunities, or create a wheel cycle manually.</p>
-              <Button 
+              <Button
                 onClick={() => setShowWheelBuilder(true)}
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -94,7 +94,7 @@ export default function Wheels() {
               <h3 className="text-lg font-medium text-slate-900 mb-2">Wheel Cycles Active</h3>
               <p className="text-slate-500 mb-6">Found {tickers.length} tickers with wheel cycles: {tickers.join(', ')}</p>
               <p className="text-slate-500 mb-4">Use "Build from Positions" to find new wheel opportunities from your current holdings.</p>
-              <Button 
+              <Button
                 onClick={() => setShowWheelBuilder(true)}
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -107,7 +107,7 @@ export default function Wheels() {
 
       {/* Wheel Builder Modal */}
       {showWheelBuilder && (
-        <WheelBuilder 
+        <WheelBuilder
           isOpen={showWheelBuilder}
           onClose={() => setShowWheelBuilder(false)}
           onWheelCreated={(wheelData) => {

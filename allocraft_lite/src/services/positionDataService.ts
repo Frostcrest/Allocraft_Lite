@@ -169,7 +169,7 @@ export class PositionDataService {
 
             // Use the new persistent storage API with fresh data option
             const positions = await schwabApi.getStoredPositions(false);
-            
+
             if (!Array.isArray(positions) || positions.length === 0) {
                 console.log('❌ No stored positions found');
                 return [];
@@ -178,18 +178,18 @@ export class PositionDataService {
             // Transform stored positions to our PositionData interface
             const transformedPositions: PositionData[] = positions.map(pos => {
                 const parsedOption = parseOptionSymbol(pos.instrument?.symbol || '');
-                
+
                 return {
                     id: `schwab-${pos.account_id}-${pos.instrument?.cusip || pos.instrument?.symbol}`,
                     symbol: pos.instrument?.symbol || 'UNKNOWN',
                     shares: Math.abs(pos.longQuantity || pos.shortQuantity || 0),
                     costBasis: (pos.longQuantity || 0) * (pos.averagePrice || 0),
-                    marketPrice: pos.marketValue && pos.longQuantity 
-                        ? pos.marketValue / Math.abs(pos.longQuantity) 
+                    marketPrice: pos.marketValue && pos.longQuantity
+                        ? pos.marketValue / Math.abs(pos.longQuantity)
                         : pos.averagePrice || 0,
                     marketValue: pos.marketValue || 0,
                     profitLoss: (pos.marketValue || 0) - ((pos.longQuantity || 0) * (pos.averagePrice || 0)),
-                    profitLossPercent: pos.averagePrice 
+                    profitLossPercent: pos.averagePrice
                         ? (((pos.marketValue || 0) / Math.abs(pos.longQuantity || 1)) - (pos.averagePrice || 0)) / (pos.averagePrice || 1) * 100
                         : 0,
                     source: 'schwab' as const,
@@ -224,17 +224,17 @@ export class PositionDataService {
     static async forceSyncPositions(): Promise<PositionData[]> {
         try {
             console.log('🔄 Forcing fresh sync of Schwab positions...');
-            
+
             // Trigger backend sync
             await schwabApi.syncPositions(true);
-            
+
             // Clear cache to force fresh fetch
             this.cachedPositions = [];
             this.lastFetch = null;
-            
+
             // Fetch fresh data
             return await this.getSchwabPositions(true);
-            
+
         } catch (error) {
             console.error('❌ Error forcing sync:', error);
             throw error;
