@@ -17,6 +17,7 @@ import { CloseCallModal } from "@/features/wheels/lot-actions/CloseCallModal";
 import { ClosePutModal } from "@/features/wheels/lot-actions/ClosePutModal";
 import { RollCallModal } from "@/features/wheels/lot-actions/RollCallModal";
 import { NewLotWizard } from "@/features/wheels/lot-actions/NewLotWizard";
+import WheelBuilder from "@/components/WheelBuilder";
 
 const initialCycle = {
   ticker: "",
@@ -444,6 +445,14 @@ export default function Wheels() {
             <p className="text-slate-600 mt-2">All lots and events are grouped by ticker</p>
           </div>
           <div className="flex gap-2">
+            <WheelBuilder 
+              onWheelCreated={(wheelData) => {
+                console.log('Wheel creation requested:', wheelData);
+                // Auto-select the ticker that was detected
+                setSelectedTicker(wheelData.ticker);
+                // Could also auto-create a cycle here if needed
+              }}
+            />
             <Button onClick={openAddCycle} className="bg-slate-900 hover:bg-slate-800 shadow-lg">
               <Plus className="w-5 h-5 mr-2" /> New Ticker
             </Button>
@@ -467,9 +476,17 @@ export default function Wheels() {
             </div>
             <h3 className="text-lg font-medium text-slate-900 mb-2">No cycles yet</h3>
             <p className="text-slate-500 mb-6">Create your first wheel cycle to begin tracking</p>
-            <Button onClick={openAddCycle} className="bg-slate-900 hover:bg-slate-800">
-              <Plus className="w-5 h-5 mr-2" /> Add Your First Cycle
-            </Button>
+            <div className="flex gap-3 justify-center">
+              <WheelBuilder 
+                onWheelCreated={(wheelData) => {
+                  console.log('Wheel creation requested:', wheelData);
+                  setSelectedTicker(wheelData.ticker);
+                }}
+              />
+              <Button onClick={openAddCycle} className="bg-slate-900 hover:bg-slate-800">
+                <Plus className="w-5 h-5 mr-2" /> Add Manually
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
