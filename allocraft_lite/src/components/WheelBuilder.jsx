@@ -139,6 +139,7 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
         // Just select the wheel for preview, don't create it yet
         console.log('🎯 Selected wheel for preview:', result);
         console.log('📋 Setting selectedResult state to:', result);
+        alert(`Testing click for ${result.ticker} - ${result.strategy}`);
         setSelectedResult(result);
         console.log('✅ selectedResult should now be set');
     };
@@ -308,9 +309,6 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                                         ))}
                                     </div>
                                 )}
-
-                                {/* Debug selectedResult */}
-                                {console.log('🔍 Rendering with selectedResult:', selectedResult)}
 
                                 {selectedResult && (
                                     <Card className="border-green-200 bg-green-50">
