@@ -67,6 +67,7 @@ const Stocks: React.FC = () => {
   const [schwabPositions, setSchwabPositions] = useState<Position[]>([]);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [error, setError] = useState<string>('');
+  const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set());
 
   // Load manual positions from localStorage
   useEffect(() => {
@@ -339,6 +340,42 @@ const Stocks: React.FC = () => {
   const stockValue = allPositions.filter(p => !p.isOption).reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
   const optionValue = allPositions.filter(p => p.isOption).reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
 
+  // Toggle function for expanding/collapsing tickers
+  const toggleTicker = (symbol: string) => {
+    setExpandedTickers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(symbol)) {
+        newSet.delete(symbol);
+      } else {
+        newSet.add(symbol);
+      }
+      return newSet;
+    });
+  };
+
+  // Calculate summary for a ticker group
+  const getTickerSummary = (group: { stocks: Position[], options: Position[] }) => {
+    const allPositions = [...group.stocks, ...group.options];
+    const totalValue = allPositions.reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
+    const totalPL = allPositions.reduce((sum, pos) => sum + (pos.profitLoss || 0), 0);
+    const totalCost = allPositions.reduce((sum, pos) => sum + (pos.costBasis * Math.abs(pos.shares)), 0);
+    const totalPLPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+
+    // Calculate option breakdown
+    const longOptions = group.options.filter(pos => pos.shares > 0).length;
+    const shortOptions = group.options.filter(pos => pos.shares < 0).length;
+
+    return {
+      totalValue,
+      totalPL,
+      totalPLPercent,
+      stockCount: group.stocks.length,
+      optionCount: group.options.length,
+      longOptions,
+      shortOptions
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -469,14 +506,36 @@ const Stocks: React.FC = () => {
         {/* Positions Section */}
         <Card className="border-0 shadow bg-white/80">
           <CardHeader className="py-4">
-            <CardTitle className="text-xl">
-              All Positions
-              {allPositions.length > 0 && (
-                <span className="text-sm font-normal text-slate-500 ml-2">
-                  ({allPositions.length} total)
-                </span>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">
+                All Positions
+                {allPositions.length > 0 && (
+                  <span className="text-sm font-normal text-slate-500 ml-2">
+                    ({Object.keys(groupedPositions).length} ticker{Object.keys(groupedPositions).length !== 1 ? 's' : ''})
+                  </span>
+                )}
+              </CardTitle>
+              {Object.keys(groupedPositions).length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExpandedTickers(new Set(Object.keys(groupedPositions)))}
+                    className="text-xs"
+                  >
+                    Expand All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExpandedTickers(new Set())}
+                    className="text-xs"
+                  >
+                    Collapse All
+                  </Button>
+                </div>
               )}
-            </CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading && allPositions.length === 0 ? (
@@ -496,59 +555,103 @@ const Stocks: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-4">
                 {Object.entries(groupedPositions)
                   .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([symbol, group]) => (
-                    <div key={symbol} className="space-y-4">
-                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                        <h3 className="text-xl font-semibold text-slate-900">{symbol}</h3>
-                        <span className="text-sm text-slate-500">
-                          {group.stocks.length} stock{group.stocks.length !== 1 ? 's' : ''} + {group.options.length} option{group.options.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-
-                      {/* Stock positions for this symbol */}
-                      {group.stocks.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="text-lg font-medium text-slate-700 flex items-center gap-2">
-                            📈 Stock Positions
-                            <span className="text-sm font-normal text-slate-500">({group.stocks.length})</span>
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {group.stocks.map((position) => (
-                              <PositionCard 
-                                key={position.id} 
-                                position={position} 
-                                canRemove={position.source === 'manual'} 
-                                onRemove={removePosition} 
-                              />
-                            ))}
+                  .map(([symbol, group]) => {
+                    const summary = getTickerSummary(group);
+                    const isExpanded = expandedTickers.has(symbol);
+                    
+                    return (
+                      <Card key={symbol} className="border-0 shadow bg-white/80">
+                        <CardHeader className="py-4">
+                          <div 
+                            className="flex items-center justify-between cursor-pointer hover:bg-slate-50 -m-4 p-4 rounded-lg transition-colors"
+                            onClick={() => toggleTicker(symbol)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-xl font-semibold text-slate-900">{symbol}</h3>
+                              <div className="flex gap-2">
+                                {summary.stockCount > 0 && (
+                                  <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                                    📈 {summary.stockCount} stock{summary.stockCount !== 1 ? 's' : ''}
+                                  </span>
+                                )}
+                                {summary.optionCount > 0 && (
+                                  <span className="inline-flex items-center rounded-full border border-blue-300 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                                    📊 {summary.longOptions > 0 ? `${summary.longOptions} long` : ''}{summary.longOptions > 0 && summary.shortOptions > 0 ? ', ' : ''}{summary.shortOptions > 0 ? `${summary.shortOptions} short` : ''} option{summary.optionCount !== 1 ? 's' : ''}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <div className="font-semibold text-slate-900">
+                                  ${summary.totalValue.toLocaleString()}
+                                </div>
+                                <div className={`text-sm font-medium ${
+                                  summary.totalPL >= 0 ? 'text-emerald-600' : 'text-red-600'
+                                }`}>
+                                  {summary.totalPL >= 0 ? '+' : ''}${summary.totalPL.toLocaleString()} ({summary.totalPLPercent >= 0 ? '+' : ''}{summary.totalPLPercent.toFixed(2)}%)
+                                </div>
+                              </div>
+                              <div className={`transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        </CardHeader>
 
-                      {/* Option positions for this symbol */}
-                      {group.options.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="text-lg font-medium text-slate-700 flex items-center gap-2">
-                            📊 Option Positions
-                            <span className="text-sm font-normal text-slate-500">({group.options.length})</span>
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {group.options.map((position) => (
-                              <OptionPositionCard 
-                                key={position.id} 
-                                position={position} 
-                                canRemove={position.source === 'manual'} 
-                                onRemove={removePosition} 
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        {isExpanded && (
+                          <CardContent className="pt-0">
+                            <div className="space-y-6">
+                              {/* Stock positions for this symbol */}
+                              {group.stocks.length > 0 && (
+                                <div className="space-y-3">
+                                  <h4 className="text-lg font-medium text-slate-700 flex items-center gap-2">
+                                    📈 Stock Positions
+                                    <span className="text-sm font-normal text-slate-500">({group.stocks.length})</span>
+                                  </h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {group.stocks.map((position) => (
+                                      <PositionCard 
+                                        key={position.id} 
+                                        position={position} 
+                                        canRemove={position.source === 'manual'} 
+                                        onRemove={removePosition} 
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Option positions for this symbol */}
+                              {group.options.length > 0 && (
+                                <div className="space-y-3">
+                                  <h4 className="text-lg font-medium text-slate-700 flex items-center gap-2">
+                                    📊 Option Positions
+                                    <span className="text-sm font-normal text-slate-500">({group.options.length})</span>
+                                  </h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {group.options.map((position) => (
+                                      <OptionPositionCard 
+                                        key={position.id} 
+                                        position={position} 
+                                        canRemove={position.source === 'manual'} 
+                                        onRemove={removePosition} 
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        )}
+                      </Card>
+                    );
+                  })}
               </div>
             )}
           </CardContent>
