@@ -105,7 +105,7 @@ const Stocks: React.FC = () => {
       // Use the Backend Schwab API service with correct hash-based flow
       console.log('📡 Fetching account summaries via Backend Schwab API service...');
       
-      // Step 1: Get account summaries - but we're getting full account details
+      // Step 1: Get account summaries - now correctly returning accountNumber + hashValue
       const accountSummaries = await backendSchwabApi.getAccountSummaries();
       console.log('✅ Schwab account summaries fetched:', accountSummaries);
       console.log('🔍 Raw account summaries structure:', JSON.stringify(accountSummaries, null, 2));
@@ -116,24 +116,28 @@ const Stocks: React.FC = () => {
         return;
       }
 
-      // Since we're getting full account details instead of summaries,
-      // let's extract positions directly from this response
+      // Step 2: Get full account details for each account using hash values
       const allPositions: Position[] = [];
 
-      for (const accountData of accountSummaries) {
+      for (const accountSummary of accountSummaries) {
         try {
-          console.log('🔍 Individual account data:', JSON.stringify(accountData, null, 2));
+          console.log('🔍 Individual account summary:', JSON.stringify(accountSummary, null, 2));
+          console.log(`🔍 Processing account ${accountSummary.accountNumber} with hash ${accountSummary.hashValue}`);
           
-          const securitiesAccount = accountData.securitiesAccount;
+          // Get full account details using the hash value
+          const accountDetails = await backendSchwabApi.getAccountByHash(accountSummary.hashValue);
+          console.log('🔍 Full account details:', JSON.stringify(accountDetails, null, 2));
+          
+          const securitiesAccount = accountDetails.securitiesAccount;
           if (!securitiesAccount) {
-            console.error('❌ No securitiesAccount found in account data:', accountData);
+            console.error('❌ No securitiesAccount found in account details:', accountDetails);
             continue;
           }
           
           const accountNumber = securitiesAccount.accountNumber;
           const accountType = 'Securities'; // Schwab accounts are securities accounts
           
-          console.log(`🔍 Processing account ${accountNumber} directly from account details`);
+          console.log(`🔍 Account ${accountNumber} processed with hash authentication`);
 
           // Check if positions are included in the account details
           if (securitiesAccount.positions && securitiesAccount.positions.length > 0) {
@@ -150,7 +154,7 @@ const Stocks: React.FC = () => {
             console.log(`ℹ️ No positions found in account ${accountNumber} (this is normal if account has no holdings)`);
           }
         } catch (error) {
-          console.error(`❌ Error processing account data:`, error);
+          console.error(`❌ Error fetching details for account ${accountSummary.accountNumber}:`, error);
           continue;
         }
       }
