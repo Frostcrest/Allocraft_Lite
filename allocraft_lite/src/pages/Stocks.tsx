@@ -94,10 +94,10 @@ const Stocks: React.FC = () => {
     try {
       console.log('🔍 Loading Schwab positions...');
 
-      // Check if we have a valid token
-      const token = localStorage.getItem('schwab_access_token');
-      if (!token) {
-        console.log('❌ No Schwab token found');
+      // Check if user is connected to Schwab via backend
+      const status = await backendSchwabApi.getStatus();
+      if (!status.connected) {
+        console.log('❌ User not connected to Schwab');
         setSchwabPositions([]);
         return;
       }
