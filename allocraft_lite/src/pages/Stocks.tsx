@@ -9,22 +9,22 @@ import { backendSchwabApi } from '../services/backendSchwabApi';
 const parseOptionSymbol = (symbol: string) => {
   // Match pattern: TICKER YYMMDDCPPPPPPPP or TICKER YYMMDDPPPPPPPPP
   const optionMatch = symbol.match(/^([A-Z]+)\s+(\d{6})([CP])(\d{8})$/);
-  
+
   if (!optionMatch) {
     return { isOption: false, underlyingSymbol: symbol };
   }
 
   const [, underlying, dateStr, optionType, strikeStr] = optionMatch;
-  
+
   // Parse date (YYMMDD)
   const year = 2000 + parseInt(dateStr.substring(0, 2));
   const month = parseInt(dateStr.substring(2, 4));
   const day = parseInt(dateStr.substring(4, 6));
   const expirationDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-  
+
   // Parse strike price (last 8 digits, divide by 1000)
   const strikePrice = parseInt(strikeStr) / 1000;
-  
+
   return {
     isOption: true,
     underlyingSymbol: underlying,
@@ -87,11 +87,11 @@ const Stocks: React.FC = () => {
       const symbol = instrument.symbol || instrument.cusip || `UNKNOWN_${index}`;
       const longQuantity = parseFloat(pos.longQuantity || 0);
       const shortQuantity = parseFloat(pos.shortQuantity || 0);
-      
+
       // Determine if this is a long or short position and the net quantity
       const isShortPosition = shortQuantity > 0;
       const isLongPosition = longQuantity > 0;
-      
+
       // Skip positions with no quantity
       if (longQuantity === 0 && shortQuantity === 0) {
         return null;
@@ -101,7 +101,7 @@ const Stocks: React.FC = () => {
       const quantity = isLongPosition ? longQuantity : -shortQuantity;
 
       const marketValue = parseFloat(pos.marketValue || 0);
-      
+
       // Use the appropriate average price based on position type
       let averagePrice;
       if (isShortPosition) {
@@ -183,7 +183,7 @@ const Stocks: React.FC = () => {
 
       // Use the Backend Schwab API service with correct hash-based flow
       console.log('📡 Fetching account summaries via Backend Schwab API service...');
-      
+
       // Step 1: Get account summaries - now correctly returning accountNumber + hashValue
       const accountSummaries = await backendSchwabApi.getAccountSummaries();
       console.log('✅ Schwab account summaries fetched:', accountSummaries);
@@ -202,26 +202,26 @@ const Stocks: React.FC = () => {
         try {
           console.log('🔍 Individual account summary:', JSON.stringify(accountSummary, null, 2));
           console.log(`🔍 Processing account ${accountSummary.accountNumber} with hash ${accountSummary.hashValue}`);
-          
+
           // Get full account details using the hash value
           const accountDetails = await backendSchwabApi.getAccountByHash(accountSummary.hashValue);
           console.log('🔍 Full account details:', JSON.stringify(accountDetails, null, 2));
-          
+
           const securitiesAccount = accountDetails.securitiesAccount;
           if (!securitiesAccount) {
             console.error('❌ No securitiesAccount found in account details:', accountDetails);
             continue;
           }
-          
+
           const accountNumber = securitiesAccount.accountNumber;
           const accountType = 'Securities'; // Schwab accounts are securities accounts
-          
+
           console.log(`🔍 Account ${accountNumber} processed with hash authentication`);
 
           // Check if positions are included in the account details
           if (securitiesAccount.positions && securitiesAccount.positions.length > 0) {
             console.log(`📊 Found ${securitiesAccount.positions.length} positions in account ${accountNumber}`);
-            
+
             const transformedPositions = securitiesAccount.positions
               .map((pos: any, index: number) =>
                 transformSchwabPosition(pos, accountNumber, accountType, index)
@@ -245,11 +245,11 @@ const Stocks: React.FC = () => {
     } catch (error) {
       console.error('❌ Error loading Schwab positions:', error);
       let errorMessage = 'Failed to load Schwab positions';
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
         console.error('Full error details:', error);
-        
+
         // Handle specific error types
         if (error.message.includes('Not authenticated with Allocraft')) {
           errorMessage = 'Please log in to your Allocraft account first';
@@ -259,7 +259,7 @@ const Stocks: React.FC = () => {
           errorMessage = 'Access denied. Please check your Schwab account permissions.';
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -284,7 +284,7 @@ const Stocks: React.FC = () => {
         console.log('ℹ️ Could not check Schwab status, user might not be logged in');
       }
     };
-    
+
     checkAndLoadPositions();
   }, []);
 
@@ -336,20 +336,20 @@ const Stocks: React.FC = () => {
 
   // Combine manual and Schwab positions safely
   const allPositions = [...positions, ...schwabPositions];
-  
+
   // Group positions by underlying symbol
   const groupedPositions = allPositions.reduce((groups, position) => {
     const key = position.isOption ? position.underlyingSymbol! : position.symbol;
     if (!groups[key]) {
       groups[key] = { stocks: [], options: [] };
     }
-    
+
     if (position.isOption) {
       groups[key].options.push(position);
     } else {
       groups[key].stocks.push(position);
     }
-    
+
     return groups;
   }, {} as Record<string, { stocks: Position[], options: Position[] }>);
 
@@ -558,11 +558,11 @@ const Stocks: React.FC = () => {
                   .map(([symbol, group]) => {
                     const summary = getTickerSummary(group);
                     const isExpanded = expandedTickers.has(symbol);
-                    
+
                     return (
                       <Card key={symbol} className="border-0 shadow bg-white/80">
                         <CardHeader className="py-4">
-                          <div 
+                          <div
                             className="flex items-center justify-between cursor-pointer hover:bg-slate-50 -m-4 p-4 rounded-lg transition-colors"
                             onClick={() => toggleTicker(symbol)}
                           >
@@ -586,9 +586,8 @@ const Stocks: React.FC = () => {
                                 <div className="font-semibold text-slate-900">
                                   ${summary.totalValue.toLocaleString()}
                                 </div>
-                                <div className={`text-sm font-medium ${
-                                  summary.totalPL >= 0 ? 'text-emerald-600' : 'text-red-600'
-                                }`}>
+                                <div className={`text-sm font-medium ${summary.totalPL >= 0 ? 'text-emerald-600' : 'text-red-600'
+                                  }`}>
                                   {summary.totalPL >= 0 ? '+' : ''}${summary.totalPL.toLocaleString()} ({summary.totalPLPercent >= 0 ? '+' : ''}{summary.totalPLPercent.toFixed(2)}%)
                                 </div>
                               </div>
@@ -613,11 +612,11 @@ const Stocks: React.FC = () => {
                                   </h4>
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {group.stocks.map((position) => (
-                                      <PositionCard 
-                                        key={position.id} 
-                                        position={position} 
-                                        canRemove={position.source === 'manual'} 
-                                        onRemove={removePosition} 
+                                      <PositionCard
+                                        key={position.id}
+                                        position={position}
+                                        canRemove={position.source === 'manual'}
+                                        onRemove={removePosition}
                                       />
                                     ))}
                                   </div>
@@ -633,11 +632,11 @@ const Stocks: React.FC = () => {
                                   </h4>
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {group.options.map((position) => (
-                                      <OptionPositionCard 
-                                        key={position.id} 
-                                        position={position} 
-                                        canRemove={position.source === 'manual'} 
-                                        onRemove={removePosition} 
+                                      <OptionPositionCard
+                                        key={position.id}
+                                        position={position}
+                                        canRemove={position.source === 'manual'}
+                                        onRemove={removePosition}
                                       />
                                     ))}
                                   </div>
@@ -694,11 +693,10 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, canRemove, onRemo
   const getStatusChip = () => {
     const isProfit = position.profitLoss >= 0;
     return (
-      <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${
-        isProfit 
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-700' 
+      <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit
+          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
           : 'border-red-300 bg-red-50 text-red-700'
-      }`}>
+        }`}>
         {isProfit ? 'Profit' : 'Loss'}
       </span>
     );
@@ -804,18 +802,16 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
     const isProfit = position.profitLoss >= 0;
     return (
       <div className="flex gap-2">
-        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${
-          isCall 
-            ? 'border-blue-300 bg-blue-50 text-blue-700' 
+        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isCall
+            ? 'border-blue-300 bg-blue-50 text-blue-700'
             : 'border-purple-300 bg-purple-50 text-purple-700'
-        }`}>
+          }`}>
           {position.optionType}
         </span>
-        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${
-          isProfit 
-            ? 'border-emerald-300 bg-emerald-50 text-emerald-700' 
+        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit
+            ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
             : 'border-red-300 bg-red-50 text-red-700'
-        }`}>
+          }`}>
           {isProfit ? 'Profit' : 'Loss'}
         </span>
       </div>
@@ -824,10 +820,10 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
 
   const formatExpirationDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 

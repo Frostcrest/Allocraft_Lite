@@ -5,27 +5,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Zap, TrendingUp, DollarSign, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { PositionDataService } from "@/services/positionDataService";
-import { WheelDetectionService } from "@/services/wheelDetection";
+import { WheelDetectionService, WheelDetectionResult } from "@/services/wheelDetection";
 import { formatCurrency } from "@/lib/utils";
 
-const WheelBuilder = ({ onWheelCreated }) => {
+interface WheelBuilderProps {
+    onWheelCreated?: (wheelData: any) => void;
+}
+
+const WheelBuilder: React.FC<WheelBuilderProps> = ({ onWheelCreated }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [detectedWheels, setDetectedWheels] = useState([]);
+    const [detectedWheels, setDetectedWheels] = useState<WheelDetectionResult[]>([]);
     const [isConnected, setIsConnected] = useState(false);
-    const [error, setError] = useState('');
-    const [selectedResult, setSelectedResult] = useState(null);
+    const [error, setError] = useState<string>('');
+    const [selectedResult, setSelectedResult] = useState<WheelDetectionResult | null>(null);
 
     // Check Schwab connection status
     useEffect(() => {
         const checkConnection = async () => {
-            try {
-                const connected = await PositionDataService.isConnectedToSchwab();
-                setIsConnected(connected);
-            } catch (err) {
-                console.warn('Could not check Schwab connection status:', err);
-                setIsConnected(false);
-            }
+            const connected = await PositionDataService.isConnectedToSchwab();
+            setIsConnected(connected);
         };
         checkConnection();
     }, []);
@@ -72,7 +71,7 @@ const WheelBuilder = ({ onWheelCreated }) => {
         setSelectedResult(null);
     };
 
-    const getStrategyIcon = (strategy) => {
+    const getStrategyIcon = (strategy: string) => {
         switch (strategy) {
             case 'full_wheel':
                 return <Zap className="w-4 h-4 text-purple-600" />;
@@ -87,7 +86,7 @@ const WheelBuilder = ({ onWheelCreated }) => {
         }
     };
 
-    const getStrategyColor = (strategy) => {
+    const getStrategyColor = (strategy: string) => {
         switch (strategy) {
             case 'full_wheel':
                 return 'bg-purple-100 text-purple-800 border-purple-200';
@@ -102,7 +101,7 @@ const WheelBuilder = ({ onWheelCreated }) => {
         }
     };
 
-    const getConfidenceColor = (confidence) => {
+    const getConfidenceColor = (confidence: string) => {
         switch (confidence) {
             case 'high':
                 return 'bg-emerald-100 text-emerald-800';
@@ -115,7 +114,7 @@ const WheelBuilder = ({ onWheelCreated }) => {
         }
     };
 
-    const handleCreateWheel = (result) => {
+    const handleCreateWheel = (result: WheelDetectionResult) => {
         // This would integrate with the existing wheel creation system
         const suggestions = WheelDetectionService.generateWheelSuggestions(result);
 

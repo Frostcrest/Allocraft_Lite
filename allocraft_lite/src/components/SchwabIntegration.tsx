@@ -117,10 +117,10 @@ const SchwabIntegration: React.FC<SchwabIntegrationProps> = ({ onConnectionSucce
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Connect Your Schwab Account</h3>
         <div className={`px-2 py-1 rounded-full text-xs font-medium ${connectionStatus === 'connected'
-            ? 'bg-green-100 text-green-700'
-            : connectionStatus === 'connecting'
-              ? 'bg-yellow-100 text-yellow-700'
-              : 'bg-gray-100 text-gray-700'
+          ? 'bg-green-100 text-green-700'
+          : connectionStatus === 'connecting'
+            ? 'bg-yellow-100 text-yellow-700'
+            : 'bg-gray-100 text-gray-700'
           }`}>
           {connectionStatus === 'connected' && '✅ Schwab Account Connected'}
           {connectionStatus === 'connecting' && '🔄 Connecting...'}

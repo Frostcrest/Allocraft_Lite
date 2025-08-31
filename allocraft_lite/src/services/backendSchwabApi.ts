@@ -156,7 +156,7 @@ export class BackendSchwabApiService {
    */
   async getAccountsWithPositions(): Promise<SchwabAccount[]> {
     console.log('🔍 Fetching accounts with positions from backend...');
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/schwab/accounts-with-positions`, {
         method: 'GET',
@@ -166,18 +166,18 @@ export class BackendSchwabApiService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log(`📡 Backend accounts-with-positions response status: ${response.status}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
         console.log(`❌ Backend error response: ${JSON.stringify(errorData)}`);
         throw new Error(`Failed to fetch accounts with positions: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log(`✅ Accounts with positions data received:`, data);
-      
+
       return data;
     } catch (error) {
       console.error('❌ Error fetching accounts with positions:', error);
@@ -197,9 +197,9 @@ export class BackendSchwabApiService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('📡 Backend account summaries response status:', response.status);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Account summaries data received:', data);
@@ -231,18 +231,18 @@ export class BackendSchwabApiService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log(`📡 Backend account details response status: ${response.status}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
         console.log(`❌ Backend error response: ${JSON.stringify(errorData)}`);
         throw new Error(`Failed to fetch account details: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log('✅ Account details received:', data);
-      
+
       return data;
     } catch (error) {
       console.error('❌ Error fetching account details:', error);
@@ -263,9 +263,9 @@ export class BackendSchwabApiService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('📡 Backend accounts response status:', response.status);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Accounts data received:', data);
@@ -298,9 +298,9 @@ export class BackendSchwabApiService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log(`📡 Backend positions response status for ${accountId}:`, response.status);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log(`✅ Positions data received for ${accountId}:`, data);
@@ -325,7 +325,7 @@ export class BackendSchwabApiService {
   /**
    * Check Schwab connection status
    */
-  async getStatus(): Promise<{connected: boolean, has_access_token: boolean, has_refresh_token: boolean, token_expires_at: string | null}> {
+  async getStatus(): Promise<{ connected: boolean, has_access_token: boolean, has_refresh_token: boolean, token_expires_at: string | null }> {
     try {
       const response = await fetch(`${API_BASE_URL}/schwab/status`, {
         headers: {
@@ -333,14 +333,14 @@ export class BackendSchwabApiService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         return await response.json();
       } else if (response.status === 401 || response.status === 403) {
         // User not authenticated with main app, return disconnected status
         return {
           connected: false,
-          has_access_token: false, 
+          has_access_token: false,
           has_refresh_token: false,
           token_expires_at: null
         };
@@ -353,7 +353,7 @@ export class BackendSchwabApiService {
       return {
         connected: false,
         has_access_token: false,
-        has_refresh_token: false, 
+        has_refresh_token: false,
         token_expires_at: null
       };
     }
@@ -383,7 +383,7 @@ export class BackendSchwabApiService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       return response.ok;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -403,7 +403,7 @@ export class BackendSchwabApiService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (!response.ok && response.status !== 401 && response.status !== 403) {
         throw new Error(`Disconnect failed: ${response.statusText}`);
       }

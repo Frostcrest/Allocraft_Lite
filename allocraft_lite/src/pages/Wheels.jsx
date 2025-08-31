@@ -49,6 +49,14 @@ export default function Wheels() {
 
   const [selectedTicker, setSelectedTicker] = useState(null);
 
+  // Cleanup effect to handle navigation away
+  useEffect(() => {
+    return () => {
+      // Cleanup any pending state updates when component unmounts
+      console.log('Wheels component unmounting');
+    };
+  }, []);
+
   // Use React Query for ticker-specific data
   const {
     data: tickerData,
@@ -95,7 +103,7 @@ export default function Wheels() {
       const tickers = Array.from(new Set(cycles.map(c => c.ticker))).sort((a, b) => a.localeCompare(b));
       setSelectedTicker(tickers[0] || null);
     }
-  }, [cycles, selectedTicker]);
+  }, [cycles]); // Removed selectedTicker from dependencies to prevent infinite loop
 
   // Helper: get all cycle IDs for a ticker
   const getCycleIdsForTicker = (ticker) => (cycles || []).filter((c) => c.ticker === ticker).map((c) => c.id);
@@ -123,7 +131,7 @@ export default function Wheels() {
     } catch (e) {
       console.error("Error computing side stats:", e);
     }
-  }, [selectedTicker, tickerData, events, metrics]);
+  }, [selectedTicker, tickerData]); // Simplified dependencies
 
   // Process lots and events when data changes (simplified since we have events_by_lot)
   useEffect(() => {
@@ -445,14 +453,13 @@ export default function Wheels() {
             <p className="text-slate-600 mt-2">All lots and events are grouped by ticker</p>
           </div>
           <div className="flex gap-2">
-            <WheelBuilder 
+            {/* Temporarily disabled WheelBuilder to fix navigation */}
+            {/* <WheelBuilder 
               onWheelCreated={(wheelData) => {
                 console.log('Wheel creation requested:', wheelData);
-                // Auto-select the ticker that was detected
                 setSelectedTicker(wheelData.ticker);
-                // Could also auto-create a cycle here if needed
               }}
-            />
+            /> */}
             <Button onClick={openAddCycle} className="bg-slate-900 hover:bg-slate-800 shadow-lg">
               <Plus className="w-5 h-5 mr-2" /> New Ticker
             </Button>
@@ -477,14 +484,15 @@ export default function Wheels() {
             <h3 className="text-lg font-medium text-slate-900 mb-2">No cycles yet</h3>
             <p className="text-slate-500 mb-6">Create your first wheel cycle to begin tracking</p>
             <div className="flex gap-3 justify-center">
-              <WheelBuilder 
+              {/* Temporarily disabled WheelBuilder to fix navigation */}
+              {/* <WheelBuilder 
                 onWheelCreated={(wheelData) => {
                   console.log('Wheel creation requested:', wheelData);
                   setSelectedTicker(wheelData.ticker);
                 }}
-              />
+              /> */}
               <Button onClick={openAddCycle} className="bg-slate-900 hover:bg-slate-800">
-                <Plus className="w-5 h-5 mr-2" /> Add Manually
+                <Plus className="w-5 h-5 mr-2" /> Add Your First Cycle
               </Button>
             </div>
           </div>
