@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import StockPositionRow from '@/components/StockPositionRow';
 import AddStockModal from '@/components/AddStockModal';
 import SchwabIntegration from '@/components/SchwabIntegration';
 import SchwabConfigTest from '@/components/SchwabConfigTest';
@@ -224,11 +223,19 @@ const Stocks: React.FC = () => {
     };
   }, []);
 
-  const addPosition = (newPosition: Omit<Position, 'id' | 'source'>) => {
+  const addPosition = (newPositionData: { symbol: string; shares: number; costBasis: number; marketPrice: number; }) => {
+    // Calculate derived values
+    const marketValue = newPositionData.shares * newPositionData.marketPrice;
+    const profitLoss = marketValue - (newPositionData.costBasis * newPositionData.shares);
+    const profitLossPercent = newPositionData.costBasis > 0 ? ((newPositionData.marketPrice - newPositionData.costBasis) / newPositionData.costBasis) * 100 : 0;
+
     const position: Position = {
-      ...newPosition,
+      ...newPositionData,
       id: Date.now().toString(),
-      source: 'manual'
+      source: 'manual',
+      marketValue,
+      profitLoss,
+      profitLossPercent
     };
 
     const updatedPositions = [...positions, position];
@@ -255,200 +262,308 @@ const Stocks: React.FC = () => {
   }, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Stock Positions</h1>
-          <p className="text-muted-foreground">
-            Manage your equity holdings • Total Value: ${totalValue.toFixed(2)}
-            {schwabPositions.length > 0 && (
-              <span className="ml-2 text-sm">
-                ({positions.length} manual + {schwabPositions.length} Schwab positions)
-              </span>
-            )}
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Stock Positions</h1>
+            <p className="text-slate-600 mt-2">
+              Manage your equity holdings • Total Value: <span className="font-semibold">${totalValue.toLocaleString()}</span>
+              {schwabPositions.length > 0 && (
+                <span className="ml-2 text-sm">
+                  ({positions.length} manual + {schwabPositions.length} Schwab positions)
+                </span>
+              )}
+            </p>
+          </div>
+          <Button onClick={() => setIsAddModalOpen(true)} className="bg-slate-900 hover:bg-slate-800 shadow-lg">
+            <Plus className="h-5 w-5 mr-2" />
+            Add Position
+          </Button>
         </div>
-        <Button onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Position
-        </Button>
-      </div>
 
-      {/* API Mode Switcher */}
-      <APISwitcher />
-
-      {/* Error Display */}
-      {error && (
-        <Card className="border-red-200 bg-red-50">
+        {/* API Mode Switcher */}
+        <Card className="border-0 shadow bg-white/80">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-red-800">❌ Error Loading Positions</h3>
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setError('');
-                  loadSchwabPositions();
-                }}
-                className="border-red-300"
-              >
-                Retry
-              </Button>
-            </div>
+            <APISwitcher />
           </CardContent>
         </Card>
-      )}
 
-      {/* Schwab Integration Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>🔗 Connect Your Schwab Account</span>
-            {schwabPositions.length > 0 && (
-              <div className="flex items-center gap-2">
+        {/* Error Display */}
+        {error && (
+          <Card className="border-red-200 bg-red-50 shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-red-800">❌ Error Loading Positions</h3>
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setError('');
+                    loadSchwabPositions();
+                  }}
+                  className="border-red-300"
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Schwab Integration Section */}
+        <Card className="border-0 shadow bg-white/80">
+          <CardHeader className="py-4">
+            <CardTitle className="text-xl flex items-center justify-between">
+              <span>🔗 Connect Your Schwab Account</span>
+              {schwabPositions.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadSchwabPositions}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? '🔄 Refreshing...' : '🔄 Refresh'}
+                  </Button>
+                  {lastRefresh && (
+                    <span className="text-xs text-slate-500">
+                      Last updated: {lastRefresh.toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-600 mb-4">
+              Link your Charles Schwab account to automatically import your positions and keep your portfolio in sync.
+            </p>
+            <SchwabIntegration onConnectionSuccess={loadSchwabPositions} />
+          </CardContent>
+        </Card>
+
+        {/* Schwab Status */}
+        {schwabPositions.length > 0 && (
+          <Card className="border-emerald-200 bg-emerald-50 shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-emerald-800">✅ Schwab Connected</h3>
+                  <p className="text-sm text-emerald-600">
+                    {schwabPositions.length} positions imported from your Schwab account
+                  </p>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={loadSchwabPositions}
                   disabled={isLoading}
+                  className="border-emerald-300"
                 >
-                  {isLoading ? '🔄 Refreshing...' : '🔄 Refresh'}
+                  {isLoading ? 'Syncing...' : 'Sync Now'}
                 </Button>
-                {lastRefresh && (
-                  <span className="text-xs text-muted-foreground">
-                    Last updated: {lastRefresh.toLocaleTimeString()}
-                  </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* OAuth Diagnostic */}
+        <Card className="border-0 shadow bg-white/80">
+          <CardContent className="pt-6">
+            <SchwabConfigTest />
+          </CardContent>
+        </Card>
+
+        {/* Integration Tests */}
+        <Card className="border-0 shadow bg-white/80">
+          <CardContent className="pt-6">
+            <SchwabIntegrationTests />
+          </CardContent>
+        </Card>
+
+        {/* Positions Section */}
+        <Card className="border-0 shadow bg-white/80">
+          <CardHeader className="py-4">
+            <CardTitle className="text-xl">
+              All Positions
+              {allPositions.length > 0 && (
+                <span className="text-sm font-normal text-slate-500 ml-2">
+                  ({allPositions.length} total)
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading && allPositions.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <div className="animate-spin h-8 w-8 mx-auto mb-4 border-2 border-slate-300 border-t-slate-600 rounded-full"></div>
+                <p className="text-lg">Loading Schwab positions...</p>
+              </div>
+            ) : allPositions.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                  <Plus className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No positions yet</h3>
+                <p className="text-slate-500 mb-6">Add positions manually or connect your Schwab account to import automatically.</p>
+                <Button onClick={() => setIsAddModalOpen(true)} className="bg-slate-900 hover:bg-slate-800">
+                  <Plus className="w-5 h-5 mr-2" /> Add Your First Position
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Schwab Positions */}
+                {schwabPositions.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-slate-900">📊 Schwab Positions</h3>
+                      <span className="text-sm text-slate-500">{schwabPositions.length} positions</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {schwabPositions.map((position) => (
+                        <PositionCard key={position.id} position={position} canRemove={false} onRemove={() => {}} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual Positions */}
+                {positions.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-slate-900">✏️ Manual Positions</h3>
+                      <span className="text-sm text-slate-500">{positions.length} positions</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {positions.map((position) => (
+                        <PositionCard key={position.id} position={position} canRemove={true} onRemove={removePosition} />
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Link your Charles Schwab account to automatically import your positions and keep your portfolio in sync.
-          </p>
-          <SchwabIntegration onConnectionSuccess={loadSchwabPositions} />
-        </CardContent>
-      </Card>
-
-      {/* Schwab Status */}
-      {schwabPositions.length > 0 && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-green-800">✅ Schwab Connected</h3>
-                <p className="text-sm text-green-600">
-                  {schwabPositions.length} positions imported from your Schwab account
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadSchwabPositions}
-                disabled={isLoading}
-                className="border-green-300"
-              >
-                {isLoading ? 'Syncing...' : 'Sync Now'}
-              </Button>
-            </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* OAuth Diagnostic */}
-      <SchwabConfigTest />
+        <AddStockModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAdd={addPosition}
+        />
+      </div>
+    </div>
+  );
+};
 
-      {/* Integration Tests */}
-      <SchwabIntegrationTests />
+// Position Card Component similar to LotCard from Wheels page
+interface PositionCardProps {
+  position: Position;
+  canRemove: boolean;
+  onRemove: (id: string) => void;
+}
 
-      {/* Positions Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            All Positions
-            {allPositions.length > 0 && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                ({allPositions.length} total)
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading && allPositions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <div className="animate-spin h-6 w-6 mx-auto mb-2 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-              <p>Loading Schwab positions...</p>
-            </div>
-          ) : allPositions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No positions found.</p>
-              <p className="text-sm mt-2">
-                Add positions manually or connect your Schwab account to import automatically.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="grid grid-cols-8 gap-4 text-sm font-medium text-muted-foreground border-b pb-2">
-                <div>Ticker</div>
-                <div>Shares</div>
-                <div>Cost Basis</div>
-                <div>Market Price</div>
-                <div>Market Value</div>
-                <div>P/L</div>
-                <div>Status</div>
-                <div>Actions</div>
-              </div>
+const PositionCard: React.FC<PositionCardProps> = ({ position, canRemove, onRemove }) => {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
 
-              {/* Group positions by source */}
-              {schwabPositions.length > 0 && (
-                <>
-                  <div className="text-sm font-medium text-blue-600 pt-4 pb-2 border-b">
-                    📊 Schwab Positions ({schwabPositions.length})
-                  </div>
-                  {schwabPositions.map((position) => (
-                    <div key={position.id} className="bg-blue-50 rounded-lg p-2">
-                      <StockPositionRow
-                        position={position}
-                        onRemove={() => { }} // Can't remove Schwab positions
-                        canRemove={false}
-                      />
-                      <div className="text-xs text-blue-600 mt-1">
-                        Account: {position.accountNumber} ({position.accountType})
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
+  const formatPercent = (value: number) => {
+    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  };
 
-              {positions.length > 0 && (
-                <>
-                  <div className="text-sm font-medium text-gray-600 pt-4 pb-2 border-b">
-                    ✏️ Manual Positions ({positions.length})
-                  </div>
-                  {positions.map((position) => (
-                    <StockPositionRow
-                      key={position.id}
-                      position={position}
-                      onRemove={removePosition}
-                      canRemove={true}
-                    />
-                  ))}
-                </>
-              )}
-            </div>
+  const getProfitLossColor = (value: number) => {
+    if (value > 0) return 'text-emerald-600';
+    if (value < 0) return 'text-red-600';
+    return 'text-slate-600';
+  };
+
+  const getStatusChip = () => {
+    const isProfit = position.profitLoss >= 0;
+    return (
+      <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${
+        isProfit 
+          ? 'border-emerald-300 bg-emerald-50 text-emerald-700' 
+          : 'border-red-300 bg-red-50 text-red-700'
+      }`}>
+        {isProfit ? 'Profit' : 'Loss'}
+      </span>
+    );
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900 truncate">{position.symbol}</h3>
+          {getStatusChip()}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {canRemove && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onRemove(position.id)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <AddStockModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={addPosition}
-      />
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <div className="text-slate-500">Shares</div>
+            <div className="font-semibold text-slate-900">{position.shares.toLocaleString()}</div>
+          </div>
+          <div>
+            <div className="text-slate-500">Cost Basis</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.costBasis)}</div>
+          </div>
+          <div>
+            <div className="text-slate-500">Market Price</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.marketPrice)}</div>
+          </div>
+          <div>
+            <div className="text-slate-500">Market Value</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.marketValue)}</div>
+          </div>
+        </div>
+
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-slate-500 text-sm">Profit/Loss</div>
+              <div className={`font-semibold ${getProfitLossColor(position.profitLoss)}`}>
+                {formatCurrency(position.profitLoss)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-slate-500 text-sm">Percentage</div>
+              <div className={`font-semibold ${getProfitLossColor(position.profitLoss)}`}>
+                {formatPercent(position.profitLossPercent)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {position.source === 'schwab' && (
+          <div className="text-xs text-slate-500 pt-2 border-t border-slate-100">
+            Account: {position.accountNumber} ({position.accountType})
+          </div>
+        )}
+      </div>
     </div>
   );
 };
