@@ -104,6 +104,49 @@ const Stocks: React.FC = () => {
 
       // Use the Backend Schwab API service instead of direct fetch calls
       console.log('📡 Fetching accounts via Backend Schwab API service...');
+      
+      // First try to get accounts with positions included
+      try {
+        console.log('🔍 Trying to fetch accounts with positions...');
+        const accountsWithPositions = await backendSchwabApi.getAccountsWithPositions();
+        console.log('✅ Accounts with positions fetched:', accountsWithPositions);
+        
+        if (Array.isArray(accountsWithPositions) && accountsWithPositions.length > 0) {
+          // Process accounts that might have positions
+          const allPositions: Position[] = [];
+          
+          for (const account of accountsWithPositions) {
+            const securitiesAccount = account.securitiesAccount;
+            if (!securitiesAccount) continue;
+            
+            const accountNumber = securitiesAccount.accountNumber;
+            const accountType = 'Securities';
+            
+            // Check if positions are included
+            if (securitiesAccount.positions && securitiesAccount.positions.length > 0) {
+              console.log(`📊 Found ${securitiesAccount.positions.length} positions in account ${accountNumber}`);
+              
+              const transformedPositions = securitiesAccount.positions
+                .map((pos: any, index: number) =>
+                  transformSchwabPosition(pos, accountNumber, accountType, index)
+                )
+                .filter((pos: Position | null) => pos !== null) as Position[];
+
+              allPositions.push(...transformedPositions);
+            }
+          }
+          
+          if (allPositions.length > 0) {
+            console.log(`✅ Total Schwab positions loaded via accounts-with-positions: ${allPositions.length}`);
+            setSchwabPositions(allPositions);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Failed to get accounts with positions, falling back to separate calls:', error);
+      }
+      
+      // Fallback: get accounts separately and then fetch positions
       const accounts = await backendSchwabApi.getAccounts();
       console.log('✅ Schwab accounts fetched:', accounts);
 

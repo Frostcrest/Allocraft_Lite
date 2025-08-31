@@ -7,25 +7,73 @@
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://allocraft-backend.onrender.com';
 
 export interface SchwabAccount {
-  accountId: string;
-  type: string;
-  roundTrips: number;
-  isDayTrader: boolean;
-  isClosingOnlyRestricted: boolean;
-  positions: SchwabPosition[];
-  initialBalances: {
-    accruedInterest: number;
-    availableFundsNonMarginableTrade: number;
-    bondValue: number;
-    buyingPower: number;
-    cashBalance: number;
-    cashAvailableForTrading: number;
-    cashReceipts: number;
-    dayTradingBuyingPower: number;
-    dayTradingBuyingPowerCall: number;
+  securitiesAccount: {
+    accountNumber: string;
+    type: string;
+    roundTrips: number;
+    isDayTrader: boolean;
+    isClosingOnlyRestricted: boolean;
+    pfcbFlag: boolean;
+    positions?: SchwabPosition[];
+    initialBalances: {
+      accruedInterest: number;
+      availableFundsNonMarginableTrade: number;
+      bondValue: number;
+      buyingPower: number;
+      cashBalance: number;
+      cashAvailableForTrading: number;
+      cashReceipts: number;
+      dayTradingBuyingPower: number;
+      dayTradingBuyingPowerCall: number;
+      liquidationValue: number;
+      totalCash: number;
+      accountValue: number;
+    };
+    currentBalances: {
+      accruedInterest: number;
+      cashBalance: number;
+      cashReceipts: number;
+      longOptionMarketValue: number;
+      liquidationValue: number;
+      longMarketValue: number;
+      moneyMarketFund: number;
+      savings: number;
+      shortMarketValue: number;
+      pendingDeposits: number;
+      mutualFundValue: number;
+      bondValue: number;
+      shortOptionMarketValue: number;
+      availableFunds: number;
+      availableFundsNonMarginableTrade: number;
+      buyingPower: number;
+      buyingPowerNonMarginableTrade: number;
+      dayTradingBuyingPower: number;
+      equity: number;
+      equityPercentage: number;
+      longMarginValue: number;
+      maintenanceCall: number;
+      maintenanceRequirement: number;
+      marginBalance: number;
+      regTCall: number;
+      shortBalance: number;
+      shortMarginValue: number;
+      sma: number;
+    };
+    projectedBalances: {
+      availableFunds: number;
+      availableFundsNonMarginableTrade: number;
+      buyingPower: number;
+      dayTradingBuyingPower: number;
+      dayTradingBuyingPowerCall: number;
+      maintenanceCall: number;
+      regTCall: number;
+      isInCall: boolean;
+      stockBuyingPower: number;
+    };
+  };
+  aggregatedBalance: {
+    currentLiquidationValue: number;
     liquidationValue: number;
-    totalCash: number;
-    accountValue: number;
   };
 }
 
@@ -72,6 +120,40 @@ export class BackendSchwabApiService {
       window.location.href = authUrl;
     } catch (error) {
       console.error('Failed to initiate OAuth:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get accounts with positions included
+   */
+  async getAccountsWithPositions(): Promise<SchwabAccount[]> {
+    console.log('🔍 Fetching accounts with positions from backend...');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/schwab/accounts-with-positions`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log(`📡 Backend accounts-with-positions response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        console.log(`❌ Backend error response: ${JSON.stringify(errorData)}`);
+        throw new Error(`Failed to fetch accounts with positions: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log(`✅ Accounts with positions data received:`, data);
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error fetching accounts with positions:', error);
       throw error;
     }
   }
