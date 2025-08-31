@@ -10,6 +10,7 @@ import Wheels from "./Wheels";
 import WheelsLotsMock from "./WheelsLotsMock.jsx";
 import LotTimelinePage from "@/features/wheels/LotTimelinePage";
 import Profile from "./Profile";
+import Settings from "./Settings.tsx";
 import SchwabCallback from "./SchwabCallback";
 
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
@@ -37,6 +38,7 @@ const PAGES = {
 
     Wheels: Wheels,
     Profile: Profile,
+    Settings: Settings,
 
 }
 
@@ -79,6 +81,7 @@ function PagesContent() {
                                 <Route path="/Options" element={<Options />} />
                                 <Route path="/Wheels" element={<Wheels />} />
                                 <Route path="/Profile" element={<Profile />} />
+                                <Route path="/Settings" element={<Settings />} />
                             </Routes>
                         </Layout>
                     </RequireAuth>

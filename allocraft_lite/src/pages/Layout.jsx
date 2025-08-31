@@ -8,7 +8,8 @@ import {
   TrendingUp,
   Target,
   RotateCcw,
-  PieChart
+  PieChart,
+  Settings
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,6 +46,14 @@ const navigationItems = [
     title: "Wheels",
     url: createPageUrl("Wheels"),
     icon: RotateCcw,
+  },
+];
+
+const settingsItems = [
+  {
+    title: "Settings",
+    url: createPageUrl("Settings"),
+    icon: Settings,
   },
 ];
 
@@ -86,6 +95,33 @@ export default function Layout({ children, currentPageName }) {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {navigationItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        className={`group transition-all duration-200 rounded-xl ${location.pathname === item.url
+                          ? 'bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-lg'
+                          : 'hover:bg-slate-50 text-slate-700 hover:text-slate-900'
+                          }`}
+                      >
+                        <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
+                          <item.icon className={`w-5 h-5 transition-colors ${location.pathname === item.url ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
+                            }`} />
+                          <span className="font-medium">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 py-2">
+                Configuration
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {settingsItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild

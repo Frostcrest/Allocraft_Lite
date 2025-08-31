@@ -3,10 +3,6 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AddStockModal from '@/components/AddStockModal';
-import SchwabIntegration from '@/components/SchwabIntegration';
-import SchwabConfigTest from '@/components/SchwabConfigTest';
-import SchwabIntegrationTests from '@/components/SchwabIntegrationTests';
-import APISwitcher from '@/components/APISwitcher';
 import { backendSchwabApi } from '../services/backendSchwabApi';
 
 // Option symbol parser for formats like "HIMS 251017P00037000"
@@ -400,13 +396,6 @@ const Stocks: React.FC = () => {
           </Button>
         </div>
 
-        {/* API Mode Switcher */}
-        <Card className="border-0 shadow bg-white/80">
-          <CardContent className="pt-6">
-            <APISwitcher />
-          </CardContent>
-        </Card>
-
         {/* Error Display */}
         {error && (
           <Card className="border-red-200 bg-red-50 shadow">
@@ -432,40 +421,8 @@ const Stocks: React.FC = () => {
           </Card>
         )}
 
-        {/* Schwab Integration Section */}
-        <Card className="border-0 shadow bg-white/80">
-          <CardHeader className="py-4">
-            <CardTitle className="text-xl flex items-center justify-between">
-              <span>🔗 Connect Your Schwab Account</span>
-              {schwabPositions.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={loadSchwabPositions}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? '🔄 Refreshing...' : '🔄 Refresh'}
-                  </Button>
-                  {lastRefresh && (
-                    <span className="text-xs text-slate-500">
-                      Last updated: {lastRefresh.toLocaleTimeString()}
-                    </span>
-                  )}
-                </div>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600 mb-4">
-              Link your Charles Schwab account to automatically import your positions and keep your portfolio in sync.
-            </p>
-            <SchwabIntegration onConnectionSuccess={loadSchwabPositions} />
-          </CardContent>
-        </Card>
-
-        {/* Schwab Status */}
-        {schwabPositions.length > 0 && (
+        {/* Schwab Status or Setup Prompt */}
+        {schwabPositions.length > 0 ? (
           <Card className="border-emerald-200 bg-emerald-50 shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -474,6 +431,11 @@ const Stocks: React.FC = () => {
                   <p className="text-sm text-emerald-600">
                     {schwabPositions.length} positions imported from your Schwab account
                   </p>
+                  {lastRefresh && (
+                    <p className="text-xs text-emerald-500 mt-1">
+                      Last updated: {lastRefresh.toLocaleTimeString()}
+                    </p>
+                  )}
                 </div>
                 <Button
                   variant="outline"
@@ -487,21 +449,28 @@ const Stocks: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        ) : (
+          <Card className="border-blue-200 bg-blue-50 shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-blue-800">🔗 Connect Your Schwab Account</h3>
+                  <p className="text-sm text-blue-600">
+                    Import your positions automatically from Charles Schwab
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.href = '/Settings'}
+                  className="border-blue-300"
+                >
+                  Go to Settings
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
-
-        {/* OAuth Diagnostic */}
-        <Card className="border-0 shadow bg-white/80">
-          <CardContent className="pt-6">
-            <SchwabConfigTest />
-          </CardContent>
-        </Card>
-
-        {/* Integration Tests */}
-        <Card className="border-0 shadow bg-white/80">
-          <CardContent className="pt-6">
-            <SchwabIntegrationTests />
-          </CardContent>
-        </Card>
 
         {/* Positions Section */}
         <Card className="border-0 shadow bg-white/80">
