@@ -108,6 +108,7 @@ export default function Wheels() {
       {/* Wheel Builder Modal */}
       {showWheelBuilder && (
         <WheelBuilder 
+          isOpen={showWheelBuilder}
           onClose={() => setShowWheelBuilder(false)}
           onWheelCreated={(wheelData) => {
             console.log('Wheel successfully created:', wheelData);

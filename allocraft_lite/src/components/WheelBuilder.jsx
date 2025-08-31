@@ -8,13 +8,25 @@ import { PositionDataService } from "@/services/positionDataService";
 import { WheelDetectionService } from "@/services/wheelDetection";
 import { formatCurrency } from "@/lib/utils";
 
-const WheelBuilder = ({ onWheelCreated }) => {
+const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [detectedWheels, setDetectedWheels] = useState([]);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState('');
     const [selectedResult, setSelectedResult] = useState(null);
+
+    // Use external control if provided, otherwise use internal state
+    const modalIsOpen = externalIsOpen !== undefined ? externalIsOpen : isOpen;
+    const handleModalChange = (open) => {
+        if (externalIsOpen !== undefined && onClose) {
+            // Externally controlled
+            if (!open) onClose();
+        } else {
+            // Internally controlled
+            setIsOpen(open);
+        }
+    };
 
     // Check Schwab connection status
     useEffect(() => {
@@ -29,6 +41,14 @@ const WheelBuilder = ({ onWheelCreated }) => {
         };
         checkConnection();
     }, []);
+
+    // Auto-detect wheels when externally opened
+    useEffect(() => {
+        if (externalIsOpen && detectedWheels.length === 0) {
+            console.log('🚀 Modal opened externally, auto-detecting wheels...');
+            detectWheelOpportunities();
+        }
+    }, [externalIsOpen]);
 
     const detectWheelOpportunities = async () => {
         setIsLoading(true);
@@ -118,7 +138,9 @@ const WheelBuilder = ({ onWheelCreated }) => {
     const handleSelectWheel = (result) => {
         // Just select the wheel for preview, don't create it yet
         console.log('🎯 Selected wheel for preview:', result);
+        console.log('📋 Setting selectedResult state to:', result);
         setSelectedResult(result);
+        console.log('✅ selectedResult should now be set');
     };
 
     const handleCreateWheel = (result) => {
@@ -150,7 +172,7 @@ const WheelBuilder = ({ onWheelCreated }) => {
                 Build from Positions
             </Button>
 
-            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <Dialog open={modalIsOpen} onOpenChange={handleModalChange}>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
@@ -286,6 +308,9 @@ const WheelBuilder = ({ onWheelCreated }) => {
                                         ))}
                                     </div>
                                 )}
+
+                                {/* Debug selectedResult */}
+                                {console.log('🔍 Rendering with selectedResult:', selectedResult)}
 
                                 {selectedResult && (
                                     <Card className="border-green-200 bg-green-50">
