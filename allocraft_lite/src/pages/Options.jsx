@@ -59,11 +59,36 @@ export default function Options() {
 
   // React Query hooks
   const {
-    data: options = [],
+    data: rawOptions,
     isLoading,
     error,
     refetch
   } = useOptions();
+
+  // Ensure options is always an array
+  const options = React.useMemo(() => {
+    if (!rawOptions) return [];
+    if (!Array.isArray(rawOptions)) {
+      console.warn('Options API returned non-array data:', rawOptions);
+      return [];
+    }
+    return rawOptions.filter(option => option && typeof option === 'object');
+  }, [rawOptions]);
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Options data received:', {
+      options,
+      isArray: Array.isArray(options),
+      length: options?.length,
+      firstOption: options?.[0],
+      rawData: options
+    });
+    
+    if (error) {
+      console.error('Options API error:', error);
+    }
+  }, [options, error]);
 
   const createOptionMutation = useCreateOption();
   const updateOptionMutation = useUpdateOption();
@@ -155,8 +180,19 @@ export default function Options() {
   };
 
   const calculateTotalValue = () => {
+    if (!options || !Array.isArray(options)) {
+      return 0;
+    }
+    
     return options
-      .filter((option) => option.status === "Open" && option.current_price)
+      .filter((option) => 
+        option && 
+        option.status === "Open" && 
+        option.current_price && 
+        typeof option.current_price === 'number' &&
+        option.contracts &&
+        typeof option.contracts === 'number'
+      )
       .reduce(
         (total, option) => total + option.contracts * option.current_price * 100,
         0
@@ -240,45 +276,52 @@ export default function Options() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {options.map((option) => {
-                    const pl = option.current_price && option.cost_basis
-                      ? (option.current_price - option.cost_basis) * option.contracts * 100
-                      : 0;
+                  {options && options.length > 0 ? (
+                    options.map((option) => {
+                      // Safely handle option data with null checks
+                      if (!option || typeof option !== 'object') {
+                        console.warn('Invalid option object:', option);
+                        return null;
+                      }
 
-                    return (
-                      <TableRow key={option.id} className="hover:bg-slate-50">
-                        <TableCell className="font-medium text-slate-900">
-                          {option.ticker}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={option.option_type === 'Call' ? 'default' : 'secondary'}>
-                            {option.option_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatCurrency(option.strike_price)}</TableCell>
-                        <TableCell>{formatExpiryDate(option.expiry_date)}</TableCell>
-                        <TableCell>{option.contracts}</TableCell>
-                        <TableCell>{formatCurrency(option.cost_basis)}</TableCell>
-                        <TableCell>
-                          {option.current_price ? formatCurrency(option.current_price) : 'N/A'}
-                        </TableCell>
-                        <TableCell className={pl >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {formatCurrency(pl)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusBadge(option.status)}>
-                            {option.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => handleEdit(option)}
-                              disabled={isMutating}
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0"
-                            >
+                      const pl = option.current_price && option.cost_basis
+                        ? (option.current_price - option.cost_basis) * (option.contracts || 0) * 100
+                        : 0;
+
+                      return (
+                        <TableRow key={option.id || Math.random()} className="hover:bg-slate-50">
+                          <TableCell className="font-medium text-slate-900">
+                            {option.ticker || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={option.option_type === 'Call' ? 'default' : 'secondary'}>
+                              {option.option_type || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatCurrency(option.strike_price || 0)}</TableCell>
+                          <TableCell>{formatExpiryDate(option.expiry_date)}</TableCell>
+                          <TableCell>{option.contracts || 0}</TableCell>
+                          <TableCell>{formatCurrency(option.cost_basis || 0)}</TableCell>
+                          <TableCell>
+                            {option.current_price ? formatCurrency(option.current_price) : 'N/A'}
+                          </TableCell>
+                          <TableCell className={pl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {formatCurrency(pl)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusBadge(option.status || 'Unknown')}>
+                              {option.status || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => handleEdit(option)}
+                                disabled={isMutating}
+                                size="sm"
+                                variant="outline"
+                                className="h-8 w-8 p-0"
+                              >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button
@@ -294,7 +337,13 @@ export default function Options() {
                         </TableCell>
                       </TableRow>
                     );
-                  })}
+                  }).filter(Boolean)) : (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+                        No options data available
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
