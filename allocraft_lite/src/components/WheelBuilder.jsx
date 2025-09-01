@@ -28,18 +28,18 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
         }
     };
 
-    // Check Schwab connection status
+    // Check if user has any positions (from any source)
     useEffect(() => {
-        const checkConnection = async () => {
+        const checkPositions = async () => {
             try {
-                const connected = await PositionDataService.isConnectedToSchwab();
-                setIsConnected(connected);
+                const hasPositions = await PositionDataService.hasAnyPositions();
+                setIsConnected(hasPositions);
             } catch (err) {
-                console.warn('Could not check Schwab connection status:', err);
+                console.warn('Could not check position status:', err);
                 setIsConnected(false);
             }
         };
-        checkConnection();
+        checkPositions();
     }, []);
 
     // Auto-detect wheels when externally opened
@@ -55,13 +55,13 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
         setError('');
 
         try {
-            console.log('🔍 Analyzing Schwab positions for wheel opportunities...');
+            console.log('🔍 Analyzing all positions for wheel opportunities...');
 
-            // Get fresh position data
-            const positions = await PositionDataService.getSchwabPositions(true);
+            // Get fresh position data from all sources
+            const positions = await PositionDataService.getAllPositions();
 
             if (positions.length === 0) {
-                setError('No positions found. Make sure your Schwab account is connected and has positions.');
+                setError('No positions found. Add some stock positions to detect wheel opportunities.');
                 return;
             }
 
@@ -193,20 +193,30 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                                     <div className="flex items-center gap-3">
                                         <AlertCircle className="w-5 h-5 text-amber-600" />
                                         <div>
-                                            <h3 className="font-semibold text-amber-800">Schwab Connection Required</h3>
+                                            <h3 className="font-semibold text-amber-800">No Positions Found</h3>
                                             <p className="text-sm text-amber-700 mt-1">
-                                                Connect your Schwab account to automatically detect wheel opportunities from your positions.
+                                                Add some stock positions to automatically detect wheel opportunities. You can import from Schwab or add positions manually.
                                             </p>
                                         </div>
                                     </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-3 border-amber-300"
-                                        onClick={() => window.location.href = '/Settings'}
-                                    >
-                                        Go to Settings
-                                    </Button>
+                                    <div className="flex gap-2 mt-3">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="border-amber-300"
+                                            onClick={() => window.location.href = '/Dashboard'}
+                                        >
+                                            Add Positions
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="border-amber-300"
+                                            onClick={() => window.location.href = '/Settings'}
+                                        >
+                                            Connect Schwab
+                                        </Button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ) : (
@@ -215,7 +225,7 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                                     <div>
                                         <h3 className="text-lg font-semibold">Detected Wheel Opportunities</h3>
                                         <p className="text-sm text-gray-600">
-                                            We'll analyze your Schwab positions to find existing and potential wheel strategies.
+                                            We'll analyze your positions to find existing and potential wheel strategies.
                                         </p>
                                     </div>
                                     <Button

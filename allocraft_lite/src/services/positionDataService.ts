@@ -272,6 +272,74 @@ export class PositionDataService {
     }
 
     /**
+     * Check if user has any positions (from any source)
+     */
+    static async hasAnyPositions(): Promise<boolean> {
+        try {
+            const response = await fetch('/api/stocks/all-positions', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.positions && data.positions.length > 0;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error checking for positions:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Get all positions from all sources (unified endpoint)
+     */
+    static async getAllPositions(): Promise<PositionData[]> {
+        try {
+            const response = await fetch('/api/stocks/all-positions', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.positions || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('Error fetching all positions:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Get positions grouped by underlying ticker (all sources)
+     */
+    static async getAllPositionsGroupedByTicker(): Promise<Record<string, { stocks: PositionData[], options: PositionData[] }>> {
+        const positions = await this.getAllPositions();
+
+        return positions.reduce((groups, position) => {
+            const key = position.isOption ? position.underlyingSymbol! : position.symbol;
+            if (!groups[key]) {
+                groups[key] = { stocks: [], options: [] };
+            }
+
+            if (position.isOption) {
+                groups[key].options.push(position);
+            } else {
+                groups[key].stocks.push(position);
+            }
+
+            return groups;
+        }, {} as Record<string, { stocks: PositionData[], options: PositionData[] }>);
+    }
+
+    /**
      * Check if user is connected to Schwab
      */
     static async isConnectedToSchwab(): Promise<boolean> {
