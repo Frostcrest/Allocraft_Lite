@@ -574,6 +574,8 @@ export const mockSyncPositions = async () => {
 // Export positions (for production use)
 export const exportPositions = async () => {
   try {
+    console.log('🔄 Starting position export...');
+    
     const response = await fetch(`${API_BASE_URL}/schwab/export/positions`, {
       method: 'GET',
       headers: {
@@ -581,12 +583,34 @@ export const exportPositions = async () => {
       },
     });
 
+    console.log(`📡 Export response status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`Failed to export positions: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ Export response error:', errorText);
+      throw new Error(`Failed to export positions: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('📤 Positions exported successfully:', data);
+    console.log('📤 Positions exported successfully!');
+    console.log(`📊 Export summary: ${data.export_info?.total_accounts || 0} accounts, ${data.export_info?.total_positions || 0} positions`);
+    
+    // Log data structure for debugging
+    if (data.accounts && data.accounts.length > 0) {
+      console.log('🏦 Sample account structure:', {
+        account_keys: Object.keys(data.accounts[0]),
+        first_account: data.accounts[0].account_number,
+        position_count: data.accounts[0].positions?.length || 0
+      });
+      
+      if (data.accounts[0].positions && data.accounts[0].positions.length > 0) {
+        console.log('📈 Sample position structure:', {
+          position_keys: Object.keys(data.accounts[0].positions[0]),
+          first_position: data.accounts[0].positions[0].symbol
+        });
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error('❌ Error exporting positions:', error);
@@ -597,11 +621,24 @@ export const exportPositions = async () => {
 // Import positions (for development use)
 export const importPositions = async (importData: any) => {
   try {
+    console.log('🔄 Starting position import...');
+    console.log('📋 Import data summary:', {
+      accounts: importData.accounts?.length || 0,
+      total_positions: importData.export_info?.total_positions || 0,
+      export_timestamp: importData.export_info?.export_timestamp
+    });
+
     const token = localStorage.getItem('token');
     if (!token) {
-      throw new Error('Authentication required');
+      throw new Error('Authentication required for import');
     }
 
+    // Validate import data structure
+    if (!importData.accounts || !Array.isArray(importData.accounts)) {
+      throw new Error('Invalid import data: missing accounts array');
+    }
+
+    console.log('📡 Sending import request...');
     const response = await fetch(`${API_BASE_URL}/schwab/import/positions`, {
       method: 'POST',
       headers: {
@@ -611,12 +648,17 @@ export const importPositions = async (importData: any) => {
       body: JSON.stringify(importData),
     });
 
+    console.log(`📡 Import response status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`Failed to import positions: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ Import response error:', errorText);
+      throw new Error(`Failed to import positions: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('📥 Positions imported successfully:', data);
+    console.log('📥 Positions imported successfully!');
+    console.log(`📊 Import result: ${data.accounts_created || 0} accounts, ${data.positions_created || 0} positions`);
     return data;
   } catch (error) {
     console.error('❌ Error importing positions:', error);

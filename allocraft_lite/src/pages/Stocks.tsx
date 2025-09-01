@@ -454,6 +454,32 @@ const Stocks: React.FC = () => {
     }
   };
 
+  const handleTestConnection = async () => {
+    try {
+      setIsLoading(true);
+      console.log('🔄 Testing backend connection...');
+
+      // Test the debug endpoint first
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/schwab/debug/schema`);
+      console.log(`📡 Debug response status: ${response.status}`);
+
+      if (!response.ok) {
+        throw new Error(`Backend connection failed: ${response.status}`);
+      }
+
+      const debugData = await response.json();
+      console.log('🔍 Backend debug data:', debugData);
+
+      toast.success(`Backend connected! Found ${debugData.database_status.account_count} accounts, ${debugData.database_status.position_count} positions`);
+
+    } catch (error) {
+      console.error('❌ Backend connection test failed:', error);
+      toast.error(`Backend connection failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleImportPositions = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -582,6 +608,14 @@ const Stocks: React.FC = () => {
                   {isDevelopmentMode() && (
                     <>
                       <button
+                        onClick={handleTestConnection}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Testing...' : '🔧 Test Backend'}
+                      </button>
+                      
+                      <button
                         onClick={handleLoadMockData}
                         className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
                         disabled={isLoading}
@@ -633,6 +667,16 @@ const Stocks: React.FC = () => {
                   </Button>
                   {isDevelopmentMode() && (
                     <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleTestConnection}
+                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Testing...' : '🔧 Test Backend'}
+                      </Button>
+                      
                       <Button
                         variant="outline"
                         size="sm"
