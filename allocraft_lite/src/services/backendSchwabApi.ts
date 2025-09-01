@@ -510,7 +510,6 @@ export const getMockPositions = async () => {
     const response = await fetch(`${API_BASE_URL}/schwab/mock/positions`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
         'Content-Type': 'application/json',
       },
     });
@@ -533,7 +532,6 @@ export const loadMockData = async () => {
     const response = await fetch(`${API_BASE_URL}/schwab/mock/load-data`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
         'Content-Type': 'application/json',
       },
     });
@@ -556,7 +554,6 @@ export const mockSyncPositions = async () => {
     const response = await fetch(`${API_BASE_URL}/schwab/mock/sync`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
         'Content-Type': 'application/json',
       },
     });
@@ -570,6 +567,65 @@ export const mockSyncPositions = async () => {
     return data;
   } catch (error) {
     console.error('❌ Error with mock sync:', error);
+    throw error;
+  }
+};
+
+// Export positions (for production use)
+export const exportPositions = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/schwab/export/positions`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to export positions: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📤 Positions exported successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error exporting positions:', error);
+    throw error;
+  }
+};
+
+// Import positions (for development use)
+export const importPositions = async (importData: any) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/schwab/import/positions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(importData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to import positions: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📥 Positions imported successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error importing positions:', error);
     throw error;
   }
 };

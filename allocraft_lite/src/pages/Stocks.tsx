@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddStockModal from '@/components/AddStockModal';
 import { backendSchwabApi } from '../services/backendSchwabApi';
-import { getStoredPositions, syncPositions, getSyncStatus, loadMockData, isDevelopmentMode } from '../services/backendSchwabApi';
+import { getStoredPositions, syncPositions, getSyncStatus, loadMockData, isDevelopmentMode, exportPositions, importPositions } from '../services/backendSchwabApi';
 
 // Option symbol parser for formats like "HIMS 251017P00037000"
 const parseOptionSymbol = (symbol: string) => {
@@ -405,7 +405,7 @@ const Stocks: React.FC = () => {
   const handleLoadMockData = async () => {
     try {
       setIsLoading(true);
-      console.log('🎭 Loading mock data for development...');
+      console.log('🎭 Starting mock data load...');
 
       const result = await loadMockData();
       console.log('✅ Mock data loaded:', result);
@@ -417,9 +417,74 @@ const Stocks: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error loading mock data:', error);
-      toast.error('Failed to load mock data');
+      toast.error(`Failed to load mock data: ${error.message}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleExportPositions = async () => {
+    try {
+      setIsLoading(true);
+      console.log('📤 Starting positions export...');
+
+      const exportData = await exportPositions();
+      console.log('✅ Positions exported:', exportData);
+
+      // Create a downloadable JSON file
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `allocraft-positions-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${exportData.export_info.total_accounts} accounts with ${exportData.export_info.total_positions} positions`);
+
+    } catch (error) {
+      console.error('❌ Error exporting positions:', error);
+      toast.error(`Failed to export positions: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportPositions = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsLoading(true);
+      console.log('📥 Starting positions import...');
+
+      const fileText = await file.text();
+      const importData = JSON.parse(fileText);
+      
+      // Validate the import data structure
+      if (!importData.accounts || !importData.export_info) {
+        throw new Error('Invalid import file format');
+      }
+
+      const result = await importPositions(importData);
+      console.log('✅ Positions imported:', result);
+
+      // Reload positions to show imported data
+      await loadSchwabPositions(false);
+
+      toast.success(`Imported ${result.result.accounts_imported} accounts with ${result.result.positions_imported} positions`);
+
+    } catch (error) {
+      console.error('❌ Error importing positions:', error);
+      toast.error(`Failed to import positions: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+      // Reset the file input
+      event.target.value = '';
     }
   };
 
@@ -505,14 +570,42 @@ const Stocks: React.FC = () => {
                     {isLoading ? 'Syncing...' : 'Sync Fresh Data'}
                   </button>
 
+                  <button
+                    onClick={handleExportPositions}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium flex items-center gap-2"
+                    disabled={isLoading}
+                  >
+                    <Download size={16} />
+                    {isLoading ? 'Exporting...' : 'Export Data'}
+                  </button>
+
                   {isDevelopmentMode() && (
-                    <button
-                      onClick={handleLoadMockData}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Loading...' : '🎭 Load Mock Data'}
-                    </button>
+                    <>
+                      <button
+                        onClick={handleLoadMockData}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Loading...' : '🎭 Load Mock Data'}
+                      </button>
+                      
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept=".json"
+                          onChange={handleImportPositions}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          disabled={isLoading}
+                        />
+                        <button
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-2"
+                          disabled={isLoading}
+                        >
+                          <Upload size={16} />
+                          {isLoading ? 'Importing...' : 'Import Data'}
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -539,15 +632,36 @@ const Stocks: React.FC = () => {
                     Go to Settings
                   </Button>
                   {isDevelopmentMode() && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleLoadMockData}
-                      className="border-purple-300 text-purple-700 hover:bg-purple-50"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Loading...' : '🎭 Load Mock Data'}
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleLoadMockData}
+                        className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Loading...' : '🎭 Load Mock Data'}
+                      </Button>
+                      
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept=".json"
+                          onChange={handleImportPositions}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          disabled={isLoading}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 flex items-center gap-2"
+                          disabled={isLoading}
+                        >
+                          <Upload size={16} />
+                          {isLoading ? 'Importing...' : 'Import Data'}
+                        </Button>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
