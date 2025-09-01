@@ -574,15 +574,9 @@ export const mockSyncPositions = async () => {
 // Export positions (for production use)
 export const exportPositions = async () => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
     const response = await fetch(`${API_BASE_URL}/schwab/export/positions`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
