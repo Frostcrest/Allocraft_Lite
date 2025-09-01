@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 import AddStockModal from '@/components/AddStockModal';
 import { backendSchwabApi } from '../services/backendSchwabApi';
-import { getStoredPositions, syncPositions, getSyncStatus } from '../services/backendSchwabApi';
+import { getStoredPositions, syncPositions, getSyncStatus, loadMockData, isDevelopmentMode } from '../services/backendSchwabApi';
 
 // Option symbol parser for formats like "HIMS 251017P00037000"
 const parseOptionSymbol = (symbol: string) => {
@@ -401,6 +402,27 @@ const Stocks: React.FC = () => {
     }
   };
 
+  const handleLoadMockData = async () => {
+    try {
+      setIsLoading(true);
+      console.log('🎭 Loading mock data for development...');
+
+      const result = await loadMockData();
+      console.log('✅ Mock data loaded:', result);
+
+      // Reload positions to show mock data
+      await loadSchwabPositions(false);
+
+      toast.success(`Mock data loaded: ${result.result.accounts_created} accounts, ${result.result.positions_created} positions`);
+
+    } catch (error) {
+      console.error('❌ Error loading mock data:', error);
+      toast.error('Failed to load mock data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -482,6 +504,16 @@ const Stocks: React.FC = () => {
                   >
                     {isLoading ? 'Syncing...' : 'Sync Fresh Data'}
                   </button>
+
+                  {isDevelopmentMode() && (
+                    <button
+                      onClick={handleLoadMockData}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Loading...' : '🎭 Load Mock Data'}
+                    </button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -494,16 +526,30 @@ const Stocks: React.FC = () => {
                   <h3 className="font-semibold text-blue-800">🔗 Connect Your Schwab Account</h3>
                   <p className="text-sm text-blue-600">
                     Import your positions automatically from Charles Schwab
+                    {isDevelopmentMode() && " or use mock data for development"}
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.location.href = '/Settings'}
-                  className="border-blue-300"
-                >
-                  Go to Settings
-                </Button>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.href = '/Settings'}
+                    className="border-blue-300"
+                  >
+                    Go to Settings
+                  </Button>
+                  {isDevelopmentMode() && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLoadMockData}
+                      className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Loading...' : '🎭 Load Mock Data'}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

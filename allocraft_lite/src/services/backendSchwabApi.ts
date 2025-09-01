@@ -500,3 +500,83 @@ export const getSyncStatus = async () => {
     throw error;
   }
 };
+
+// ========================================
+// MOCK DATA FUNCTIONS FOR DEVELOPMENT
+// ========================================
+
+export const getMockPositions = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/schwab/mock/positions`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get mock positions: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('🎭 Mock positions retrieved:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error getting mock positions:', error);
+    throw error;
+  }
+};
+
+export const loadMockData = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/schwab/mock/load-data`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load mock data: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('🎭 Mock data loaded successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error loading mock data:', error);
+    throw error;
+  }
+};
+
+export const mockSyncPositions = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/schwab/mock/sync`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('allocraft_token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to mock sync positions: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('🎭 Mock sync completed:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error with mock sync:', error);
+    throw error;
+  }
+};
+
+// Helper function to check if we're in development mode
+export const isDevelopmentMode = (): boolean => {
+  return API_BASE_URL.includes('localhost') || 
+         API_BASE_URL.includes('127.0.0.1') || 
+         (import.meta as any).env?.DEV === true;
+};
