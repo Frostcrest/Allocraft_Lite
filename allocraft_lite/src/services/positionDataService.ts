@@ -282,7 +282,7 @@ export class PositionDataService {
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 return data.positions && data.positions.length > 0;
@@ -305,7 +305,7 @@ export class PositionDataService {
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 return data.positions || [];
