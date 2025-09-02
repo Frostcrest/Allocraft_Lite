@@ -628,11 +628,6 @@ export const importPositions = async (importData: any) => {
       export_timestamp: importData.export_info?.export_timestamp
     });
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required for import');
-    }
-
     // Validate import data structure
     if (!importData.accounts || !Array.isArray(importData.accounts)) {
       throw new Error('Invalid import data: missing accounts array');
@@ -642,7 +637,6 @@ export const importPositions = async (importData: any) => {
     const response = await fetch(`${API_BASE_URL}/schwab/import/positions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(importData),
