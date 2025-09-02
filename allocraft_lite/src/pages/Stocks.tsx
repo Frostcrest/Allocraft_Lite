@@ -5,9 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddStockModal from '@/components/AddStockModal';
 import { unifiedApi, UnifiedPosition } from '../services/unifiedApi';
-// Keep legacy API for comparison/fallback if needed
-import { backendSchwabApi } from '../services/backendSchwabApi';
-import { getStoredPositions, syncPositions, getSyncStatus, loadMockData, isDevelopmentMode, exportPositions, importPositions } from '../services/backendSchwabApi';
+// Keep legacy API for development mode checking
+import { isDevelopmentMode } from '../services/backendSchwabApi';
 
 // Option symbol parser for formats like "HIMS 251017P00037000"
 const parseOptionSymbol = (symbol: string) => {
@@ -67,16 +66,16 @@ const Stocks: React.FC = () => {
     try {
       setIsLoading(true);
       setError('');
-      
+
       // Get both stock and option positions from unified backend
       const [stockPositions, optionPositions] = await Promise.all([
         unifiedApi.getStockPositions(),
         unifiedApi.getOptionPositions()
       ]);
-      
+
       // Combine and transform positions
       const allPositions: Position[] = [];
-      
+
       // Add stock positions
       stockPositions.forEach(pos => {
         allPositions.push({
@@ -88,7 +87,7 @@ const Stocks: React.FC = () => {
           marketValue: pos.market_value
         });
       });
-      
+
       // Add option positions
       optionPositions.forEach(pos => {
         allPositions.push({
@@ -100,16 +99,16 @@ const Stocks: React.FC = () => {
           marketValue: pos.market_value
         });
       });
-      
+
       setPositions(allPositions);
       setLastRefresh(new Date());
-      
+
       console.log(`✅ Loaded ${allPositions.length} positions from unified backend:`, {
         stocks: stockPositions.length,
         options: optionPositions.length,
         total: allPositions.length
       });
-      
+
     } catch (error) {
       console.error('❌ Error loading unified positions:', error);
       setError(`Failed to load positions: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -175,7 +174,7 @@ const Stocks: React.FC = () => {
     if (position.asset_type === 'OPTION') {
       key = position.ticker || position.symbol.split(' ')[0] || position.symbol;
     }
-    
+
     if (!groups[key]) {
       groups[key] = { stocks: [], options: [] };
     }
@@ -243,19 +242,16 @@ const Stocks: React.FC = () => {
   const handleManualSync = async () => {
     try {
       setIsLoading(true);
-      console.log('🔄 Starting manual position sync...');
+      console.log('🔄 Refreshing positions...');
 
-      const syncResult = await syncPositions(true);
-      console.log('✅ Manual sync completed:', syncResult);
+      // Just reload the unified positions
+      await loadUnifiedPositions();
 
-      // Reload positions after sync
-      await loadUnifiedPositions(); // Use unified positions
-
-      toast.success(`Sync completed: ${syncResult.result.positions_added} added, ${syncResult.result.positions_updated} updated`);
+      toast.success('Positions refreshed successfully');
 
     } catch (error) {
-      console.error('❌ Error during manual sync:', error);
-      toast.error('Failed to sync positions');
+      console.error('❌ Error refreshing positions:', error);
+      toast.error('Failed to refresh positions');
     } finally {
       setIsLoading(false);
     }
@@ -264,15 +260,9 @@ const Stocks: React.FC = () => {
   const handleLoadMockData = async () => {
     try {
       setIsLoading(true);
-      console.log('🎭 Starting mock data load...');
+      console.log('🎭 Loading mock data not available in unified model...');
 
-      const result = await loadMockData();
-      console.log('✅ Mock data loaded:', result);
-
-      // Reload positions to show mock data
-      await loadUnifiedPositions();
-
-      toast.success(`Mock data loaded: ${result.result.accounts_created} accounts, ${result.result.positions_created} positions`);
+      toast.info('Mock data loading not available in unified model');
 
     } catch (error) {
       console.error('❌ Error loading mock data:', error);
@@ -287,14 +277,25 @@ const Stocks: React.FC = () => {
       setIsLoading(true);
       console.log('📤 Starting positions export...');
 
-      const exportData = await exportPositions();
-      console.log('✅ Positions exported:', exportData);
+      // Get all positions from unified API
+      const allPositions = await unifiedApi.getAllPositions();
+      const allAccounts = await unifiedApi.getAllAccounts();
+
+      const exportData = {
+        export_info: {
+          total_accounts: allAccounts.total_accounts,
+          total_positions: allPositions.total_positions,
+          export_date: new Date().toISOString()
+        },
+        accounts: allAccounts.accounts,
+        positions: allPositions.positions
+      };
 
       // Create a downloadable JSON file
       const dataStr = JSON.stringify(exportData, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(dataBlob);
-      
+
       const link = document.createElement('a');
       link.href = url;
       link.download = `allocraft-positions-export-${new Date().toISOString().split('T')[0]}.json`;
@@ -307,7 +308,7 @@ const Stocks: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error exporting positions:', error);
-      toast.error(`Failed to export positions: ${error.message}`);
+      toast.error(`Failed to export positions: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -318,22 +319,15 @@ const Stocks: React.FC = () => {
       setIsLoading(true);
       console.log('🔄 Testing backend connection...');
 
-      // Test the debug endpoint first
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/schwab/debug/schema`);
-      console.log(`📡 Debug response status: ${response.status}`);
+      // Test the unified API health check
+      const healthCheck = await unifiedApi.checkHealth();
+      console.log('🔍 Backend health:', healthCheck);
 
-      if (!response.ok) {
-        throw new Error(`Backend connection failed: ${response.status}`);
-      }
-
-      const debugData = await response.json();
-      console.log('🔍 Backend debug data:', debugData);
-
-      toast.success(`Backend connected! Found ${debugData.database_status.account_count} accounts, ${debugData.database_status.position_count} positions`);
+      toast.success('Backend connected successfully!');
 
     } catch (error) {
       console.error('❌ Backend connection test failed:', error);
-      toast.error(`Backend connection failed: ${error.message}`);
+      toast.error(`Backend connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -349,19 +343,19 @@ const Stocks: React.FC = () => {
 
       const fileText = await file.text();
       const importData = JSON.parse(fileText);
-      
+
       // Validate the import data structure
       if (!importData.accounts || !importData.export_info) {
         throw new Error('Invalid import file format');
       }
 
-      const result = await importPositions(importData);
+      const result = await unifiedApi.importPositions(importData);
       console.log('✅ Positions imported:', result);
 
       // Reload positions to show imported data
       await loadUnifiedPositions();
 
-      toast.success(`Imported ${result.result.accounts_imported} accounts with ${result.result.positions_imported} positions`);
+      toast.success(`Imported successfully: ${result.imported_count} positions`);
 
     } catch (error) {
       console.error('❌ Error importing positions:', error);
@@ -473,7 +467,7 @@ const Stocks: React.FC = () => {
                       >
                         {isLoading ? 'Testing...' : '🔧 Test Backend'}
                       </button>
-                      
+
                       <button
                         onClick={handleLoadMockData}
                         className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
@@ -481,7 +475,7 @@ const Stocks: React.FC = () => {
                       >
                         {isLoading ? 'Loading...' : '🎭 Load Mock Data'}
                       </button>
-                      
+
                       <div className="relative">
                         <input
                           type="file"
@@ -535,7 +529,7 @@ const Stocks: React.FC = () => {
                       >
                         {isLoading ? 'Testing...' : '🔧 Test Backend'}
                       </Button>
-                      
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -545,7 +539,7 @@ const Stocks: React.FC = () => {
                       >
                         {isLoading ? 'Loading...' : '🎭 Load Mock Data'}
                       </Button>
-                      
+
                       <div className="relative">
                         <input
                           type="file"

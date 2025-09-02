@@ -575,7 +575,7 @@ export const mockSyncPositions = async () => {
 export const exportPositions = async () => {
   try {
     console.log('🔄 Starting position export...');
-    
+
     const response = await fetch(`${API_BASE_URL}/schwab/export/positions`, {
       method: 'GET',
       headers: {
@@ -594,7 +594,7 @@ export const exportPositions = async () => {
     const data = await response.json();
     console.log('📤 Positions exported successfully!');
     console.log(`📊 Export summary: ${data.export_info?.total_accounts || 0} accounts, ${data.export_info?.total_positions || 0} positions`);
-    
+
     // Log data structure for debugging
     if (data.accounts && data.accounts.length > 0) {
       console.log('🏦 Sample account structure:', {
@@ -602,7 +602,7 @@ export const exportPositions = async () => {
         first_account: data.accounts[0].account_number,
         position_count: data.accounts[0].positions?.length || 0
       });
-      
+
       if (data.accounts[0].positions && data.accounts[0].positions.length > 0) {
         console.log('📈 Sample position structure:', {
           position_keys: Object.keys(data.accounts[0].positions[0]),
@@ -610,7 +610,7 @@ export const exportPositions = async () => {
         });
       }
     }
-    
+
     return data;
   } catch (error) {
     console.error('❌ Error exporting positions:', error);
@@ -662,7 +662,7 @@ export const importPositions = async (importData: any) => {
 
 // Helper function to check if we're in development mode
 export const isDevelopmentMode = (): boolean => {
-  return API_BASE_URL.includes('localhost') || 
-         API_BASE_URL.includes('127.0.0.1') || 
-         (import.meta as any).env?.DEV === true;
+  return API_BASE_URL.includes('localhost') ||
+    API_BASE_URL.includes('127.0.0.1') ||
+    (import.meta as any).env?.DEV === true;
 };

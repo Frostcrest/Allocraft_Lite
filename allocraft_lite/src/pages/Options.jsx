@@ -84,7 +84,7 @@ export default function Options() {
       firstOption: options?.[0],
       rawData: options
     });
-    
+
     if (error) {
       console.error('Options API error:', error);
     }
@@ -183,12 +183,12 @@ export default function Options() {
     if (!options || !Array.isArray(options)) {
       return 0;
     }
-    
+
     return options
-      .filter((option) => 
-        option && 
-        option.status === "Open" && 
-        option.current_price && 
+      .filter((option) =>
+        option &&
+        option.status === "Open" &&
+        option.current_price &&
         typeof option.current_price === 'number' &&
         option.contracts &&
         typeof option.contracts === 'number'
@@ -322,22 +322,22 @@ export default function Options() {
                                 variant="outline"
                                 className="h-8 w-8 p-0"
                               >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              onClick={() => handleDelete(option.id)}
-                              disabled={isMutating}
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  }).filter(Boolean)) : (
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                onClick={() => handleDelete(option.id)}
+                                disabled={isMutating}
+                                size="sm"
+                                variant="outline"
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }).filter(Boolean)) : (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                         No options data available
