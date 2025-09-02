@@ -34,13 +34,13 @@ const WheelBuilder: React.FC<WheelBuilderProps> = ({ onWheelCreated }) => {
         setError('');
 
         try {
-            console.log('🔍 Analyzing Schwab positions for wheel opportunities...');
+            console.log('🔍 Analyzing all positions for wheel opportunities...');
 
-            // Get fresh position data
-            const positions = await PositionDataService.getSchwabPositions(true);
+            // Get fresh position data from all sources (unified backend)
+            const positions = await PositionDataService.getAllPositions();
 
             if (positions.length === 0) {
-                setError('No positions found. Make sure your Schwab account is connected and has positions.');
+                setError('No positions found. Add some stock positions to detect wheel opportunities.');
                 return;
             }
 

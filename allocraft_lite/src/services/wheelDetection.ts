@@ -120,7 +120,7 @@ export class WheelDetectionService {
             type: p.isOption ? (p.optionType === 'Call' ? 'call' : 'put') as 'call' | 'put' : 'stock' as 'stock',
             symbol: p.symbol,
             quantity: p.isOption ? Math.abs(p.contracts || 0) : Math.abs(p.shares),
-            position: (p.isOption ? (p.contracts || 0) < 0 : p.shares > 0) ? 'short' : 'long' as 'long' | 'short',
+            position: (p.isOption ? (p.contracts || 0) < 0 : p.shares < 0) ? 'short' : 'long' as 'long' | 'short',
             strikePrice: p.strikePrice,
             expirationDate: p.expirationDate,
             marketValue: p.marketValue

@@ -886,7 +886,7 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
           }`}>
           {position.option_type}
         </span>
-        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${profitLoss !== undefined 
+        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${profitLoss !== undefined
           ? (isProfit ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-red-300 bg-red-50 text-red-700')
           : 'border-slate-300 bg-slate-50 text-slate-700'
           }`}>

@@ -226,7 +226,7 @@ export class PositionDataService {
                     optionType: pos.option_type as 'Call' | 'Put',
                     strikePrice: pos.strike_price,
                     expirationDate: pos.expiration_date,
-                    contracts: Math.abs(contracts)
+                    contracts: contracts  // 🔧 FIX: Preserve signed contracts for short position detection
                 });
             });
 
