@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddStockModal from '@/components/AddStockModal';
+import { unifiedApi, UnifiedPosition } from '../services/unifiedApi';
+// Keep legacy API for comparison/fallback if needed
 import { backendSchwabApi } from '../services/backendSchwabApi';
 import { getStoredPositions, syncPositions, getSyncStatus, loadMockData, isDevelopmentMode, exportPositions, importPositions } from '../services/backendSchwabApi';
 
@@ -37,253 +39,87 @@ const parseOptionSymbol = (symbol: string) => {
   };
 };
 
-interface Position {
-  id: string;
-  symbol: string;
-  shares: number;
-  costBasis: number;
-  marketPrice: number;
-  marketValue: number;
-  profitLoss: number;
-  profitLossPercent: number;
-  source: 'manual' | 'schwab';
-  accountType?: string;
-  accountNumber?: string;
-  // Option-specific fields
-  isOption?: boolean;
-  underlyingSymbol?: string;
-  optionType?: 'Call' | 'Put';
-  strikePrice?: number;
-  expirationDate?: string;
-  contracts?: number;
+// Use the unified position interface
+interface Position extends UnifiedPosition {
+  // Legacy fields for backward compatibility
+  shares?: number;
+  costBasis?: number;
+  marketPrice?: number;
+  marketValue?: number;
+  // For UI state
+  expanded?: boolean;
 }
 
 const Stocks: React.FC = () => {
   const [positions, setPositions] = useState<Position[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [schwabPositions, setSchwabPositions] = useState<Position[]>([]);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [error, setError] = useState<string>('');
   const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set());
 
-  // Load manual positions from localStorage
+  // Load positions from unified backend
   useEffect(() => {
-    const savedPositions = localStorage.getItem('stockPositions');
-    if (savedPositions) {
-      try {
-        const parsed = JSON.parse(savedPositions);
-        const manualPositions = parsed.filter((p: Position) => p.source !== 'schwab');
-        setPositions(manualPositions);
-      } catch (error) {
-        console.error('Error loading positions:', error);
-      }
-    }
+    loadUnifiedPositions();
   }, []);
 
-  // Safe position transformation with error handling
-  const transformSchwabPosition = (pos: any, accountNumber: string, accountType: string, index: number): Position | null => {
+  const loadUnifiedPositions = async () => {
     try {
-      // Safely extract values with fallbacks
-      const instrument = pos.instrument || {};
-      const symbol = instrument.symbol || instrument.cusip || `UNKNOWN_${index}`;
-      const longQuantity = parseFloat(pos.longQuantity || 0);
-      const shortQuantity = parseFloat(pos.shortQuantity || 0);
-
-      // Determine if this is a long or short position and the net quantity
-      const isShortPosition = shortQuantity > 0;
-      const isLongPosition = longQuantity > 0;
-
-      // Skip positions with no quantity
-      if (longQuantity === 0 && shortQuantity === 0) {
-        return null;
-      }
-
-      // Calculate the signed quantity (positive for long, negative for short)
-      const quantity = isLongPosition ? longQuantity : -shortQuantity;
-
-      const marketValue = parseFloat(pos.marketValue || 0);
-
-      // Use the appropriate average price based on position type
-      let averagePrice;
-      if (isShortPosition) {
-        averagePrice = parseFloat(pos.averageShortPrice || pos.taxLotAverageShortPrice || pos.averagePrice || 0);
-      } else {
-        averagePrice = parseFloat(pos.averageLongPrice || pos.taxLotAverageLongPrice || pos.averagePrice || 0);
-      }
-
-      // For short positions, the market price calculation is different
-      const marketPrice = Math.abs(quantity) > 0 ? Math.abs(marketValue) / Math.abs(quantity) : 0;
-
-      // Calculate P&L - for short positions, this works differently
-      let profitLoss;
-      if (isShortPosition) {
-        // For short options: profit when current price < sold price
-        // Use shortOpenProfitLoss if available, otherwise calculate
-        profitLoss = parseFloat(pos.shortOpenProfitLoss || 0) || (averagePrice * Math.abs(quantity) * 100) - Math.abs(marketValue);
-      } else {
-        // For long options: profit when current price > bought price
-        // Use longOpenProfitLoss if available, otherwise calculate
-        profitLoss = parseFloat(pos.longOpenProfitLoss || 0) || marketValue - (averagePrice * Math.abs(quantity) * 100);
-      }
-
-      const costBasis = averagePrice * Math.abs(quantity) * 100; // Total cost basis
-      const profitLossPercent = costBasis > 0 ? (profitLoss / costBasis) * 100 : 0;
-
-      // Parse option information
-      const optionInfo = parseOptionSymbol(symbol);
-
-      const basePosition: Position = {
-        id: `schwab-${accountNumber}-${symbol}-${index}`,
-        symbol: symbol,
-        shares: quantity, // This will be negative for short positions
-        costBasis: averagePrice,
-        marketPrice: marketPrice,
-        marketValue: marketValue,
-        profitLoss: profitLoss,
-        profitLossPercent: profitLossPercent,
-        source: 'schwab' as const,
-        accountType: accountType,
-        accountNumber: accountNumber
-      };
-
-      // Add option-specific fields if it's an option
-      if (optionInfo.isOption) {
-        return {
-          ...basePosition,
-          isOption: true,
-          underlyingSymbol: optionInfo.underlyingSymbol,
-          optionType: optionInfo.optionType as 'Call' | 'Put',
-          strikePrice: optionInfo.strikePrice,
-          expirationDate: optionInfo.expirationDate,
-          contracts: quantity / 100, // Convert shares to contracts (will be negative for short)
-        };
-      }
-
-      return basePosition;
-    } catch (error) {
-      console.error('Error transforming position:', error, pos);
-      return null;
-    }
-  };
-
-  // Load Schwab positions with better error handling
-  const loadSchwabPositions = async (forceRefresh: boolean = false) => {
-    setIsLoading(true);
-    setError('');
-
-    try {
-      console.log(`🔍 Loading Schwab positions (${forceRefresh ? 'force refresh' : 'from cache'})...`);
-
-      // Check sync status first
-      const syncStatus = await getSyncStatus();
-      console.log('📋 Current sync status:', syncStatus);
-
-      // Get stored positions
-      const storedData = await getStoredPositions(forceRefresh);
-
+      setIsLoading(true);
+      setError('');
+      
+      // Get both stock and option positions from unified backend
+      const [stockPositions, optionPositions] = await Promise.all([
+        unifiedApi.getStockPositions(),
+        unifiedApi.getOptionPositions()
+      ]);
+      
+      // Combine and transform positions
       const allPositions: Position[] = [];
-
-      for (const accountData of storedData) {
-        console.log(`📊 Processing account ${accountData.accountNumber} with ${accountData.positions.length} stored positions`);
-
-        for (const positionData of accountData.positions) {
-          const position: Position = {
-            id: `schwab-${accountData.accountNumber}-${positionData.symbol}`,
-            symbol: positionData.symbol,
-            quantity: positionData.quantity,
-            averagePrice: positionData.averagePrice,
-            currentPrice: positionData.marketValue / positionData.quantity,
-            marketValue: positionData.marketValue,
-            profitLoss: positionData.profitLoss,
-            profitLossPercentage: positionData.profitLossPercentage,
-            source: 'schwab',
-            accountNumber: accountData.accountNumber,
-            lastUpdated: positionData.lastUpdated,
-            // Option-specific fields
-            isOption: positionData.isOption || false,
-            underlyingSymbol: positionData.underlyingSymbol,
-            optionType: positionData.optionType,
-            strikePrice: positionData.strikePrice,
-            expirationDate: positionData.expirationDate,
-            contracts: positionData.contracts,
-            isShort: positionData.isShort || false
-          };
-
-          allPositions.push(position);
-        }
-      }
-
-      console.log(`✅ Total Schwab positions loaded from storage: ${allPositions.length}`);
-      setSchwabPositions(allPositions);
-
-      // Show sync status in UI
-      const totalAccounts = syncStatus.length;
-      const recentlySynced = syncStatus.filter(s => s.isRecentlySynced).length;
-
-      console.log(`📊 Sync Status: ${recentlySynced}/${totalAccounts} accounts recently synced`);
-
+      
+      // Add stock positions
+      stockPositions.forEach(pos => {
+        allPositions.push({
+          ...pos,
+          // Legacy compatibility fields
+          shares: (pos.long_quantity || 0) - (pos.short_quantity || 0),
+          costBasis: pos.average_price,
+          marketPrice: pos.current_price || 0,
+          marketValue: pos.market_value
+        });
+      });
+      
+      // Add option positions
+      optionPositions.forEach(pos => {
+        allPositions.push({
+          ...pos,
+          // Legacy compatibility fields
+          shares: pos.contracts || ((pos.long_quantity || 0) - (pos.short_quantity || 0)),
+          costBasis: pos.average_price,
+          marketPrice: pos.current_price || 0,
+          marketValue: pos.market_value
+        });
+      });
+      
+      setPositions(allPositions);
+      setLastRefresh(new Date());
+      
+      console.log(`✅ Loaded ${allPositions.length} positions from unified backend:`, {
+        stocks: stockPositions.length,
+        options: optionPositions.length,
+        total: allPositions.length
+      });
+      
     } catch (error) {
-      console.error('❌ Error loading Schwab positions:', error);
-      let errorMessage = 'Failed to load Schwab positions';
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        console.error('Full error details:', error);
-
-        // Handle specific error types
-        if (error.message.includes('Not authenticated with Allocraft')) {
-          errorMessage = 'Please log in to your Allocraft account first';
-        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-          errorMessage = 'Schwab connection expired. Please reconnect your account.';
-        } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
-          errorMessage = 'Access denied. Please check your Schwab account permissions.';
-        }
-      }
-
-      setError(errorMessage);
+      console.error('❌ Error loading unified positions:', error);
+      setError(`Failed to load positions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error('Failed to load positions from unified backend');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load Schwab positions on component mount
-  useEffect(() => {
-    // Check if user is connected to Schwab and auto-load positions
-    const checkAndLoadPositions = async () => {
-      try {
-        const status = await backendSchwabApi.getStatus();
-        if (status.connected) {
-          console.log('🔄 User is connected to Schwab, loading positions...');
-          setTimeout(() => {
-            loadSchwabPositions();
-          }, 500);
-        } else {
-          console.log('ℹ️ User not connected to Schwab, skipping position load');
-        }
-      } catch (error) {
-        console.log('ℹ️ Could not check Schwab status, user might not be logged in');
-      }
-    };
-
-    checkAndLoadPositions();
-  }, []);
-
-  // Listen for Schwab connection events
-  useEffect(() => {
-    const handleSchwabConnection = () => {
-      console.log('🔄 Schwab connection detected, refreshing positions...');
-      setTimeout(() => {
-        loadSchwabPositions();
-      }, 1000); // Give OAuth time to complete
-    };
-
-    window.addEventListener('schwab-connected', handleSchwabConnection);
-    return () => {
-      window.removeEventListener('schwab-connected', handleSchwabConnection);
-    };
-  }, []);
-
+  // Add a new manual position (keeping this for backward compatibility)
   const addPosition = (newPositionData: { symbol: string; shares: number; costBasis: number; marketPrice: number; }) => {
     // Calculate derived values
     const marketValue = newPositionData.shares * newPositionData.marketPrice;
@@ -291,41 +127,60 @@ const Stocks: React.FC = () => {
     const profitLossPercent = newPositionData.costBasis > 0 ? ((newPositionData.marketPrice - newPositionData.costBasis) / newPositionData.costBasis) * 100 : 0;
 
     const position: Position = {
-      ...newPositionData,
       id: Date.now().toString(),
-      source: 'manual',
-      marketValue,
+      symbol: newPositionData.symbol,
+      asset_type: 'EQUITY',
+      long_quantity: newPositionData.shares > 0 ? newPositionData.shares : 0,
+      short_quantity: newPositionData.shares < 0 ? Math.abs(newPositionData.shares) : 0,
+      market_value: marketValue,
+      average_price: newPositionData.costBasis,
+      current_price: newPositionData.marketPrice,
+      data_source: 'manual',
+      status: 'Open',
       profitLoss,
-      profitLossPercent
+      profitLossPercent,
+      // Legacy compatibility
+      shares: newPositionData.shares,
+      costBasis: newPositionData.costBasis,
+      marketPrice: newPositionData.marketPrice,
+      marketValue
     };
 
     const updatedPositions = [...positions, position];
     setPositions(updatedPositions);
-    localStorage.setItem('stockPositions', JSON.stringify([...updatedPositions, ...schwabPositions]));
+    // Note: In unified model, manual positions should also be saved to backend
+    // For now keeping localStorage for compatibility
+    localStorage.setItem('stockPositions', JSON.stringify(updatedPositions));
   };
 
   const removePosition = (id: string) => {
-    if (id.startsWith('schwab-')) {
-      // Can't remove Schwab positions manually
+    if (id.includes('schwab') || id.includes('fidelity')) {
+      // Can't remove imported positions manually
+      toast.error('Cannot remove imported positions. Use your brokerage to close the position.');
       return;
     }
 
     const updatedPositions = positions.filter(p => p.id !== id);
     setPositions(updatedPositions);
-    localStorage.setItem('stockPositions', JSON.stringify([...updatedPositions, ...schwabPositions]));
+    localStorage.setItem('stockPositions', JSON.stringify(updatedPositions));
   };
 
-  // Combine manual and Schwab positions safely
-  const allPositions = [...positions, ...schwabPositions];
+  // All positions are now in the single positions array from unified backend
+  const allPositions = positions;
 
-  // Group positions by underlying symbol
+  // Group positions by underlying symbol (for options) or symbol (for stocks)
   const groupedPositions = allPositions.reduce((groups, position) => {
-    const key = position.isOption ? position.underlyingSymbol! : position.symbol;
+    // For options, use the parsed ticker if available, otherwise try to extract from symbol
+    let key = position.symbol;
+    if (position.asset_type === 'OPTION') {
+      key = position.ticker || position.symbol.split(' ')[0] || position.symbol;
+    }
+    
     if (!groups[key]) {
       groups[key] = { stocks: [], options: [] };
     }
 
-    if (position.isOption) {
+    if (position.asset_type === 'OPTION') {
       groups[key].options.push(position);
     } else {
       groups[key].stocks.push(position);
@@ -335,15 +190,19 @@ const Stocks: React.FC = () => {
   }, {} as Record<string, { stocks: Position[], options: Position[] }>);
 
   const totalValue = allPositions.reduce((sum, pos) => {
-    const value = isNaN(pos.marketValue) ? 0 : pos.marketValue;
+    const value = isNaN(pos.market_value || 0) ? 0 : (pos.market_value || 0);
     return sum + value;
   }, 0);
 
   // Calculate statistics
-  const totalStocks = allPositions.filter(p => !p.isOption).length;
-  const totalOptions = allPositions.filter(p => p.isOption).length;
-  const stockValue = allPositions.filter(p => !p.isOption).reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
-  const optionValue = allPositions.filter(p => p.isOption).reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
+  const totalStocks = allPositions.filter(p => p.asset_type !== 'OPTION').length;
+  const totalOptions = allPositions.filter(p => p.asset_type === 'OPTION').length;
+  const stockValue = allPositions
+    .filter(p => p.asset_type !== 'OPTION')
+    .reduce((sum, pos) => sum + (pos.market_value || 0), 0);
+  const optionValue = allPositions
+    .filter(p => p.asset_type === 'OPTION')
+    .reduce((sum, pos) => sum + (pos.market_value || 0), 0);
 
   // Toggle function for expanding/collapsing tickers
   const toggleTicker = (symbol: string) => {
@@ -361,7 +220,7 @@ const Stocks: React.FC = () => {
   // Calculate summary for a ticker group
   const getTickerSummary = (group: { stocks: Position[], options: Position[] }) => {
     const allPositions = [...group.stocks, ...group.options];
-    const totalValue = allPositions.reduce((sum, pos) => sum + (pos.marketValue || 0), 0);
+    const totalValue = allPositions.reduce((sum, pos) => sum + (pos.market_value || 0), 0);
     const totalPL = allPositions.reduce((sum, pos) => sum + (pos.profitLoss || 0), 0);
     const totalCost = allPositions.reduce((sum, pos) => sum + (pos.costBasis * Math.abs(pos.shares)), 0);
     const totalPLPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
@@ -390,7 +249,7 @@ const Stocks: React.FC = () => {
       console.log('✅ Manual sync completed:', syncResult);
 
       // Reload positions after sync
-      await loadSchwabPositions(false); // Use cached data since we just synced
+      await loadUnifiedPositions(); // Use unified positions
 
       toast.success(`Sync completed: ${syncResult.result.positions_added} added, ${syncResult.result.positions_updated} updated`);
 
@@ -411,7 +270,7 @@ const Stocks: React.FC = () => {
       console.log('✅ Mock data loaded:', result);
 
       // Reload positions to show mock data
-      await loadSchwabPositions(false);
+      await loadUnifiedPositions();
 
       toast.success(`Mock data loaded: ${result.result.accounts_created} accounts, ${result.result.positions_created} positions`);
 
@@ -500,7 +359,7 @@ const Stocks: React.FC = () => {
       console.log('✅ Positions imported:', result);
 
       // Reload positions to show imported data
-      await loadSchwabPositions(false);
+      await loadUnifiedPositions();
 
       toast.success(`Imported ${result.result.accounts_imported} accounts with ${result.result.positions_imported} positions`);
 
@@ -552,7 +411,7 @@ const Stocks: React.FC = () => {
                   size="sm"
                   onClick={() => {
                     setError('');
-                    loadSchwabPositions();
+                    loadUnifiedPositions();
                   }}
                   className="border-red-300"
                 >
@@ -564,14 +423,14 @@ const Stocks: React.FC = () => {
         )}
 
         {/* Schwab Status or Setup Prompt */}
-        {schwabPositions.length > 0 ? (
+        {positions.length > 0 ? (
           <Card className="border-emerald-200 bg-emerald-50 shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-emerald-800">✅ Schwab Connected</h3>
                   <p className="text-sm text-emerald-600">
-                    {schwabPositions.length} positions imported from your Schwab account
+                    {positions.length} positions imported from your Schwab account
                   </p>
                   {lastRefresh && (
                     <p className="text-xs text-emerald-500 mt-1">
@@ -581,11 +440,11 @@ const Stocks: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => loadSchwabPositions(false)}
+                    onClick={() => loadUnifiedPositions()}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Loading...' : 'Load Cached'}
+                    {isLoading ? 'Loading...' : 'Refresh Data'}
                   </button>
 
                   <button

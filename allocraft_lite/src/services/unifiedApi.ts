@@ -1,0 +1,169 @@
+/**
+ * Unified API Service
+ * Connects to the unified backend Position/Account data model
+ */
+
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+
+export interface UnifiedPosition {
+  id: string;
+  symbol: string;
+  asset_type: 'EQUITY' | 'OPTION' | 'COLLECTIVE_INVESTMENT';
+  long_quantity: number;
+  short_quantity: number;
+  market_value: number;
+  average_price: number;
+  current_price?: number;
+  data_source: 'manual' | 'schwab' | 'fidelity';
+  status: string;
+  // Option-specific fields (parsed from symbol)
+  ticker?: string;
+  option_type?: 'Call' | 'Put';
+  strike_price?: number;
+  expiration_date?: string;
+  contracts?: number;
+  // Additional UI fields
+  profitLoss?: number;
+  profitLossPercent?: number;
+}
+
+export interface UnifiedAccount {
+  id: string;
+  account_number: string;
+  account_type: string;
+  brokerage: string;
+  total_value: number;
+  cash_balance: number;
+  position_count: number;
+  last_synced: string | null;
+}
+
+class UnifiedApiService {
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = API_BASE_URL;
+  }
+
+  /**
+   * Get all positions from unified backend (corrected endpoint)
+   */
+  async getAllPositions(): Promise<{ total_positions: number; positions: UnifiedPosition[] }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/portfolio/positions`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching unified positions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get stock positions (EQUITY + COLLECTIVE_INVESTMENT)
+   */
+  async getStockPositions(): Promise<UnifiedPosition[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/portfolio/stocks`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // The unified API already returns the correct format
+      return data;
+    } catch (error) {
+      console.error('Error fetching stock positions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get option positions with parsed data
+   */
+  async getOptionPositions(): Promise<UnifiedPosition[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/portfolio/options`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // The unified API already returns the correct format
+      return data;
+    } catch (error) {
+      console.error('Error fetching option positions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all accounts
+   */
+  async getAllAccounts(): Promise<{ total_accounts: number; accounts: UnifiedAccount[] }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/portfolio/accounts`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching unified accounts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Import positions (Schwab CSV format)
+   */
+  async importPositions(importData: any): Promise<{ message: string; imported_count: number }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/portfolio/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(importData)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error importing positions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check backend health
+   */
+  async checkHealth(): Promise<{ status: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/health`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error checking backend health:', error);
+      throw error;
+    }
+  }
+}
+
+export const unifiedApi = new UnifiedApiService();
