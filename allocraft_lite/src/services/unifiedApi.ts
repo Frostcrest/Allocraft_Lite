@@ -3,7 +3,9 @@
  * Connects to the unified backend Position/Account data model
  */
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+import { getApiBaseUrl } from '../utils/apiConfig';
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface UnifiedPosition {
     id: string;

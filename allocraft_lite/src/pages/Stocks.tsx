@@ -858,7 +858,14 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
           </div>
           <div>
             <div className="text-slate-500">Current Price</div>
-            <div className="font-semibold text-slate-900">{position.current_price ? formatCurrency(position.current_price) : 'N/A'}</div>
+            <div className="font-semibold text-slate-900">
+              {(position.current_price !== null && 
+                position.current_price !== undefined && 
+                typeof position.current_price === 'number') ? 
+                formatCurrency(position.current_price) : 
+                'N/A'
+              }
+            </div>
           </div>
           <div>
             <div className="text-slate-500">Market Value</div>

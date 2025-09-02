@@ -134,20 +134,31 @@ export default function Options() {
     return rawOptions.filter(option => option && typeof option === 'object');
   }, [rawOptions]);
 
+  // Create debug state to display on page
+  const [debugInfo, setDebugInfo] = React.useState(null);
+
   // Debug logging
   React.useEffect(() => {
     console.log('Options data received:', {
-      options,
+      rawOptions,
+      processedOptions: options,
       isArray: Array.isArray(options),
-      length: options?.length,
-      firstOption: options?.[0],
-      rawData: options
+      length: options?.length
     });
 
     if (error) {
       console.error('Options API error:', error);
     }
-  }, [options, error]);
+  }, [options, error, rawOptions]);
+
+  // Auto-refresh prices on component mount
+  React.useEffect(() => {
+    // Only auto-refresh if we have options data and no current refresh is pending
+    if (options && options.length > 0 && !refreshPricesMutation.isPending) {
+      console.log('Auto-refreshing option prices on mount...');
+      refreshPricesMutation.mutate();
+    }
+  }, [options.length]); // Only trigger when options are first loaded
 
   // Categorize options for strategy analysis
   const categorizedOptions = React.useMemo(() => {
@@ -454,7 +465,12 @@ export default function Options() {
                           </TableCell>
                           <TableCell>{formatCurrency(option.average_price || 0)}</TableCell>
                           <TableCell>
-                            {option.current_price ? formatCurrency(option.current_price) : 'N/A'}
+                            {(option.current_price !== null && 
+                              option.current_price !== undefined && 
+                              typeof option.current_price === 'number') ? 
+                              formatCurrency(option.current_price) : 
+                              'N/A'
+                            }
                           </TableCell>
                           <TableCell className={pl >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {formatCurrency(pl)}

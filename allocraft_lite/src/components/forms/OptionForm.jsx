@@ -2,35 +2,64 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 export default function OptionForm({
-  formData,
-  expiryDates,
+  formData = {},
+  expiryDates = [],
   editingOption,
-  onChange,
-  onSubmit,
-  onCancel,
+  onChange = () => {},
+  onSubmit = () => {},
+  onCancel = () => {},
+  // New props from Options.jsx
+  isOpen,
+  onClose,
+  option,
+  disabled
 }) {
+  // Use the new props if available, otherwise fall back to old props
+  const isModalOpen = isOpen !== undefined ? isOpen : false;
+  const handleClose = onClose || onCancel;
+  const currentOption = option || editingOption;
+  const isDisabled = disabled !== undefined ? disabled : false;
+  
+  // If formData is empty but we have an option, populate formData
+  const currentFormData = formData.ticker ? formData : {
+    ticker: currentOption?.ticker || '',
+    option_type: currentOption?.option_type || 'Call',
+    strike_price: currentOption?.strike_price || '',
+    expiry_date: currentOption?.expiry_date || '',
+    contracts: currentOption?.contracts || '',
+    cost_basis: currentOption?.cost_basis || ''
+  };
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <Dialog open={isModalOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>
+            {currentOption ? "Edit Option" : "Add New Option"}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="ticker">Ticker</Label>
           <Input
             id="ticker"
-            value={formData.ticker}
-            onChange={e => onChange("ticker", e.target.value.toUpperCase())}
+            value={currentFormData.ticker || ''}
+            onChange={e => onChange && onChange("ticker", e.target.value.toUpperCase())}
             placeholder="AAPL"
             required
+            disabled={isDisabled}
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="option_type">Type</Label>
           <Select
-            value={formData.option_type}
-            onValueChange={value => onChange("option_type", value)}
+            value={currentFormData.option_type || 'Call'}
+            onValueChange={value => onChange && onChange("option_type", value)}
+            disabled={isDisabled}
           >
             <SelectTrigger>
               <SelectValue />
@@ -49,10 +78,11 @@ export default function OptionForm({
             id="strike_price"
             type="number"
             step="0.01"
-            value={formData.strike_price}
-            onChange={e => onChange("strike_price", e.target.value)}
+            value={currentFormData.strike_price || ''}
+            onChange={e => onChange && onChange("strike_price", e.target.value)}
             placeholder="150.00"
             required
+            disabled={isDisabled}
           />
         </div>
         <div className="space-y-2">
@@ -60,25 +90,27 @@ export default function OptionForm({
           <Input
             id="contracts"
             type="number"
-            value={formData.contracts}
-            onChange={e => onChange("contracts", e.target.value)}
+            value={currentFormData.contracts || ''}
+            onChange={e => onChange && onChange("contracts", e.target.value)}
             placeholder="1"
             required
+            disabled={isDisabled}
           />
         </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor="expiry_date">Expiry Date</Label>
         <Select
-          value={formData.expiry_date}
-          onValueChange={value => onChange("expiry_date", value)}
+          value={currentFormData.expiry_date || ''}
+          onValueChange={value => onChange && onChange("expiry_date", value)}
           required
+          disabled={isDisabled}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select expiry date" />
           </SelectTrigger>
           <SelectContent>
-            {expiryDates.map(date => (
+            {(expiryDates || []).map(date => (
               <SelectItem key={date} value={date}>
                 {date}
               </SelectItem>
@@ -93,18 +125,20 @@ export default function OptionForm({
             id="cost"
             type="number"
             step="0.01"
-            value={formData.cost}
-            onChange={e => onChange("cost", e.target.value)}
+            value={currentFormData.cost_basis || currentFormData.cost || ''}
+            onChange={e => onChange && onChange("cost", e.target.value)}
             placeholder="500.00"
             required
+            disabled={isDisabled}
           />
         </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor="status">Status</Label>
         <Select
-          value={formData.status}
-          onValueChange={value => onChange("status", value)}
+          value={currentFormData.status || 'Open'}
+          onValueChange={value => onChange && onChange("status", value)}
+          disabled={isDisabled}
         >
           <SelectTrigger>
             <SelectValue />
@@ -116,13 +150,24 @@ export default function OptionForm({
         </Select>
       </div>
       <DialogFooter className="gap-3">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={handleClose}
+          disabled={isDisabled}
+        >
           Cancel
         </Button>
-        <Button type="submit" className="bg-slate-900 hover:bg-slate-800">
-          {editingOption ? "Update" : "Add"} Option
+        <Button 
+          type="submit" 
+          className="bg-slate-900 hover:bg-slate-800"
+          disabled={isDisabled}
+        >
+          {currentOption ? "Update" : "Add"} Option
         </Button>
       </DialogFooter>
     </form>
+      </DialogContent>
+    </Dialog>
   );
 }

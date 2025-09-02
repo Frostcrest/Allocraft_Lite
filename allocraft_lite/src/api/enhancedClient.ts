@@ -4,6 +4,7 @@
 
 import { QueryClient, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './fastapiClient';
+import { getCachedApiBaseUrl } from '../utils/apiConfig';
 import {
     Stock,
     Option,
@@ -380,7 +381,8 @@ export const useLogin = () => {
             form.append('username', username);
             form.append('password', password);
             
-            const response = await fetch(`http://127.0.0.1:8000/auth/login`, {
+            const apiBaseUrl = await getCachedApiBaseUrl();
+            const response = await fetch(`${apiBaseUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: form,
@@ -417,8 +419,10 @@ export const useSignup = () => {
     
     return useMutation<{ access_token: string }, ApiError, { username: string; email: string; password: string }>({
         mutationFn: async ({ username, email, password }) => {
+            const apiBaseUrl = await getCachedApiBaseUrl();
+            
             // First, register the user
-            const signupResponse = await fetch(`http://127.0.0.1:8000/auth/register`, {
+            const signupResponse = await fetch(`${apiBaseUrl}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password }),
@@ -440,7 +444,7 @@ export const useSignup = () => {
             form.append('username', username);
             form.append('password', password);
             
-            const loginResponse = await fetch(`http://127.0.0.1:8000/auth/login`, {
+            const loginResponse = await fetch(`${apiBaseUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: form,
