@@ -14,6 +14,7 @@ import {
     CreateOptionRequest,
     UpdateOptionRequest,
     CreateWheelEventRequest,
+    CreateWheelCycleRequest,
     StockSector
 } from '../types';
 import { UnifiedPosition, UnifiedAccount } from '../services/unifiedApi';
@@ -253,7 +254,22 @@ export const useRefreshOptionPrices = () => {
 export const useWheelCycles = () => {
     return useQuery<WheelCycle[]>({
         queryKey: queryKeys.cycles,
-        queryFn: () => enhancedFetch<WheelCycle[]>('/wheels/')
+        queryFn: () => enhancedFetch<WheelCycle[]>('/wheels/wheel-cycles')
+    });
+};
+
+export const useCreateWheelCycle = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<WheelCycle, ApiError, CreateWheelCycleRequest>({
+        mutationFn: (wheelData) => enhancedFetch('/wheels/wheel-cycles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(wheelData)
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.cycles });
+        }
     });
 };
 

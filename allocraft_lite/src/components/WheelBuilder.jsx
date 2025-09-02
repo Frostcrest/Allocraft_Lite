@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Zap, TrendingUp, DollarSign, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { PositionDataService } from "@/services/positionDataService";
 import { WheelDetectionService } from "@/services/wheelDetection";
+import { useCreateWheelCycle } from "@/api/enhancedClient";
 import { formatCurrency } from "@/lib/utils";
 
 const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
@@ -15,6 +16,9 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState('');
     const [selectedResult, setSelectedResult] = useState(null);
+    
+    // React Query hook for creating wheel cycles
+    const createWheelMutation = useCreateWheelCycle();
 
     // Use external control if provided, otherwise use internal state
     const modalIsOpen = externalIsOpen !== undefined ? externalIsOpen : isOpen;
@@ -148,25 +152,48 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
         }, 100);
     };
 
-    const handleCreateWheel = (result) => {
-        // This actually creates the wheel and calls the parent callback
+    const handleCreateWheel = async (result) => {
+        // Generate suggestions for the wheel strategy
         const suggestions = WheelDetectionService.generateWheelSuggestions(result);
 
         console.log('✅ Creating wheel from detection result:', result);
         console.log('💡 Suggested actions:', suggestions);
 
-        // Call parent callback to create the wheel
-        if (onWheelCreated) {
-            console.log('🚀 Calling parent onWheelCreated callback...');
-            onWheelCreated({
+        try {
+            // Create wheel cycle in backend using React Query
+            const wheelCycleData = {
+                cycle_key: `${result.ticker}-${Date.now()}`,
                 ticker: result.ticker,
-                strategy: result.strategy,
-                positions: result.positions,
-                suggestions
-            });
-            console.log('✅ Parent callback completed');
-        } else {
-            console.warn('❌ No onWheelCreated callback provided');
+                started_at: new Date().toISOString().split('T')[0],
+                status: "Open",
+                notes: JSON.stringify({
+                    strategy: result.strategy,
+                    detection_metadata: result,
+                    suggestions: suggestions
+                })
+            };
+
+            console.log('🚀 Creating wheel cycle in backend:', wheelCycleData);
+            const createdCycle = await createWheelMutation.mutateAsync(wheelCycleData);
+            console.log('✅ Wheel cycle created successfully:', createdCycle);
+
+            // Call parent callback with the created wheel data
+            if (onWheelCreated) {
+                console.log('🚀 Calling parent onWheelCreated callback...');
+                onWheelCreated({
+                    ticker: result.ticker,
+                    strategy: result.strategy,
+                    positions: result.positions,
+                    suggestions,
+                    backendCycle: createdCycle
+                });
+                console.log('✅ Parent callback completed');
+            } else {
+                console.warn('❌ No onWheelCreated callback provided');
+            }
+        } catch (error) {
+            console.error('❌ Failed to create wheel cycle:', error);
+            setError('Failed to create wheel cycle. Please try again.');
         }
     };
 
@@ -282,8 +309,9 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                                                             onClick={() => handleCreateWheel(result)}
                                                             size="sm"
                                                             className="bg-purple-600 hover:bg-purple-700"
+                                                            disabled={createWheelMutation.isPending}
                                                         >
-                                                            Create Wheel
+                                                            {createWheelMutation.isPending ? 'Creating...' : 'Create Wheel'}
                                                         </Button>
                                                     </div>
                                                 </CardHeader>
@@ -350,8 +378,9 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                                                     size="sm"
                                                     className="bg-green-600 hover:bg-green-700"
                                                     onClick={() => handleCreateWheel(selectedResult)}
+                                                    disabled={createWheelMutation.isPending}
                                                 >
-                                                    Confirm Creation
+                                                    {createWheelMutation.isPending ? 'Creating...' : 'Confirm Creation'}
                                                 </Button>
                                                 <Button size="sm" variant="outline" onClick={() => setSelectedResult(null)}>
                                                     Cancel

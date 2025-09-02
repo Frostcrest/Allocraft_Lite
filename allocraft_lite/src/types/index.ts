@@ -106,6 +106,16 @@ export interface WheelCycle {
   updated_at: string;
 }
 
+export interface CreateWheelCycleRequest {
+  cycle_key: string;
+  ticker: string;
+  started_at?: string;
+  status?: 'Open' | 'Closed';
+  notes?: string;
+  strategy_type?: string;
+  detection_metadata?: any;
+}
+
 export interface WheelEvent {
   id: number;
   wheel_cycle_id: number;
