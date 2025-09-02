@@ -222,10 +222,10 @@ export class PositionDataService {
                     accountType: 'Securities',
                     accountNumber: pos.account_id?.toString() || 'Unknown',
                     isOption: true,
-                    underlyingSymbol: (pos as any).ticker || pos.symbol.split(' ')[0],
-                    optionType: (pos as any).option_type as 'Call' | 'Put',
-                    strikePrice: (pos as any).strike_price,
-                    expirationDate: (pos as any).expiration_date,
+                    underlyingSymbol: pos.ticker || pos.symbol.split(' ')[0], // Use ticker field from backend
+                    optionType: pos.option_type as 'Call' | 'Put',
+                    strikePrice: pos.strike_price,
+                    expirationDate: pos.expiration_date,
                     contracts: Math.abs(contracts)
                 });
             });

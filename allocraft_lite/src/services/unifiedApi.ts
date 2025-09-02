@@ -16,6 +16,7 @@ export interface UnifiedPosition {
     current_price?: number;
     data_source: 'manual' | 'schwab' | 'fidelity';
     status: string;
+    account_id?: number;
     // Option-specific fields (parsed from symbol)
     ticker?: string;
     option_type?: 'Call' | 'Put';
