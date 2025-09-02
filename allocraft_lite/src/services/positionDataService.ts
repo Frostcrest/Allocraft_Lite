@@ -150,6 +150,37 @@ export class PositionDataService {
     private static readonly CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
     /**
+     * Parse option symbol to extract strike price and expiration date
+     * Format: "GOOG  260618C00250000" -> strike: 250, expiration: "2026-06-18"
+     */
+    private static parseOptionSymbol(symbol: string): { strikePrice?: number; expirationDate?: string } {
+        try {
+            // Match pattern like "GOOG  260618C00250000"
+            const match = symbol.match(/^([A-Z]+)\s+(\d{6})([CP])(\d{8})$/);
+            if (!match) {
+                console.warn(`Could not parse option symbol: ${symbol}`);
+                return {};
+            }
+
+            const [, ticker, dateStr, optionType, strikeStr] = match;
+            
+            // Parse date (YYMMDD)
+            const year = 2000 + parseInt(dateStr.substring(0, 2));
+            const month = dateStr.substring(2, 4);
+            const day = dateStr.substring(4, 6);
+            const expirationDate = `${year}-${month}-${day}`;
+            
+            // Parse strike price (divide by 1000)
+            const strikePrice = parseInt(strikeStr) / 1000;
+            
+            return { strikePrice, expirationDate };
+        } catch (error) {
+            console.warn(`Error parsing option symbol ${symbol}:`, error);
+            return {};
+        }
+    }
+
+    /**
      * Get all positions from unified model (cached for 5 minutes)
      */
     static async getSchwabPositions(forceRefresh = false): Promise<PositionData[]> {
@@ -209,16 +240,19 @@ export class PositionDataService {
                 const profitLoss = marketValue - (costBasis * Math.abs(contracts) * 100);
                 const profitLossPercent = costBasis > 0 ? ((pos.current_price || 0) - costBasis) / costBasis * 100 : 0;
 
+                // Parse option symbol to extract strike and expiration
+                const { strikePrice, expirationDate } = this.parseOptionSymbol(pos.symbol);
+
                 // 🔧 CRITICAL FIX: Log position signs for debugging
-                if (contracts !== 0) {
-                    console.log(`🔍 Option Position: ${pos.symbol}`, {
-                        longQty: pos.long_quantity,
-                        shortQty: pos.short_quantity,
-                        netContracts: contracts,
-                        isShort: contracts < 0,
-                        optionType: pos.option_type
-                    });
-                }
+                console.log(`🔍 Option Position: ${pos.symbol}`, {
+                    longQty: pos.long_quantity,
+                    shortQty: pos.short_quantity,
+                    netContracts: contracts,
+                    isShort: contracts < 0,
+                    optionType: pos.option_type,
+                    parsedStrike: strikePrice,
+                    parsedExpiration: expirationDate
+                });
 
                 transformedPositions.push({
                     id: pos.id?.toString() || `unified-option-${pos.symbol}`,
@@ -233,10 +267,10 @@ export class PositionDataService {
                     accountType: 'Securities',
                     accountNumber: pos.account_id?.toString() || 'Unknown',
                     isOption: true,
-                    underlyingSymbol: pos.ticker || pos.symbol.split(' ')[0], // Use ticker field from backend
+                    underlyingSymbol: pos.underlying_symbol || pos.symbol.split(' ')[0], // Use underlying_symbol field from backend
                     optionType: pos.option_type as 'Call' | 'Put',
-                    strikePrice: pos.strike_price,
-                    expirationDate: pos.expiration_date,
+                    strikePrice: strikePrice || pos.strike_price, // Use parsed strike or fallback to backend
+                    expirationDate: expirationDate || pos.expiration_date, // Use parsed expiration or fallback to backend
                     contracts: contracts  // 🔧 FIXED: Preserve signed contracts for wheel detection
                 });
             });

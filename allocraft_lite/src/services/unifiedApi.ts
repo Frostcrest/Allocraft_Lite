@@ -17,8 +17,9 @@ export interface UnifiedPosition {
     data_source: 'manual' | 'schwab' | 'fidelity';
     status: string;
     account_id?: number;
-    // Option-specific fields (parsed from symbol)
-    ticker?: string;
+    // Option-specific fields
+    underlying_symbol?: string; // From backend for options
+    ticker?: string; // Alternative field name
     option_type?: 'Call' | 'Put';
     strike_price?: number;
     expiration_date?: string;
@@ -69,7 +70,7 @@ class UnifiedApiService {
      */
     async getStockPositions(): Promise<UnifiedPosition[]> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/stocks`);
+            const response = await fetch(`${this.baseUrl}/portfolio/positions/stocks`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -90,7 +91,7 @@ class UnifiedApiService {
      */
     async getOptionPositions(): Promise<UnifiedPosition[]> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/options`);
+            const response = await fetch(`${this.baseUrl}/portfolio/positions/options`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -129,7 +130,7 @@ class UnifiedApiService {
      */
     async importPositions(importData: any): Promise<{ message: string; imported_count: number }> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/import`, {
+            const response = await fetch(`${this.baseUrl}/portfolio/import/positions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

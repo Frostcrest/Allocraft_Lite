@@ -486,7 +486,7 @@ export const useAllPositions = () => {
 export const useStockPositions = () => {
     return useQuery<UnifiedPosition[]>({
         queryKey: queryKeys.stockPositions,
-        queryFn: () => enhancedFetch<UnifiedPosition[]>('/portfolio/stocks'),
+        queryFn: () => enhancedFetch<UnifiedPosition[]>('/portfolio/positions/stocks'),
         staleTime: 3 * 60 * 1000,
     });
 };
@@ -497,7 +497,7 @@ export const useStockPositions = () => {
 export const useOptionPositions = () => {
     return useQuery<UnifiedPosition[]>({
         queryKey: queryKeys.optionPositions,
-        queryFn: () => enhancedFetch<UnifiedPosition[]>('/portfolio/options'),
+        queryFn: () => enhancedFetch<UnifiedPosition[]>('/portfolio/positions/options'),
         staleTime: 3 * 60 * 1000,
     });
 };
@@ -520,7 +520,7 @@ export const useImportPositions = () => {
     const queryClient = useQueryClient();
 
     return useMutation<{ imported_count: number }, ApiError, any>({
-        mutationFn: (importData) => enhancedFetch('/portfolio/import', {
+        mutationFn: (importData) => enhancedFetch('/portfolio/import/positions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(importData)

@@ -15,6 +15,11 @@ interface Position extends UnifiedPosition {
   costBasis?: number;
   marketPrice?: number;
   marketValue?: number;
+  // Option fields in camelCase (from PositionDataService transformation)
+  optionType?: 'Call' | 'Put';
+  strikePrice?: number;
+  expirationDate?: string;
+  underlyingSymbol?: string;
   // For UI state
   expanded?: boolean;
 }
@@ -805,13 +810,14 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
   };
 
   const isShortPosition = position.short_quantity > 0;
+  const netContracts = (position.long_quantity || 0) - (position.short_quantity || 0);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <h3 className="text-lg font-semibold text-slate-900 truncate">
-            {position.ticker || position.symbol} ${position.strike_price}
+            {position.underlying_symbol || position.symbol.split(' ')[0]} ${position.strike_price || 'N/A'}
           </h3>
           {getOptionTypeChip()}
         </div>
@@ -835,7 +841,7 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
             {position.option_type} • Exp: {position.expiration_date ? formatExpirationDate(position.expiration_date) : 'N/A'}
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            {isShortPosition ? 'Short' : 'Long'} {Math.abs(position.contracts || 0).toFixed(2)} contract{Math.abs(position.contracts || 0) !== 1 ? 's' : ''}
+            {isShortPosition ? 'Short' : 'Long'} {Math.abs(netContracts)} contract{Math.abs(netContracts) !== 1 ? 's' : ''}
           </div>
         </div>
 
@@ -843,7 +849,7 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
           <div>
             <div className="text-slate-500">Contracts</div>
             <div className="font-semibold text-slate-900">
-              {(position.contracts || 0) >= 0 ? '+' : ''}{(position.contracts || 0).toFixed(2)}
+              {netContracts >= 0 ? '+' : ''}{netContracts}
             </div>
           </div>
           <div>
