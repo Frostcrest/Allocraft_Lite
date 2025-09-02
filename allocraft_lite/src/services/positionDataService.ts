@@ -5,7 +5,7 @@
  * Updated to use the unified data model
  */
 
-import { unifiedApi, UnifiedPosition } from './unifiedApi';
+import { unifiedApi } from './unifiedApi';
 
 export interface PositionData {
     id: string;
@@ -193,14 +193,14 @@ export class PositionDataService {
                     marketValue: marketValue,
                     profitLoss: profitLoss,
                     profitLossPercent: profitLossPercent,
-                    source: pos.data_source === 'schwab_import' ? 'schwab_import' : 'schwab',
+                    source: 'schwab' as const,
                     accountType: 'Securities',
                     accountNumber: pos.account_id?.toString() || 'Unknown',
                     isOption: false
                 });
             });
 
-            // Add option positions
+            // Add option positions with enhanced logging
             optionPositions.forEach(pos => {
                 const contracts = (pos.long_quantity || 0) - (pos.short_quantity || 0);
                 const shares = contracts * 100; // Convert contracts to shares
@@ -208,6 +208,17 @@ export class PositionDataService {
                 const costBasis = pos.average_price || 0;
                 const profitLoss = marketValue - (costBasis * Math.abs(contracts) * 100);
                 const profitLossPercent = costBasis > 0 ? ((pos.current_price || 0) - costBasis) / costBasis * 100 : 0;
+
+                // 🔧 CRITICAL FIX: Log position signs for debugging
+                if (contracts !== 0) {
+                    console.log(`🔍 Option Position: ${pos.symbol}`, {
+                        longQty: pos.long_quantity,
+                        shortQty: pos.short_quantity,
+                        netContracts: contracts,
+                        isShort: contracts < 0,
+                        optionType: pos.option_type
+                    });
+                }
 
                 transformedPositions.push({
                     id: pos.id?.toString() || `unified-option-${pos.symbol}`,
@@ -218,7 +229,7 @@ export class PositionDataService {
                     marketValue: marketValue,
                     profitLoss: profitLoss,
                     profitLossPercent: profitLossPercent,
-                    source: pos.data_source === 'schwab_import' ? 'schwab_import' : 'schwab',
+                    source: 'schwab' as const,
                     accountType: 'Securities',
                     accountNumber: pos.account_id?.toString() || 'Unknown',
                     isOption: true,
@@ -226,7 +237,7 @@ export class PositionDataService {
                     optionType: pos.option_type as 'Call' | 'Put',
                     strikePrice: pos.strike_price,
                     expirationDate: pos.expiration_date,
-                    contracts: contracts  // 🔧 FIX: Preserve signed contracts for short position detection
+                    contracts: contracts  // 🔧 FIXED: Preserve signed contracts for wheel detection
                 });
             });
 

@@ -15,11 +15,12 @@ export interface WheelDetectionResult {
     positions: Array<{
         type: 'stock' | 'call' | 'put';
         symbol: string;
-        quantity: number;
+        quantity: number; // Absolute quantity for display
         position: 'long' | 'short';
         strikePrice?: number;
         expirationDate?: string;
         marketValue: number;
+        rawQuantity?: number; // Preserve signed quantity for logic
     }>;
     recommendations?: string[];
     potentialActions?: Array<{
@@ -48,6 +49,8 @@ export class WheelDetectionService {
      * Main detection method - analyzes all positions and groups by ticker
      */
     static detectWheelStrategies(positions: any[]): WheelDetectionResult[] {
+        console.log('🎯 Starting wheel strategy detection with positions:', positions);
+        
         // Convert positions to our internal format, handling optional fields
         const parsedPositions: ParsedPosition[] = positions.map(p => ({
             id: p.id,
@@ -63,17 +66,26 @@ export class WheelDetectionService {
             source: p.source
         }));
 
+        console.log('📊 Parsed positions for analysis:', parsedPositions);
+
         // Group positions by underlying ticker
         const groupedByTicker = this.groupPositionsByTicker(parsedPositions);
+        console.log('🏷️ Positions grouped by ticker:', Object.keys(groupedByTicker));
 
         const results: WheelDetectionResult[] = [];
 
         for (const [ticker, tickerPositions] of Object.entries(groupedByTicker)) {
+            console.log(`\n🔍 Analyzing ${ticker} with ${tickerPositions.length} positions...`);
             const detection = this.analyzeTickerPositions(ticker, tickerPositions);
             if (detection) {
+                console.log(`✅ ${ticker}: Strategy detected -`, detection.strategy);
                 results.push(detection);
+            } else {
+                console.log(`❌ ${ticker}: No wheel strategy detected`);
             }
         }
+
+        console.log(`\n🎯 Wheel detection complete: Found ${results.length} strategies`, results.map(r => `${r.ticker}:${r.strategy}`));
 
         // Sort by strategy complexity (full wheels first, then covered calls, then CSPs)
         return results.sort((a, b) => {
@@ -103,6 +115,8 @@ export class WheelDetectionService {
      * Analyze positions for a specific ticker to detect wheel strategies
      */
     private static analyzeTickerPositions(ticker: string, positions: ParsedPosition[]): WheelDetectionResult | null {
+        console.log(`🔍 Analyzing ${ticker} positions for wheel strategies:`, positions);
+        
         const stockPositions = positions.filter(p => !p.isOption);
         const optionPositions = positions.filter(p => p.isOption);
         const callOptions = optionPositions.filter(p => p.optionType === 'Call');
@@ -111,23 +125,42 @@ export class WheelDetectionService {
         // Calculate total stock holdings
         const totalStockShares = stockPositions.reduce((sum, pos) => sum + pos.shares, 0);
 
-        // Separate long/short options
+        // Separate long/short options - CRITICAL: Use signed values
         const shortCalls = callOptions.filter(p => (p.contracts || 0) < 0);
         const shortPuts = putOptions.filter(p => (p.contracts || 0) < 0);
+        const longCalls = callOptions.filter(p => (p.contracts || 0) > 0);
+        const longPuts = putOptions.filter(p => (p.contracts || 0) > 0);
 
-        // Convert positions to standardized format
-        const formattedPositions = positions.map(p => ({
-            type: p.isOption ? (p.optionType === 'Call' ? 'call' : 'put') as 'call' | 'put' : 'stock' as 'stock',
-            symbol: p.symbol,
-            quantity: p.isOption ? Math.abs(p.contracts || 0) : Math.abs(p.shares),
-            position: (p.isOption ? (p.contracts || 0) < 0 : p.shares < 0) ? 'short' : 'long' as 'long' | 'short',
-            strikePrice: p.strikePrice,
-            expirationDate: p.expirationDate,
-            marketValue: p.marketValue
-        }));
+        console.log(`📊 ${ticker} Position Analysis:`, {
+            totalStockShares,
+            shortCalls: shortCalls.length,
+            shortPuts: shortPuts.length,
+            longCalls: longCalls.length,
+            longPuts: longPuts.length,
+            shortCallDetails: shortCalls.map(c => ({ symbol: c.symbol, contracts: c.contracts, strike: c.strikePrice })),
+            shortPutDetails: shortPuts.map(p => ({ symbol: p.symbol, contracts: p.contracts, strike: p.strikePrice }))
+        });
 
-        // Detection logic
+        // Convert positions to standardized format with preserved signs
+        const formattedPositions = positions.map(p => {
+            const isShortPosition = p.isOption ? (p.contracts || 0) < 0 : p.shares < 0;
+            const rawQuantity = p.isOption ? (p.contracts || 0) : p.shares;
+            
+            return {
+                type: p.isOption ? (p.optionType === 'Call' ? 'call' : 'put') as 'call' | 'put' : 'stock' as 'stock',
+                symbol: p.symbol,
+                quantity: Math.abs(rawQuantity), // Only use abs for display purposes
+                position: isShortPosition ? 'short' : 'long' as 'long' | 'short',
+                strikePrice: p.strikePrice,
+                expirationDate: p.expirationDate,
+                marketValue: p.marketValue,
+                rawQuantity: rawQuantity // Preserve original signed quantity for logic
+            };
+        });
+
+        // Detection logic with enhanced logging
         if (this.isFullWheel(totalStockShares, shortCalls, shortPuts)) {
+            console.log(`✅ ${ticker}: Detected FULL WHEEL strategy`);
             return {
                 ticker,
                 strategy: 'full_wheel',
@@ -148,6 +181,7 @@ export class WheelDetectionService {
         }
 
         if (this.isCoveredCall(totalStockShares, shortCalls)) {
+            console.log(`✅ ${ticker}: Detected COVERED CALL strategy`);
             return {
                 ticker,
                 strategy: 'covered_call',
@@ -167,6 +201,7 @@ export class WheelDetectionService {
         }
 
         if (this.isCashSecuredPut(shortPuts)) {
+            console.log(`✅ ${ticker}: Detected CASH-SECURED PUT strategy`);
             return {
                 ticker,
                 strategy: 'cash_secured_put',
@@ -188,6 +223,7 @@ export class WheelDetectionService {
         if (this.isNakedStock(totalStockShares, optionPositions)) {
             // Only suggest wheel for stocks in round lots (100+ shares)
             if (totalStockShares >= 100) {
+                console.log(`✅ ${ticker}: Detected NAKED STOCK ready for wheel strategy`);
                 return {
                     ticker,
                     strategy: 'naked_stock',
@@ -207,6 +243,7 @@ export class WheelDetectionService {
             }
         }
 
+        console.log(`❌ ${ticker}: No wheel strategy detected`);
         return null;
     }
 

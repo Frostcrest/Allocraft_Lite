@@ -152,17 +152,21 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
         // This actually creates the wheel and calls the parent callback
         const suggestions = WheelDetectionService.generateWheelSuggestions(result);
 
-        console.log('✅ Actually creating wheel from detection result:', result);
+        console.log('✅ Creating wheel from detection result:', result);
         console.log('💡 Suggested actions:', suggestions);
 
         // Call parent callback to create the wheel
         if (onWheelCreated) {
+            console.log('🚀 Calling parent onWheelCreated callback...');
             onWheelCreated({
                 ticker: result.ticker,
                 strategy: result.strategy,
                 positions: result.positions,
                 suggestions
             });
+            console.log('✅ Parent callback completed');
+        } else {
+            console.warn('❌ No onWheelCreated callback provided');
         }
     };
 
@@ -275,7 +279,7 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                                                             </div>
                                                         </div>
                                                         <Button
-                                                            onClick={() => handleSelectWheel(result)}
+                                                            onClick={() => handleCreateWheel(result)}
                                                             size="sm"
                                                             className="bg-purple-600 hover:bg-purple-700"
                                                         >
