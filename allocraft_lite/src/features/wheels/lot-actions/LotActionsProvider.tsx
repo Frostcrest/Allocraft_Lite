@@ -16,7 +16,7 @@ import {
     createLotShortPut as apiCreateShortPut,
 } from "./api";
 import { validateSellCC, validateCloseCC, validateRoll, validateBuyLot, validateShortPut } from "./validators";
-import { wheelApi } from "@/api/fastapiClient";
+import { useCreateWheelEvent } from "@/api/enhancedClient";
 
 interface LotActionsContextValue {
     openCover: (lot: LotVM) => void;
@@ -44,6 +44,9 @@ export function LotActionsProvider({ children, lots, setLots, cycleId, ticker: _
         cycleId: number; ticker?: string; onEventCreated?: (e: any) => void;
     }) {
     const [modal, setModal] = useState<LotActionsContextValue["modal"]>(null);
+    
+    // React Query hook for creating wheel events
+    const createEventMutation = useCreateWheelEvent();
 
     const updateLots: LotsUpdater = (updater) => {
         if (typeof setLots === "function") {
@@ -91,15 +94,19 @@ export function LotActionsProvider({ children, lots, setLots, cycleId, ticker: _
 
     const closeCoveredCall = async (p: CloseCoveredCallInput) => {
         if (!validateCloseCC(p)) throw new Error("Invalid close call");
-        // Create backend event for SELL_CALL_CLOSE
-        const evt = await wheelApi.createEvent({
-            cycle_id: cycleId,
-            event_type: "SELL_CALL_CLOSE",
-            trade_date: p.tradeDate,
-            contracts: p.contracts,
-            premium: p.limitDebit,
-            fees: p.fees ?? 0,
-            notes: p.notes ?? null,
+        // Create backend event for closing a covered call using React Query
+        const evt = await new Promise((resolve, reject) => {
+            createEventMutation.mutate({
+                wheel_cycle_id: cycleId,
+                event_type: "CLOSE_POSITION",
+                quantity: p.contracts,
+                price: p.limitDebit,
+                premium: p.limitDebit,
+                notes: p.notes ?? "",
+            }, {
+                onSuccess: resolve,
+                onError: reject
+            });
         });
         onEventCreated?.(evt);
         updateLots((prev) =>
@@ -166,17 +173,19 @@ export function LotActionsProvider({ children, lots, setLots, cycleId, ticker: _
         // reuse validation from close CC since it's the same shape
         if (!validateCloseCC({ lotId: p.lotId, tradeDate: p.tradeDate, limitDebit: p.limitDebit, contracts: p.contracts, fees: p.fees, notes: p.notes }))
             throw new Error("Invalid close put");
-        // Create backend event for SELL_PUT_CLOSE
-        const evt = await wheelApi.createEvent({
-            cycle_id: cycleId,
-            event_type: "BUY_PUT_CLOSE",
-            trade_date: p.tradeDate,
-            contracts: p.contracts,
-            premium: p.limitDebit,
-            fees: p.fees ?? 0,
-            notes: p.notes ?? null,
-            // Try to link to the SELL_PUT_OPEN event from the LotVM metadata if available
-            link_event_id: lots.find(l => l.lotNo === p.lotId)?.meta?.putOpenEventId ?? null,
+        // Create backend event for closing a short put using React Query
+        const evt = await new Promise((resolve, reject) => {
+            createEventMutation.mutate({
+                wheel_cycle_id: cycleId,
+                event_type: "CLOSE_POSITION",
+                quantity: p.contracts,
+                price: p.limitDebit,
+                premium: p.limitDebit,
+                notes: p.notes ?? "",
+            }, {
+                onSuccess: resolve,
+                onError: reject
+            });
         });
         onEventCreated?.(evt);
         updateLots((prev) =>
