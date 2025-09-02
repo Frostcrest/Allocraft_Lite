@@ -221,12 +221,12 @@ const Stocks: React.FC = () => {
     const allPositions = [...group.stocks, ...group.options];
     const totalValue = allPositions.reduce((sum, pos) => sum + (pos.market_value || 0), 0);
     const totalPL = allPositions.reduce((sum, pos) => sum + (pos.profitLoss || 0), 0);
-    const totalCost = allPositions.reduce((sum, pos) => sum + (pos.costBasis * Math.abs(pos.shares)), 0);
+    const totalCost = allPositions.reduce((sum, pos) => sum + ((pos.costBasis || pos.average_price) * Math.abs(pos.shares || pos.long_quantity || 0)), 0);
     const totalPLPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
 
     // Calculate option breakdown
-    const longOptions = group.options.filter(pos => pos.shares > 0).length;
-    const shortOptions = group.options.filter(pos => pos.shares < 0).length;
+    const longOptions = group.options.filter(pos => (pos.shares || pos.long_quantity || 0) > 0).length;
+    const shortOptions = group.options.filter(pos => (pos.shares || pos.short_quantity || 0) < 0).length;
 
     return {
       totalValue,
@@ -266,7 +266,7 @@ const Stocks: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error loading mock data:', error);
-      toast.error(`Failed to load mock data: ${error.message}`);
+      toast.error(`Failed to load mock data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -359,7 +359,7 @@ const Stocks: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error importing positions:', error);
-      toast.error(`Failed to import positions: ${error.message}`);
+      toast.error(`Failed to import positions: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
       // Reset the file input
@@ -681,7 +681,7 @@ const Stocks: React.FC = () => {
                                       <PositionCard
                                         key={position.id}
                                         position={position}
-                                        canRemove={position.source === 'manual'}
+                                        canRemove={position.data_source === 'manual'}
                                         onRemove={removePosition}
                                       />
                                     ))}
@@ -701,7 +701,7 @@ const Stocks: React.FC = () => {
                                       <OptionPositionCard
                                         key={position.id}
                                         position={position}
-                                        canRemove={position.source === 'manual'}
+                                        canRemove={position.data_source === 'manual'}
                                         onRemove={removePosition}
                                       />
                                     ))}
@@ -746,17 +746,26 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, canRemove, onRemo
     }).format(value);
   };
 
-  const formatPercent = (value: number) => {
+  const formatPercent = (value: number | undefined) => {
+    if (value === undefined || value === null) return 'N/A';
     return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   };
 
-  const getProfitLossColor = (value: number) => {
+  const getProfitLossColor = (value: number | undefined) => {
+    if (value === undefined || value === null) return 'text-slate-600';
     if (value > 0) return 'text-emerald-600';
     if (value < 0) return 'text-red-600';
     return 'text-slate-600';
   };
 
   const getStatusChip = () => {
+    if (position.profitLoss === undefined || position.profitLoss === null) {
+      return (
+        <span className="inline-flex items-center rounded-xl border border-slate-300 bg-slate-50 text-slate-700 px-2.5 py-1 text-xs font-medium">
+          Unknown
+        </span>
+      );
+    }
     const isProfit = position.profitLoss >= 0;
     return (
       <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit
@@ -793,19 +802,19 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, canRemove, onRemo
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <div className="text-slate-500">Shares</div>
-            <div className="font-semibold text-slate-900">{position.shares.toLocaleString()}</div>
+            <div className="font-semibold text-slate-900">{position.long_quantity.toLocaleString()}</div>
           </div>
           <div>
-            <div className="text-slate-500">Cost Basis</div>
-            <div className="font-semibold text-slate-900">{formatCurrency(position.costBasis)}</div>
+            <div className="text-slate-500">Avg Price</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.average_price)}</div>
           </div>
           <div>
-            <div className="text-slate-500">Market Price</div>
-            <div className="font-semibold text-slate-900">{formatCurrency(position.marketPrice)}</div>
+            <div className="text-slate-500">Current Price</div>
+            <div className="font-semibold text-slate-900">{position.current_price ? formatCurrency(position.current_price) : 'N/A'}</div>
           </div>
           <div>
             <div className="text-slate-500">Market Value</div>
-            <div className="font-semibold text-slate-900">{formatCurrency(position.marketValue)}</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.market_value)}</div>
           </div>
         </div>
 
@@ -814,7 +823,7 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, canRemove, onRemo
             <div>
               <div className="text-slate-500 text-sm">Profit/Loss</div>
               <div className={`font-semibold ${getProfitLossColor(position.profitLoss)}`}>
-                {formatCurrency(position.profitLoss)}
+                {position.profitLoss !== undefined ? formatCurrency(position.profitLoss) : 'N/A'}
               </div>
             </div>
             <div className="text-right">
@@ -826,9 +835,9 @@ const PositionCard: React.FC<PositionCardProps> = ({ position, canRemove, onRemo
           </div>
         </div>
 
-        {position.source === 'schwab' && (
+        {position.data_source === 'schwab' && (
           <div className="text-xs text-slate-500 pt-2 border-t border-slate-100">
-            Account: {position.accountNumber} ({position.accountType})
+            Data Source: {position.data_source}
           </div>
         )}
       </div>
@@ -853,32 +862,35 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
     }).format(value);
   };
 
-  const formatPercent = (value: number) => {
+  const formatPercent = (value: number | undefined) => {
+    if (value === undefined || value === null) return 'N/A';
     return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   };
 
-  const getProfitLossColor = (value: number) => {
+  const getProfitLossColor = (value: number | undefined) => {
+    if (value === undefined || value === null) return 'text-slate-600';
     if (value > 0) return 'text-emerald-600';
     if (value < 0) return 'text-red-600';
     return 'text-slate-600';
   };
 
   const getOptionTypeChip = () => {
-    const isCall = position.optionType === 'Call';
-    const isProfit = position.profitLoss >= 0;
+    const isCall = position.option_type === 'Call';
+    const profitLoss = position.profitLoss;
+    const isProfit = profitLoss !== undefined && profitLoss >= 0;
     return (
       <div className="flex gap-2">
         <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isCall
           ? 'border-blue-300 bg-blue-50 text-blue-700'
           : 'border-purple-300 bg-purple-50 text-purple-700'
           }`}>
-          {position.optionType}
+          {position.option_type}
         </span>
-        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-          : 'border-red-300 bg-red-50 text-red-700'
+        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${profitLoss !== undefined 
+          ? (isProfit ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-red-300 bg-red-50 text-red-700')
+          : 'border-slate-300 bg-slate-50 text-slate-700'
           }`}>
-          {isProfit ? 'Profit' : 'Loss'}
+          {profitLoss !== undefined ? (isProfit ? 'Profit' : 'Loss') : 'Unknown'}
         </span>
       </div>
     );
@@ -893,14 +905,14 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
     });
   };
 
-  const isShortPosition = position.shares < 0;
+  const isShortPosition = position.short_quantity > 0;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <h3 className="text-lg font-semibold text-slate-900 truncate">
-            {position.underlyingSymbol} ${position.strikePrice}
+            {position.ticker || position.symbol} ${position.strike_price}
           </h3>
           {getOptionTypeChip()}
         </div>
@@ -921,10 +933,10 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
       <div className="space-y-3">
         <div className="text-sm text-slate-600">
           <div className="font-medium">
-            {position.optionType} • Exp: {formatExpirationDate(position.expirationDate!)}
+            {position.option_type} • Exp: {position.expiration_date ? formatExpirationDate(position.expiration_date) : 'N/A'}
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            {isShortPosition ? 'Short' : 'Long'} {Math.abs(position.contracts!).toFixed(2)} contract{Math.abs(position.contracts!) !== 1 ? 's' : ''}
+            {isShortPosition ? 'Short' : 'Long'} {Math.abs(position.contracts || 0).toFixed(2)} contract{Math.abs(position.contracts || 0) !== 1 ? 's' : ''}
           </div>
         </div>
 
@@ -932,20 +944,20 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
           <div>
             <div className="text-slate-500">Contracts</div>
             <div className="font-semibold text-slate-900">
-              {position.contracts! >= 0 ? '+' : ''}{position.contracts!.toFixed(2)}
+              {(position.contracts || 0) >= 0 ? '+' : ''}{(position.contracts || 0).toFixed(2)}
             </div>
           </div>
           <div>
             <div className="text-slate-500">Avg Price</div>
-            <div className="font-semibold text-slate-900">{formatCurrency(position.costBasis)}</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.average_price)}</div>
           </div>
           <div>
             <div className="text-slate-500">Current Price</div>
-            <div className="font-semibold text-slate-900">{formatCurrency(position.marketPrice)}</div>
+            <div className="font-semibold text-slate-900">{position.current_price ? formatCurrency(position.current_price) : 'N/A'}</div>
           </div>
           <div>
             <div className="text-slate-500">Market Value</div>
-            <div className="font-semibold text-slate-900">{formatCurrency(position.marketValue)}</div>
+            <div className="font-semibold text-slate-900">{formatCurrency(position.market_value)}</div>
           </div>
         </div>
 
@@ -954,7 +966,7 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
             <div>
               <div className="text-slate-500 text-sm">Profit/Loss</div>
               <div className={`font-semibold ${getProfitLossColor(position.profitLoss)}`}>
-                {formatCurrency(position.profitLoss)}
+                {position.profitLoss !== undefined ? formatCurrency(position.profitLoss) : 'N/A'}
               </div>
             </div>
             <div className="text-right">
@@ -966,9 +978,9 @@ const OptionPositionCard: React.FC<OptionPositionCardProps> = ({ position, canRe
           </div>
         </div>
 
-        {position.source === 'schwab' && (
+        {position.data_source === 'schwab' && (
           <div className="text-xs text-slate-500 pt-2 border-t border-slate-100">
-            Account: {position.accountNumber} ({position.accountType})
+            Data Source: {position.data_source}
           </div>
         )}
       </div>

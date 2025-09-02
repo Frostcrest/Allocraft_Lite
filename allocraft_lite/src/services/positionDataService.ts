@@ -1,11 +1,11 @@
 /**
  * Position Data Service
  * 
- * Provides a centralized way to access Schwab positions across the application
- * Now uses persistent storage for improved performance and reliability
+ * Provides a centralized way to access positions across the application
+ * Updated to use the unified data model
  */
 
-import { schwabApi } from '../api/fastapiClient';
+import { unifiedApi, UnifiedPosition } from './unifiedApi';
 
 export interface PositionData {
     id: string;
@@ -16,7 +16,7 @@ export interface PositionData {
     marketValue: number;
     profitLoss: number;
     profitLossPercent: number;
-    source: 'manual' | 'schwab';
+    source: 'manual' | 'schwab' | 'schwab_import';
     accountType?: string;
     accountNumber?: string;
     // Option-specific fields
@@ -150,7 +150,7 @@ export class PositionDataService {
     private static readonly CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
     /**
-     * Get all Schwab positions (cached for 5 minutes)
+     * Get all positions from unified model (cached for 5 minutes)
      */
     static async getSchwabPositions(forceRefresh = false): Promise<PositionData[]> {
         const now = new Date();
@@ -159,80 +159,102 @@ export class PositionDataService {
         if (!forceRefresh && this.lastFetch && this.cachedPositions.length > 0) {
             const timeSinceLastFetch = now.getTime() - this.lastFetch.getTime();
             if (timeSinceLastFetch < this.CACHE_DURATION_MS) {
-                console.log('🔄 Returning cached Schwab positions');
+                console.log('🔄 Returning cached positions');
                 return this.cachedPositions;
             }
         }
 
         try {
-            console.log('🔍 Fetching Schwab positions from persistent storage...');
+            console.log('🔍 Fetching positions from unified API...');
 
-            // Use the new persistent storage API with fresh data option
-            const positions = await schwabApi.getStoredPositions(false);
+            // Get both stock and option positions from unified API
+            const [stockPositions, optionPositions] = await Promise.all([
+                unifiedApi.getStockPositions(),
+                unifiedApi.getOptionPositions()
+            ]);
 
-            if (!Array.isArray(positions) || positions.length === 0) {
-                console.log('❌ No stored positions found');
-                return [];
-            }
+            // Transform unified positions to PositionData interface
+            const transformedPositions: PositionData[] = [];
 
-            // Transform stored positions to our PositionData interface
-            const transformedPositions: PositionData[] = positions.map(pos => {
-                const parsedOption = parseOptionSymbol(pos.instrument?.symbol || '');
+            // Add stock positions
+            stockPositions.forEach(pos => {
+                const shares = (pos.long_quantity || 0) - (pos.short_quantity || 0);
+                const marketValue = pos.market_value || 0;
+                const costBasis = pos.average_price || 0;
+                const profitLoss = marketValue - (costBasis * Math.abs(shares));
+                const profitLossPercent = costBasis > 0 ? ((pos.current_price || 0) - costBasis) / costBasis * 100 : 0;
 
-                return {
-                    id: `schwab-${pos.account_id}-${pos.instrument?.cusip || pos.instrument?.symbol}`,
-                    symbol: pos.instrument?.symbol || 'UNKNOWN',
-                    shares: Math.abs(pos.longQuantity || pos.shortQuantity || 0),
-                    costBasis: (pos.longQuantity || 0) * (pos.averagePrice || 0),
-                    marketPrice: pos.marketValue && pos.longQuantity
-                        ? pos.marketValue / Math.abs(pos.longQuantity)
-                        : pos.averagePrice || 0,
-                    marketValue: pos.marketValue || 0,
-                    profitLoss: (pos.marketValue || 0) - ((pos.longQuantity || 0) * (pos.averagePrice || 0)),
-                    profitLossPercent: pos.averagePrice
-                        ? (((pos.marketValue || 0) / Math.abs(pos.longQuantity || 1)) - (pos.averagePrice || 0)) / (pos.averagePrice || 1) * 100
-                        : 0,
-                    source: 'schwab' as const,
+                transformedPositions.push({
+                    id: pos.id?.toString() || `unified-${pos.symbol}`,
+                    symbol: pos.symbol,
+                    shares: shares,
+                    costBasis: costBasis,
+                    marketPrice: pos.current_price || 0,
+                    marketValue: marketValue,
+                    profitLoss: profitLoss,
+                    profitLossPercent: profitLossPercent,
+                    source: pos.data_source === 'schwab_import' ? 'schwab_import' : 'schwab',
                     accountType: 'Securities',
-                    accountNumber: pos.account?.account_number || 'Unknown',
-                    // Option-specific fields from parser
-                    isOption: parsedOption.isOption,
-                    underlyingSymbol: parsedOption.underlyingSymbol,
-                    optionType: parsedOption.optionType,
-                    strikePrice: parsedOption.strikePrice,
-                    expirationDate: parsedOption.expirationDate,
-                    contracts: parsedOption.isOption ? Math.abs(pos.longQuantity || pos.shortQuantity || 0) : undefined
-                };
+                    accountNumber: pos.account_id?.toString() || 'Unknown',
+                    isOption: false
+                });
+            });
+
+            // Add option positions
+            optionPositions.forEach(pos => {
+                const contracts = (pos.long_quantity || 0) - (pos.short_quantity || 0);
+                const shares = contracts * 100; // Convert contracts to shares
+                const marketValue = pos.market_value || 0;
+                const costBasis = pos.average_price || 0;
+                const profitLoss = marketValue - (costBasis * Math.abs(contracts) * 100);
+                const profitLossPercent = costBasis > 0 ? ((pos.current_price || 0) - costBasis) / costBasis * 100 : 0;
+
+                transformedPositions.push({
+                    id: pos.id?.toString() || `unified-option-${pos.symbol}`,
+                    symbol: pos.symbol,
+                    shares: shares,
+                    costBasis: costBasis,
+                    marketPrice: pos.current_price || 0,
+                    marketValue: marketValue,
+                    profitLoss: profitLoss,
+                    profitLossPercent: profitLossPercent,
+                    source: pos.data_source === 'schwab_import' ? 'schwab_import' : 'schwab',
+                    accountType: 'Securities',
+                    accountNumber: pos.account_id?.toString() || 'Unknown',
+                    isOption: true,
+                    underlyingSymbol: (pos as any).ticker || pos.symbol.split(' ')[0],
+                    optionType: (pos as any).option_type as 'Call' | 'Put',
+                    strikePrice: (pos as any).strike_price,
+                    expirationDate: (pos as any).expiration_date,
+                    contracts: Math.abs(contracts)
+                });
             });
 
             // Update cache
             this.cachedPositions = transformedPositions;
             this.lastFetch = now;
 
-            console.log(`✅ Successfully loaded ${transformedPositions.length} positions from storage`);
+            console.log(`✅ Successfully loaded ${transformedPositions.length} positions from unified API`);
             return transformedPositions;
 
         } catch (error) {
-            console.error('❌ Error loading Schwab positions:', error);
+            console.error('❌ Error loading positions from unified API:', error);
             return [];
         }
     }
 
     /**
-     * Force a fresh sync of positions from Schwab API
+     * Force a fresh sync of positions (simply refresh from unified API)
      */
     static async forceSyncPositions(): Promise<PositionData[]> {
         try {
-            console.log('🔄 Forcing fresh sync of Schwab positions...');
-
-            // Trigger backend sync
-            await schwabApi.syncPositions(true);
+            console.log('🔄 Forcing fresh sync of positions...');
 
             // Clear cache to force fresh fetch
             this.cachedPositions = [];
             this.lastFetch = null;
 
-            // Fetch fresh data
+            // Fetch fresh data from unified API
             return await this.getSchwabPositions(true);
 
         } catch (error) {
@@ -272,22 +294,12 @@ export class PositionDataService {
     }
 
     /**
-     * Check if user has any positions (from any source)
+     * Check if user has any positions (from unified API)
      */
     static async hasAnyPositions(): Promise<boolean> {
         try {
-            const response = await fetch('/api/stocks/all-positions', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                return data.positions && data.positions.length > 0;
-            }
-            return false;
+            const positions = await this.getSchwabPositions();
+            return positions.length > 0;
         } catch (error) {
             console.error('Error checking for positions:', error);
             return false;
@@ -295,26 +307,10 @@ export class PositionDataService {
     }
 
     /**
-     * Get all positions from all sources (unified endpoint)
+     * Get all positions from unified API
      */
     static async getAllPositions(): Promise<PositionData[]> {
-        try {
-            const response = await fetch('/api/stocks/all-positions', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                return data.positions || [];
-            }
-            return [];
-        } catch (error) {
-            console.error('Error fetching all positions:', error);
-            return [];
-        }
+        return await this.getSchwabPositions();
     }
 
     /**
@@ -340,14 +336,14 @@ export class PositionDataService {
     }
 
     /**
-     * Check if user is connected to Schwab
+     * Check if user is connected to Schwab (simplified for unified model)
      */
     static async isConnectedToSchwab(): Promise<boolean> {
         try {
-            const status = await schwabApi.getSyncStatus();
-            return status && status.accounts && status.accounts.length > 0;
+            const positions = await this.getSchwabPositions();
+            return positions.length > 0;
         } catch (error) {
-            console.error('Error checking Schwab status:', error);
+            console.error('Error checking connection status:', error);
             return false;
         }
     }
