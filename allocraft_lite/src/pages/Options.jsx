@@ -32,6 +32,65 @@ import {
 } from "@/api/enhancedClient";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+// Utility function to categorize options by strategy
+const categorizeOptions = (options) => {
+  const longCalls = [];
+  const longPuts = [];
+  const shortCalls = [];
+  const shortPuts = [];
+  const pmccPositions = []; // Poor Man's Covered Calls
+  const coveredCalls = []; // Covered Calls with associated stock
+  const wheelPositions = []; // Short puts starting wheels
+
+  options.forEach(option => {
+    const isShort = (option.contracts || 0) < 0;
+    const isCall = option.option_type === 'Call';
+    const isPut = option.option_type === 'Put';
+
+    if (isCall && !isShort) {
+      longCalls.push(option);
+    } else if (isPut && !isShort) {
+      longPuts.push(option);
+    } else if (isCall && isShort) {
+      shortCalls.push(option);
+      // Note: Would need to check for associated long calls (PMCC) or stock (CC)
+      // This requires cross-referencing with stock positions
+    } else if (isPut && isShort) {
+      shortPuts.push(option);
+      // Note: Short puts are typically the start of wheel strategies
+      wheelPositions.push(option);
+    }
+  });
+
+  return {
+    longCalls,
+    longPuts, 
+    shortCalls,
+    shortPuts,
+    pmccPositions,
+    coveredCalls,
+    wheelPositions
+  };
+};
+
+// Strategy badge component
+const StrategyBadge = ({ strategy }) => {
+  const strategyConfig = {
+    'Wheel Start': { color: 'bg-purple-100 text-purple-800', icon: '🎯' },
+    'Covered Call': { color: 'bg-blue-100 text-blue-800', icon: '🛡️' },
+    'PMCC': { color: 'bg-green-100 text-green-800', icon: '⚡' },
+    'Naked': { color: 'bg-yellow-100 text-yellow-800', icon: '⚠️' }
+  };
+  
+  const config = strategyConfig[strategy] || { color: 'bg-gray-100 text-gray-800', icon: '📊' };
+  
+  return (
+    <Badge className={`${config.color} text-xs`}>
+      {config.icon} {strategy}
+    </Badge>
+  );
+};
+
 // Error display component
 const ErrorDisplay = ({ error, onRetry }) => (
   <div className="p-4 border border-red-200 rounded-lg bg-red-50">
@@ -89,6 +148,11 @@ export default function Options() {
       console.error('Options API error:', error);
     }
   }, [options, error]);
+
+  // Categorize options for strategy analysis
+  const categorizedOptions = React.useMemo(() => {
+    return categorizeOptions(options);
+  }, [options]);
 
   const createOptionMutation = useCreateOption();
   const updateOptionMutation = useUpdateOption();
@@ -194,7 +258,7 @@ export default function Options() {
         typeof option.contracts === 'number'
       )
       .reduce(
-        (total, option) => total + option.contracts * option.current_price * 100,
+        (total, option) => total + Math.abs(option.contracts) * option.current_price * 100,
         0
       );
   };
@@ -231,6 +295,11 @@ export default function Options() {
                 Manage your options contracts • Total Value:{" "}
                 {formatCurrency(calculateTotalValue())}
               </p>
+              <div className="text-sm text-slate-500 mt-1 space-y-1">
+                <p>📈 <strong>Long Calls/Puts:</strong> Directional bets and protection</p>
+                <p>🛡️ <strong>Short Calls:</strong> Can be Covered Calls (with stock) or PMCC (with long calls)</p>
+                <p>🎯 <strong>Short Puts:</strong> Start of wheel strategies, may have associated wheels</p>
+              </div>
               {isMutating && (
                 <p className="text-blue-600 text-sm mt-1">
                   {refreshPricesMutation.isPending ? "Refreshing prices..." : "Processing changes..."}
@@ -258,13 +327,70 @@ export default function Options() {
             </div>
           </div>
 
+          {/* Strategy Summary Cards */}
+          {options.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Long Calls</p>
+                    <p className="text-2xl font-bold text-green-600">{categorizedOptions.longCalls.length}</p>
+                  </div>
+                  <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-green-600 text-lg">📈</span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Bullish positions</p>
+              </div>
+
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Long Puts</p>
+                    <p className="text-2xl font-bold text-red-600">{categorizedOptions.longPuts.length}</p>
+                  </div>
+                  <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
+                    <span className="text-red-600 text-lg">📉</span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Bearish protection</p>
+              </div>
+
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Short Calls</p>
+                    <p className="text-2xl font-bold text-blue-600">{categorizedOptions.shortCalls.length}</p>
+                  </div>
+                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 text-lg">🛡️</span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Income generation</p>
+              </div>
+
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Short Puts</p>
+                    <p className="text-2xl font-bold text-purple-600">{categorizedOptions.shortPuts.length}</p>
+                  </div>
+                  <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <span className="text-purple-600 text-lg">🎯</span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Wheel strategies</p>
+              </div>
+            </div>
+          )}
+
           {options.length > 0 ? (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
                     <TableHead className="font-semibold text-slate-700">Ticker</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Type</TableHead>
+                    <TableHead className="font-semibold text-slate-700">Type & Position</TableHead>
                     <TableHead className="font-semibold text-slate-700">Strike</TableHead>
                     <TableHead className="font-semibold text-slate-700">Expiry</TableHead>
                     <TableHead className="font-semibold text-slate-700">Contracts</TableHead>
@@ -284,24 +410,49 @@ export default function Options() {
                         return null;
                       }
 
-                      const pl = option.current_price && option.cost_basis
-                        ? (option.current_price - option.cost_basis) * (option.contracts || 0) * 100
-                        : 0;
+                      const pl = option.current_price && option.average_price
+                        ? (option.current_price - option.average_price) * (option.contracts || 0) * 100
+                        : (option.profit_loss || 0);
+
+                      // Determine position type (Long/Short) based on contracts
+                      const isShort = (option.contracts || 0) < 0;
+                      const positionType = isShort ? 'Short' : 'Long';
+                      const absContracts = Math.abs(option.contracts || 0);
+
+                      // Determine strategy type for display
+                      let strategyType = 'Naked';
+                      if (option.option_type === 'Put' && isShort) {
+                        strategyType = 'Wheel Start';
+                      } else if (option.option_type === 'Call' && isShort) {
+                        strategyType = 'Covered Call'; // Could be PMCC, would need more logic
+                      }
 
                       return (
                         <TableRow key={option.id || Math.random()} className="hover:bg-slate-50">
                           <TableCell className="font-medium text-slate-900">
-                            {option.ticker || 'N/A'}
+                            {option.ticker || option.underlying_symbol || 'N/A'}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={option.option_type === 'Call' ? 'default' : 'secondary'}>
-                              {option.option_type || 'Unknown'}
-                            </Badge>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex gap-2">
+                                <Badge variant={option.option_type === 'Call' ? 'default' : 'secondary'}>
+                                  {option.option_type || 'Unknown'}
+                                </Badge>
+                                <Badge variant={isShort ? 'destructive' : 'default'} className="text-xs">
+                                  {positionType}
+                                </Badge>
+                              </div>
+                              <StrategyBadge strategy={strategyType} />
+                            </div>
                           </TableCell>
                           <TableCell>{formatCurrency(option.strike_price || 0)}</TableCell>
-                          <TableCell>{formatExpiryDate(option.expiry_date)}</TableCell>
-                          <TableCell>{option.contracts || 0}</TableCell>
-                          <TableCell>{formatCurrency(option.cost_basis || 0)}</TableCell>
+                          <TableCell>{formatExpiryDate(option.expiration_date)}</TableCell>
+                          <TableCell>
+                            <span className={isShort ? 'text-red-600' : 'text-green-600'}>
+                              {isShort ? '-' : '+'}{absContracts}
+                            </span>
+                          </TableCell>
+                          <TableCell>{formatCurrency(option.average_price || 0)}</TableCell>
                           <TableCell>
                             {option.current_price ? formatCurrency(option.current_price) : 'N/A'}
                           </TableCell>

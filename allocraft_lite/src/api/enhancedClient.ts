@@ -175,7 +175,7 @@ export const useRefreshStockPrices = () => {
 export const useOptions = () => {
     return useQuery<Option[]>({
         queryKey: queryKeys.options,
-        queryFn: () => enhancedFetch<Option[]>('/options/')
+        queryFn: () => enhancedFetch<Option[]>('/portfolio/options')
     });
 };
 
