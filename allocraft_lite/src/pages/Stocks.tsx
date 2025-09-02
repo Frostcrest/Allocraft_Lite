@@ -1,42 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddStockModal from '@/components/AddStockModal';
-import { unifiedApi, UnifiedPosition } from '../services/unifiedApi';
-// Keep legacy API for development mode checking
+import { usePositionsData, useImportPositions, useBackendHealth } from '../api/enhancedClient';
+import { UnifiedPosition } from '../services/unifiedApi';
 import { isDevelopmentMode } from '../services/backendSchwabApi';
-
-// Option symbol parser for formats like "HIMS 251017P00037000"
-const parseOptionSymbol = (symbol: string) => {
-  // Match pattern: TICKER YYMMDDCPPPPPPPP or TICKER YYMMDDPPPPPPPPP
-  const optionMatch = symbol.match(/^([A-Z]+)\s+(\d{6})([CP])(\d{8})$/);
-
-  if (!optionMatch) {
-    return { isOption: false, underlyingSymbol: symbol };
-  }
-
-  const [, underlying, dateStr, optionType, strikeStr] = optionMatch;
-
-  // Parse date (YYMMDD)
-  const year = 2000 + parseInt(dateStr.substring(0, 2));
-  const month = parseInt(dateStr.substring(2, 4));
-  const day = parseInt(dateStr.substring(4, 6));
-  const expirationDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-
-  // Parse strike price (last 8 digits, divide by 1000)
-  const strikePrice = parseInt(strikeStr) / 1000;
-
-  return {
-    isOption: true,
-    underlyingSymbol: underlying,
-    optionType: optionType === 'C' ? 'Call' : 'Put',
-    strikePrice,
-    expirationDate,
-    displaySymbol: `${underlying} ${expirationDate} ${optionType === 'C' ? 'Call' : 'Put'} $${strikePrice}`
-  };
-};
 
 // Use the unified position interface
 interface Position extends UnifiedPosition {
@@ -50,75 +20,36 @@ interface Position extends UnifiedPosition {
 }
 
 const Stocks: React.FC = () => {
-  const [positions, setPositions] = useState<Position[]>([]);
+  // React Query hooks replace manual state management
+  const {
+    allPositions,
+    portfolioSummary,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = usePositionsData();
+
+  const importPositionsMutation = useImportPositions();
+  const backendHealth = useBackendHealth();
+
+  // UI state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const [error, setError] = useState<string>('');
   const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set());
 
-  // Load positions from unified backend
-  useEffect(() => {
-    loadUnifiedPositions();
-  }, []);
+  // Transform positions for backward compatibility
+  const positions = useMemo<Position[]>(() => {
+    return allPositions.map(pos => ({
+      ...pos,
+      // Legacy compatibility fields
+      shares: (pos.long_quantity || 0) - (pos.short_quantity || 0),
+      costBasis: pos.average_price,
+      marketPrice: pos.current_price || 0,
+      marketValue: pos.market_value
+    }));
+  }, [allPositions]);
 
-  const loadUnifiedPositions = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-
-      // Get both stock and option positions from unified backend
-      const [stockPositions, optionPositions] = await Promise.all([
-        unifiedApi.getStockPositions(),
-        unifiedApi.getOptionPositions()
-      ]);
-
-      // Combine and transform positions
-      const allPositions: Position[] = [];
-
-      // Add stock positions
-      stockPositions.forEach(pos => {
-        allPositions.push({
-          ...pos,
-          // Legacy compatibility fields
-          shares: (pos.long_quantity || 0) - (pos.short_quantity || 0),
-          costBasis: pos.average_price,
-          marketPrice: pos.current_price || 0,
-          marketValue: pos.market_value
-        });
-      });
-
-      // Add option positions
-      optionPositions.forEach(pos => {
-        allPositions.push({
-          ...pos,
-          // Legacy compatibility fields
-          shares: pos.contracts || ((pos.long_quantity || 0) - (pos.short_quantity || 0)),
-          costBasis: pos.average_price,
-          marketPrice: pos.current_price || 0,
-          marketValue: pos.market_value
-        });
-      });
-
-      setPositions(allPositions);
-      setLastRefresh(new Date());
-
-      console.log(`✅ Loaded ${allPositions.length} positions from unified backend:`, {
-        stocks: stockPositions.length,
-        options: optionPositions.length,
-        total: allPositions.length
-      });
-
-    } catch (error) {
-      console.error('❌ Error loading unified positions:', error);
-      setError(`Failed to load positions: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      toast.error('Failed to load positions from unified backend');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Add a new manual position (keeping this for backward compatibility)
+  // Add a new manual position (using React Query pattern)
   const addPosition = (newPositionData: { symbol: string; shares: number; costBasis: number; marketPrice: number; }) => {
     // Calculate derived values
     const marketValue = newPositionData.shares * newPositionData.marketPrice;
@@ -145,11 +76,13 @@ const Stocks: React.FC = () => {
       marketValue
     };
 
+    // TODO: In full React Query migration, this should also save to backend
+    // For now keeping localStorage for backward compatibility
     const updatedPositions = [...positions, position];
-    setPositions(updatedPositions);
-    // Note: In unified model, manual positions should also be saved to backend
-    // For now keeping localStorage for compatibility
     localStorage.setItem('stockPositions', JSON.stringify(updatedPositions));
+    
+    // Trigger refetch to get latest data
+    refetch();
   };
 
   const removePosition = (id: string) => {
@@ -160,12 +93,11 @@ const Stocks: React.FC = () => {
     }
 
     const updatedPositions = positions.filter(p => p.id !== id);
-    setPositions(updatedPositions);
     localStorage.setItem('stockPositions', JSON.stringify(updatedPositions));
+    
+    // Trigger refetch to get latest data
+    refetch();
   };
-
-  // All positions are now in the single positions array from unified backend
-  const allPositions = positions;
 
   // Group positions by underlying symbol (for options) or symbol (for stocks)
   const groupedPositions = allPositions.reduce((groups, position) => {
@@ -241,54 +173,41 @@ const Stocks: React.FC = () => {
 
   const handleManualSync = async () => {
     try {
-      setIsLoading(true);
-      console.log('🔄 Refreshing positions...');
-
-      // Just reload the unified positions
-      await loadUnifiedPositions();
-
+      console.log('🔄 Refreshing positions with React Query...');
+      
+      // React Query refetch automatically handles loading states
+      await refetch();
+      
       toast.success('Positions refreshed successfully');
-
     } catch (error) {
       console.error('❌ Error refreshing positions:', error);
       toast.error('Failed to refresh positions');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleLoadMockData = async () => {
     try {
-      setIsLoading(true);
-      console.log('🎭 Loading mock data not available in unified model...');
-
+      console.log('🎭 Mock data loading not available in unified model...');
       toast.info('Mock data loading not available in unified model');
-
     } catch (error) {
       console.error('❌ Error loading mock data:', error);
       toast.error(`Failed to load mock data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleExportPositions = async () => {
     try {
-      setIsLoading(true);
       console.log('📤 Starting positions export...');
 
-      // Get all positions from unified API
-      const allPositions = await unifiedApi.getAllPositions();
-      const allAccounts = await unifiedApi.getAllAccounts();
-
+      // Use React Query data (already loaded)
       const exportData = {
         export_info: {
-          total_accounts: allAccounts.total_accounts,
-          total_positions: allPositions.total_positions,
+          total_accounts: portfolioSummary?.total_accounts || 0,
+          total_positions: allPositions.length,
           export_date: new Date().toISOString()
         },
-        accounts: allAccounts.accounts,
-        positions: allPositions.positions
+        accounts: portfolioSummary?.accounts || [],
+        positions: allPositions
       };
 
       // Create a downloadable JSON file
@@ -309,27 +228,24 @@ const Stocks: React.FC = () => {
     } catch (error) {
       console.error('❌ Error exporting positions:', error);
       toast.error(`Failed to export positions: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleTestConnection = async () => {
     try {
-      setIsLoading(true);
-      console.log('🔄 Testing backend connection...');
+      console.log('🔄 Testing backend connection with React Query...');
 
-      // Test the unified API health check
-      const healthCheck = await unifiedApi.checkHealth();
-      console.log('🔍 Backend health:', healthCheck);
-
-      toast.success('Backend connected successfully!');
-
+      // Use React Query health check
+      await backendHealth.refetch();
+      
+      if (backendHealth.data) {
+        toast.success('Backend connected successfully!');
+      } else {
+        throw new Error('Health check failed');
+      }
     } catch (error) {
       console.error('❌ Backend connection test failed:', error);
       toast.error(`Backend connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -338,8 +254,7 @@ const Stocks: React.FC = () => {
     if (!file) return;
 
     try {
-      setIsLoading(true);
-      console.log('📥 Starting positions import...');
+      console.log('📥 Starting positions import with React Query...');
 
       const fileText = await file.text();
       const importData = JSON.parse(fileText);
@@ -349,11 +264,9 @@ const Stocks: React.FC = () => {
         throw new Error('Invalid import file format');
       }
 
-      const result = await unifiedApi.importPositions(importData);
+      // Use React Query mutation for import
+      const result = await importPositionsMutation.mutateAsync(importData);
       console.log('✅ Positions imported:', result);
-
-      // Reload positions to show imported data
-      await loadUnifiedPositions();
 
       toast.success(`Imported successfully: ${result.imported_count} positions`);
 
@@ -361,7 +274,6 @@ const Stocks: React.FC = () => {
       console.error('❌ Error importing positions:', error);
       toast.error(`Failed to import positions: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsLoading(false);
       // Reset the file input
       event.target.value = '';
     }
@@ -392,21 +304,18 @@ const Stocks: React.FC = () => {
         </div>
 
         {/* Error Display */}
-        {error && (
+        {isError && error && (
           <Card className="border-red-200 bg-red-50 shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-red-800">❌ Error Loading Positions</h3>
-                  <p className="text-sm text-red-600">{error}</p>
+                  <p className="text-sm text-red-600">{error.message}</p>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setError('');
-                    loadUnifiedPositions();
-                  }}
+                  onClick={() => refetch()}
                   className="border-red-300"
                 >
                   Retry
@@ -422,31 +331,21 @@ const Stocks: React.FC = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-emerald-800">✅ Schwab Connected</h3>
+                  <h3 className="font-semibold text-emerald-800">✅ Positions Loaded</h3>
                   <p className="text-sm text-emerald-600">
-                    {positions.length} positions imported from your Schwab account
+                    {positions.length} positions loaded from unified backend
                   </p>
-                  {lastRefresh && (
-                    <p className="text-xs text-emerald-500 mt-1">
-                      Last updated: {lastRefresh.toLocaleTimeString()}
-                    </p>
-                  )}
+                  <p className="text-xs text-emerald-500 mt-1">
+                    React Query: Auto-refreshing with smart caching
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => loadUnifiedPositions()}
+                    onClick={handleManualSync}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                     disabled={isLoading}
                   >
                     {isLoading ? 'Loading...' : 'Refresh Data'}
-                  </button>
-
-                  <button
-                    onClick={handleManualSync}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Syncing...' : 'Sync Fresh Data'}
                   </button>
 
                   <button
