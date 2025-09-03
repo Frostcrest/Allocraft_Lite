@@ -9,6 +9,10 @@ import WheelOpportunityCard from "@/components/WheelOpportunityCard";
 import WheelOpportunityGrid from "@/components/WheelOpportunityGrid";
 import WheelPerformanceSummary from "@/components/WheelPerformanceSummary";
 import ActiveWheelsSection from "@/components/ActiveWheelsSection";
+import WheelDetailsModal from '../components/wheel-management/WheelDetailsModal';
+import WheelEditModal from '../components/wheel-management/WheelEditModal';
+import WheelRollModal from '../components/wheel-management/WheelRollModal';
+import WheelCloseModal from '../components/wheel-management/WheelCloseModal';
 
 // Enhanced Wheels page with improved structure for wheel detection and management
 export default function Wheels() {
@@ -44,6 +48,13 @@ export default function Wheels() {
   const [showWheelCreationModal, setShowWheelCreationModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [detectedOpportunities, setDetectedOpportunities] = useState([]);
+  
+  // Wheel management modals
+  const [showWheelDetails, setShowWheelDetails] = useState(false);
+  const [showWheelEdit, setShowWheelEdit] = useState(false);
+  const [showWheelRoll, setShowWheelRoll] = useState(false);
+  const [showWheelClose, setShowWheelClose] = useState(false);
+  const [selectedWheel, setSelectedWheel] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(null);
@@ -243,33 +254,59 @@ export default function Wheels() {
     
     switch (action) {
       case 'view_details':
-        // TODO: Open wheel details modal
-        alert(`Viewing details for ${wheel.ticker} wheel strategy`);
+        setSelectedWheel(wheel);
+        setShowWheelDetails(true);
         break;
       case 'edit_parameters':
-        // TODO: Open parameter editing modal
-        alert(`Editing parameters for ${wheel.ticker} wheel`);
+        setSelectedWheel(wheel);
+        setShowWheelEdit(true);
         break;
       case 'roll_options':
-        // TODO: Open roll options modal
-        alert(`Rolling options for ${wheel.ticker} wheel`);
+        setSelectedWheel(wheel);
+        setShowWheelRoll(true);
         break;
       case 'close_wheel':
-        // TODO: Open close confirmation modal
-        if (confirm(`Are you sure you want to close the ${wheel.ticker} wheel strategy?`)) {
-          alert(`Closing ${wheel.ticker} wheel strategy`);
-        }
+        setSelectedWheel(wheel);
+        setShowWheelClose(true);
         break;
       case 'add_notes':
-        // TODO: Open notes modal
+        // TODO: Open notes modal - will implement later
         const notes = prompt(`Add notes for ${wheel.ticker} wheel strategy:`);
         if (notes) {
-          alert(`Notes added: ${notes}`);
+          // Save notes via API
+          console.log(`Notes added for ${wheel.ticker}:`, notes);
         }
         break;
       default:
         console.log('Unknown wheel action:', action);
     }
+  };
+
+  // Modal callback functions
+  const handleWheelSave = (updatedWheel) => {
+    console.log('💾 Wheel updated:', updatedWheel);
+    // Refresh wheel data
+    refetchCycles();
+  };
+
+  const handleWheelRoll = (rollResult) => {
+    console.log('🔄 Wheel roll completed:', rollResult);
+    // Refresh wheel data
+    refetchCycles();
+  };
+
+  const handleWheelClose = (closeResult) => {
+    console.log('❌ Wheel closed:', closeResult);
+    // Refresh wheel data and close modal
+    refetchCycles();
+  };
+
+  const closeAllModals = () => {
+    setShowWheelDetails(false);
+    setShowWheelEdit(false);
+    setShowWheelRoll(false);
+    setShowWheelClose(false);
+    setSelectedWheel(null);
   };
 
   // Handle view details for opportunity
@@ -589,6 +626,35 @@ export default function Wheels() {
           quickMode={!!quickCreationData}
         />
       )}
+
+      {/* Wheel Management Modals */}
+      <WheelDetailsModal
+        isOpen={showWheelDetails}
+        onClose={closeAllModals}
+        wheel={selectedWheel}
+        onAction={handleWheelAction}
+      />
+
+      <WheelEditModal
+        isOpen={showWheelEdit}
+        onClose={closeAllModals}
+        wheel={selectedWheel}
+        onSave={handleWheelSave}
+      />
+
+      <WheelRollModal
+        isOpen={showWheelRoll}
+        onClose={closeAllModals}
+        wheel={selectedWheel}
+        onRoll={handleWheelRoll}
+      />
+
+      <WheelCloseModal
+        isOpen={showWheelClose}
+        onClose={closeAllModals}
+        wheel={selectedWheel}
+        onCloseWheel={handleWheelClose}
+      />
     </div>
   );
 }
