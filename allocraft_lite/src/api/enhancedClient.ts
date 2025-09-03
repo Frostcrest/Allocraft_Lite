@@ -59,6 +59,8 @@ export const queryClient = new QueryClient({
 // Query key factory
 export const queryKeys = {
     cycles: ['wheel-cycles'],
+    wheelDetection: ['wheel-detection'],
+    wheelDetectionResults: ['wheel-detection', 'results'],
     stocks: ['stocks'],
     stockSectors: ['stocks', 'sectors'],
     options: ['options'],
@@ -77,7 +79,7 @@ export const queryKeys = {
 async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
     const requestId = Math.random().toString(36).substr(2, 9);
     const startTime = performance.now();
-    
+
     console.group(`🔄 [${requestId}] API Request: ${path}`);
     console.log('📊 Request Details:', {
         path,
@@ -117,7 +119,7 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
                 errorData.code,
                 { path, responseTime, errorData }
             );
-            
+
             console.error('🚨 Throwing ApiError:', apiError);
             console.groupEnd();
             throw apiError;
@@ -128,10 +130,10 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
         console.log('📦 Response data preview:', {
             type: Array.isArray(data) ? 'Array' : typeof data,
             keys: typeof data === 'object' ? Object.keys(data) : 'N/A',
-            length: Array.isArray(data) ? data.length : 
-                   (data && typeof data === 'object' && 'length' in data) ? data.length : 'N/A'
+            length: Array.isArray(data) ? data.length :
+                (data && typeof data === 'object' && 'length' in data) ? data.length : 'N/A'
         });
-        
+
         console.groupEnd();
         return data;
     } catch (error) {
@@ -142,7 +144,7 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
             path
         });
         console.groupEnd();
-        
+
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             error instanceof Error ? error.message : 'Network error',
@@ -307,6 +309,84 @@ export const useWheelCycles = () => {
     });
 };
 
+/**
+ * Hook for wheel detection from positions
+ * Analyzes positions and detects wheel opportunities using the new detection endpoint
+ */
+export const useWheelDetection = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<any, ApiError, any>({
+        mutationFn: async (detectionParams = {}) => {
+            console.log('🔍 useWheelDetection: Starting position analysis...', detectionParams);
+            
+            const requestData = {
+                include_confidence_details: true,
+                include_market_context: true,
+                min_confidence_score: detectionParams.minConfidence || 0,
+                strategy_filters: detectionParams.strategies || [],
+                ...detectionParams
+            };
+
+            const result = await enhancedFetch('/api/wheels/detect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData)
+            });
+
+            console.log('✅ useWheelDetection: Analysis complete', {
+                opportunitiesFound: result.opportunities?.length || 0,
+                analysisDate: result.analysis_date
+            });
+
+            return result;
+        },
+        onSuccess: (data) => {
+            console.log('🎯 useWheelDetection: Detection successful', {
+                opportunities: data.opportunities?.length || 0,
+                marketContext: data.market_context
+            });
+            
+            // Optionally invalidate related queries
+            queryClient.invalidateQueries({ queryKey: queryKeys.positions });
+        },
+        onError: (error) => {
+            console.error('❌ useWheelDetection: Detection failed', error);
+        }
+    });
+};
+
+/**
+ * Hook for auto-refreshing wheel detection results
+ * Provides cached detection results with optional auto-refresh during market hours
+ */
+export const useWheelDetectionResults = (options: {
+    enabled?: boolean;
+    refetchInterval?: number;
+} = {}) => {
+    const { enabled = true, refetchInterval = 30000 } = options;
+
+    return useQuery<any>({
+        queryKey: queryKeys.wheelDetectionResults,
+        queryFn: async () => {
+            console.log('🔄 useWheelDetectionResults: Fetching cached results...');
+            
+            // This could fetch cached results from backend if available
+            // For now, return empty results to indicate no cached data
+            return {
+                opportunities: [],
+                analysis_date: null,
+                market_context: null,
+                cache_status: 'no_cache'
+            };
+        },
+        enabled,
+        refetchInterval: enabled ? refetchInterval : false,
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        retry: 1
+    });
+};
+
 export const useCreateWheelCycle = () => {
     const queryClient = useQueryClient();
 
@@ -389,8 +469,8 @@ export const useUser = () => {
         queryFn: () => {
             const token = sessionStorage.getItem("allocraft_token");
             if (!token) throw new ApiError("Not authenticated", 401, "AUTH_REQUIRED");
-            return enhancedFetch('/auth/me', { 
-                headers: { Authorization: `Bearer ${token}` } 
+            return enhancedFetch('/auth/me', {
+                headers: { Authorization: `Bearer ${token}` }
             });
         },
         retry: (failureCount, error) => {
@@ -404,7 +484,7 @@ export const useUser = () => {
 
 export const useLogout = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<void, ApiError, void>({
         mutationFn: () => {
             // Clear session storage
@@ -422,20 +502,20 @@ export const useLogout = () => {
 
 export const useLogin = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<{ access_token: string }, ApiError, { username: string; password: string }>({
         mutationFn: async ({ username, password }) => {
             const form = new URLSearchParams();
             form.append('username', username);
             form.append('password', password);
-            
+
             const apiBaseUrl = await getCachedApiBaseUrl();
             const response = await fetch(`${apiBaseUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: form,
             });
-            
+
             if (!response.ok) {
                 let errorMessage = 'Login failed';
                 try {
@@ -446,15 +526,15 @@ export const useLogin = () => {
                 }
                 throw new ApiError(errorMessage, response.status, 'LOGIN_FAILED');
             }
-            
+
             return await response.json();
         },
         onSuccess: (data) => {
             // Store the token
             sessionStorage.setItem('allocraft_token', data.access_token);
             // Signal post-login loading state for the dashboard
-            try { 
-                sessionStorage.setItem('allocraft_post_login_loading', '1'); 
+            try {
+                sessionStorage.setItem('allocraft_post_login_loading', '1');
             } catch { }
             // Invalidate user cache to refetch after login
             queryClient.invalidateQueries({ queryKey: queryKeys.user });
@@ -464,18 +544,18 @@ export const useLogin = () => {
 
 export const useSignup = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation<{ access_token: string }, ApiError, { username: string; email: string; password: string }>({
         mutationFn: async ({ username, email, password }) => {
             const apiBaseUrl = await getCachedApiBaseUrl();
-            
+
             // First, register the user
             const signupResponse = await fetch(`${apiBaseUrl}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password }),
             });
-            
+
             if (!signupResponse.ok) {
                 let errorMessage = 'Signup failed';
                 try {
@@ -486,30 +566,30 @@ export const useSignup = () => {
                 }
                 throw new ApiError(errorMessage, signupResponse.status, 'SIGNUP_FAILED');
             }
-            
+
             // Auto-login after signup
             const form = new URLSearchParams();
             form.append('username', username);
             form.append('password', password);
-            
+
             const loginResponse = await fetch(`${apiBaseUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: form,
             });
-            
+
             if (!loginResponse.ok) {
                 throw new ApiError('Signup successful but auto-login failed', loginResponse.status, 'AUTO_LOGIN_FAILED');
             }
-            
+
             return await loginResponse.json();
         },
         onSuccess: (data) => {
             // Store the token
             sessionStorage.setItem('allocraft_token', data.access_token);
             // Signal post-login loading state for the dashboard
-            try { 
-                sessionStorage.setItem('allocraft_post_login_loading', '1'); 
+            try {
+                sessionStorage.setItem('allocraft_post_login_loading', '1');
             } catch { }
             // Invalidate user cache to refetch after login
             queryClient.invalidateQueries({ queryKey: queryKeys.user });
@@ -542,19 +622,19 @@ export const useStockPositions = () => {
             console.log('🔍 useStockPositions: Starting fetch...');
             const response = await enhancedFetch<{ value: UnifiedPosition[]; Count: number }>('/portfolio/positions/stocks');
             console.log('📊 useStockPositions: Raw response:', response);
-            
+
             // Backend returns { "value": [...], "Count": 7 } - extract the array
             if (response.value && Array.isArray(response.value)) {
                 console.log(`✅ useStockPositions: Extracted ${response.value.length} positions`);
                 return response.value;
             }
-            
+
             // Fallback if response is already an array
             if (Array.isArray(response)) {
                 console.log(`✅ useStockPositions: Direct array with ${response.length} positions`);
                 return response;
             }
-            
+
             console.warn('⚠️ useStockPositions: Unexpected response format, returning empty array');
             return [];
         },
@@ -572,19 +652,19 @@ export const useOptionPositions = () => {
             console.log('🔍 useOptionPositions: Starting fetch...');
             const response = await enhancedFetch<{ value: UnifiedPosition[]; Count: number }>('/portfolio/positions/options');
             console.log('📊 useOptionPositions: Raw response:', response);
-            
+
             // Backend returns { "value": [...], "Count": 16 } - extract the array
             if (response.value && Array.isArray(response.value)) {
                 console.log(`✅ useOptionPositions: Extracted ${response.value.length} positions`);
                 return response.value;
             }
-            
+
             // Fallback if response is already an array
             if (Array.isArray(response)) {
                 console.log(`✅ useOptionPositions: Direct array with ${response.length} positions`);
                 return response;
             }
-            
+
             console.warn('⚠️ useOptionPositions: Unexpected response format, returning empty array');
             return [];
         },
@@ -645,7 +725,7 @@ export const useBackendHealth = () => {
  */
 export const usePositionsData = () => {
     console.log('🎯 usePositionsData: Initializing data hooks...');
-    
+
     const allPositions = useAllPositions();
     const stockPositions = useStockPositions();
     const optionPositions = useOptionPositions();

@@ -69,7 +69,7 @@ const Stocks: React.FC = () => {
     const totalShares = position.shares || 0;
     const currentPrice = position.current_price || 0;
     const averagePrice = position.average_price || 0;
-    
+
     if (totalShares <= 0) return [];
 
     const lots: TaxLot[] = [];
@@ -149,7 +149,7 @@ const Stocks: React.FC = () => {
     const existingPositions = JSON.parse(localStorage.getItem('stockPositions') || '[]');
     const updatedPositions = [...existingPositions, position];
     localStorage.setItem('stockPositions', JSON.stringify(updatedPositions));
-    
+
     // Trigger refetch to get latest data
     refetch();
   };
@@ -159,7 +159,7 @@ const Stocks: React.FC = () => {
     const existingPositions = JSON.parse(localStorage.getItem('stockPositions') || '[]');
     const updatedPositions = existingPositions.filter((p: StockPosition) => p.id !== id);
     localStorage.setItem('stockPositions', JSON.stringify(updatedPositions));
-    
+
     // Trigger refetch to get latest data
     refetch();
   };
@@ -260,7 +260,7 @@ const Stocks: React.FC = () => {
           <p className="text-slate-600">Manage your stock portfolio with tax lot tracking</p>
         </div>
         <div className="flex gap-3">
-          <Button 
+          <Button
             onClick={() => setIsAddModalOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
@@ -281,7 +281,7 @@ const Stocks: React.FC = () => {
             <p className="text-sm text-slate-600">Stock positions</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Total Value</CardTitle>
@@ -317,8 +317,8 @@ const Stocks: React.FC = () => {
 
             return (
               <Card key={symbol} className="overflow-hidden">
-                <CardHeader 
-                  className="cursor-pointer hover:bg-slate-50 transition-colors" 
+                <CardHeader
+                  className="cursor-pointer hover:bg-slate-50 transition-colors"
                   onClick={() => toggleTicker(symbol)}
                 >
                   <div className="flex items-center justify-between">
@@ -379,7 +379,7 @@ const Stocks: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-slate-900 mb-2">No stock positions yet</h3>
               <p className="text-slate-600 mb-6">Start building your portfolio by adding your first stock position.</p>
-              <Button 
+              <Button
                 onClick={() => setIsAddModalOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
@@ -445,8 +445,8 @@ const TaxLotCard: React.FC<TaxLotCardProps> = ({ lot, symbol, canRemove, onRemov
           }`}>
           {getLotTitle()}
         </span>
-        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit 
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-700' 
+        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit
+          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
           : 'border-red-300 bg-red-50 text-red-700'
           }`}>
           {isProfit ? 'Profit' : 'Loss'}

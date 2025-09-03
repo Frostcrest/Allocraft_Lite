@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Port Detection Test</title>
 </head>
+
 <body>
     <h1>Dynamic Port Detection Test</h1>
     <div id="results"></div>
-    
+
     <script type="module">
         // Test the dynamic port detection
         import { getCachedApiBaseUrl, testApiPort, autoDetectBackendPort } from './src/utils/apiConfig.js';
-        
+
         const resultsDiv = document.getElementById('results');
-        
+
         async function runTests() {
             resultsDiv.innerHTML = '<p>Testing dynamic port detection...</p>';
-            
+
             try {
                 // Test 1: Get cached API base URL
                 const apiUrl = await getCachedApiBaseUrl();
                 resultsDiv.innerHTML += `<p>✅ Detected API URL: ${apiUrl}</p>`;
-                
+
                 // Test 2: Test specific ports
                 const testPorts = [8001, 8000, 8002];
                 for (const port of testPorts) {
@@ -28,11 +30,11 @@
                     const status = isWorking ? '✅' : '❌';
                     resultsDiv.innerHTML += `<p>${status} Port ${port}: ${isWorking ? 'Working' : 'Not responding'}</p>`;
                 }
-                
+
                 // Test 3: Auto-detect backend
                 const detectedUrl = await autoDetectBackendPort();
                 resultsDiv.innerHTML += `<p>🔍 Auto-detected backend: ${detectedUrl}</p>`;
-                
+
                 // Test 4: Test auth endpoint
                 try {
                     const response = await fetch(`${apiUrl}/auth/login`, {
@@ -44,14 +46,15 @@
                 } catch (error) {
                     resultsDiv.innerHTML += `<p>❌ Auth endpoint error: ${error.message}</p>`;
                 }
-                
+
             } catch (error) {
                 resultsDiv.innerHTML += `<p>❌ Test error: ${error.message}</p>`;
             }
         }
-        
+
         // Run tests when page loads
         window.addEventListener('load', runTests);
     </script>
 </body>
+
 </html>

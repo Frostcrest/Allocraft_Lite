@@ -15,7 +15,7 @@ async function testEndpoints() {
       arrayLength: Array.isArray(data) ? data.length : 'N/A',
       valueArrayLength: data.value ? data.value.length : 'N/A'
     });
-    
+
     if (data.value && data.value.length > 0) {
       console.log('📝 First stock position:', data.value[0]);
     }
@@ -34,7 +34,7 @@ async function testEndpoints() {
       arrayLength: Array.isArray(data) ? data.length : 'N/A',
       valueArrayLength: data.value ? data.value.length : 'N/A'
     });
-    
+
     if (data.value && data.value.length > 0) {
       console.log('📝 First option position:', data.value[0]);
     }

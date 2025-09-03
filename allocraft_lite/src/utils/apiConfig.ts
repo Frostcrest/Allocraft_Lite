@@ -58,7 +58,7 @@ export const testApiPort = async (port: number): Promise<boolean> => {
 // Auto-detect working backend port from common development ports
 export const autoDetectBackendPort = async (): Promise<string> => {
   console.log('Auto-detecting backend port...');
-  
+
   for (const port of DEFAULT_PORTS) {
     console.log(`Testing port ${port}...`);
     const isWorking = await testApiPort(port);
@@ -67,9 +67,9 @@ export const autoDetectBackendPort = async (): Promise<string> => {
       return `http://127.0.0.1:${port}`;
     }
   }
-  
+
   console.warn('⚠️ No working backend detected, falling back to default');
-  return 'http://127.0.0.1:8001'; // Default fallback
+  return 'http://127.0.0.1:8000'; // Default fallback
 };
 
 // Cached API base URL to avoid repeated detection
@@ -85,7 +85,7 @@ export const getCachedApiBaseUrl = async (): Promise<string> => {
   const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
   if (envUrl) {
     cachedApiBaseUrl = envUrl;
-    return cachedApiBaseUrl;
+    return envUrl;
   }
 
   // Auto-detect and cache

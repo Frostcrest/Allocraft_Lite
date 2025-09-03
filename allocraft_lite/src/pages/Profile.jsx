@@ -44,24 +44,24 @@ export default function Profile() {
                     <div className="flex items-center justify-between border-b pb-4">
                         <h2 className="text-lg font-semibold text-slate-900">Account Information</h2>
                     </div>
-                    
+
                     <div className="space-y-3">
                         <div className="flex justify-between">
-                            <span className="text-slate-500 font-medium">Username:</span> 
+                            <span className="text-slate-500 font-medium">Username:</span>
                             <span className="text-slate-900">{user.username}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-slate-500 font-medium">Email:</span> 
+                            <span className="text-slate-500 font-medium">Email:</span>
                             <span className="text-slate-900">{user.email}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-slate-500 font-medium">Roles:</span> 
+                            <span className="text-slate-500 font-medium">Roles:</span>
                             <span className="text-slate-900">{user.roles}</span>
                         </div>
                     </div>
-                    
+
                     <div className="pt-4 border-t">
-                        <button 
+                        <button
                             onClick={handleLogout}
                             disabled={logoutMutation.isLoading}
                             className="px-6 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

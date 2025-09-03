@@ -44,7 +44,7 @@ export function LotActionsProvider({ children, lots, setLots, cycleId, ticker: _
         cycleId: number; ticker?: string; onEventCreated?: (e: any) => void;
     }) {
     const [modal, setModal] = useState<LotActionsContextValue["modal"]>(null);
-    
+
     // React Query hook for creating wheel events
     const createEventMutation = useCreateWheelEvent();
 

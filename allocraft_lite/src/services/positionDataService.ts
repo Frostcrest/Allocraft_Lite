@@ -163,16 +163,16 @@ export class PositionDataService {
             }
 
             const [, ticker, dateStr, optionType, strikeStr] = match;
-            
+
             // Parse date (YYMMDD)
             const year = 2000 + parseInt(dateStr.substring(0, 2));
             const month = dateStr.substring(2, 4);
             const day = dateStr.substring(4, 6);
             const expirationDate = `${year}-${month}-${day}`;
-            
+
             // Parse strike price (divide by 1000)
             const strikePrice = parseInt(strikeStr) / 1000;
-            
+
             return { strikePrice, expirationDate };
         } catch (error) {
             console.warn(`Error parsing option symbol ${symbol}:`, error);

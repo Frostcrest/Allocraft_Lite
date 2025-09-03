@@ -29,12 +29,12 @@ function resolveApiBase(): string {
             const { protocol, hostname } = window.location;
             // If we're on localhost (any port), target the local backend.
             if (hostname === "localhost" || hostname === "127.0.0.1") {
-                return `${protocol}//localhost:8001`;
+                return `http://127.0.0.1:8000`;
             }
         }
     } catch { }
     // Otherwise use configured API base or fallback to local
-    return (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8001";
+    return (import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 }
 
 export const API_BASE: string = resolveApiBase();

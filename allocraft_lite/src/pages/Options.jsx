@@ -74,7 +74,7 @@ const categorizeOptions = (options) => {
 
   return {
     longCalls,
-    longPuts, 
+    longPuts,
     shortCalls,
     shortPuts,
     pmccPositions,
@@ -91,9 +91,9 @@ const StrategyBadge = ({ strategy }) => {
     'PMCC': { color: 'bg-green-100 text-green-800', icon: '⚡' },
     'Naked': { color: 'bg-yellow-100 text-yellow-800', icon: '⚠️' }
   };
-  
+
   const config = strategyConfig[strategy] || { color: 'bg-gray-100 text-gray-800', icon: '📊' };
-  
+
   return (
     <Badge className={`${config.color} text-xs`}>
       {config.icon} {strategy}
@@ -143,23 +143,6 @@ export default function Options() {
     }
     return rawOptions.filter(option => option && typeof option === 'object');
   }, [rawOptions]);
-
-  // Create debug state to display on page
-  const [debugInfo, setDebugInfo] = React.useState(null);
-
-  // Debug logging
-  React.useEffect(() => {
-    console.log('Options data received:', {
-      rawOptions,
-      processedOptions: options,
-      isArray: Array.isArray(options),
-      length: options?.length
-    });
-
-    if (error) {
-      console.error('Options API error:', error);
-    }
-  }, [options, error, rawOptions]);
 
   // Auto-refresh prices on component mount
   React.useEffect(() => {
@@ -310,11 +293,11 @@ export default function Options() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
-                Options Positions
+                Options Portfolio
               </h1>
-              <p className="text-slate-600 mt-2">
+              <p className="text-slate-600 mt-2 text-lg">
                 Manage your options contracts • Total Value:{" "}
-                {formatCurrency(calculateTotalValue())}
+                <span className="font-semibold text-slate-900">{formatCurrency(calculateTotalValue())}</span>
               </p>
               <div className="text-sm text-slate-500 mt-1 space-y-1">
                 <p>📈 <strong>Long Calls/Puts:</strong> Directional bets and protection</p>
@@ -328,7 +311,7 @@ export default function Options() {
               )}
             </div>
             <div className="flex gap-3">
-              <RefreshPricesButton 
+              <RefreshPricesButton
                 variant="outline"
                 className="border-blue-200 text-blue-700 hover:bg-blue-50"
               />
@@ -451,10 +434,10 @@ export default function Options() {
 
                       // Calculate enhanced P&L with strategy insights
                       const pnlResult = calculateStrategyPnL(positionData, strategyType);
-                      
+
                       // Use backend P&L if available, otherwise use calculated
                       const profitLoss = option.profit_loss !== undefined ? option.profit_loss : pnlResult.profitLoss;
-                      const profitLossPercent = option.profit_loss_percent !== undefined ? 
+                      const profitLossPercent = option.profit_loss_percent !== undefined ?
                         option.profit_loss_percent : pnlResult.profitLossPercent;
 
                       const positionType = isShort ? 'Short' : 'Long';
@@ -498,10 +481,10 @@ export default function Options() {
                           </TableCell>
                           <TableCell>{formatCurrency(option.average_price || 0)}</TableCell>
                           <TableCell>
-                            {(option.current_price !== null && 
-                              option.current_price !== undefined && 
-                              typeof option.current_price === 'number') ? 
-                              formatCurrency(option.current_price) : 
+                            {(option.current_price !== null &&
+                              option.current_price !== undefined &&
+                              typeof option.current_price === 'number') ?
+                              formatCurrency(option.current_price) :
                               'N/A'
                             }
                           </TableCell>

@@ -35,9 +35,9 @@ export default function Signup() {
                 )}
                 <div>
                     <label className="block text-sm mb-1">Username</label>
-                    <input 
-                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500" 
-                        value={username} 
+                    <input
+                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        value={username}
                         onChange={e => setUsername(e.target.value)}
                         disabled={signupMutation.isLoading}
                         required
@@ -45,10 +45,10 @@ export default function Signup() {
                 </div>
                 <div>
                     <label className="block text-sm mb-1">Email</label>
-                    <input 
+                    <input
                         type="email"
-                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500" 
-                        value={email} 
+                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        value={email}
                         onChange={e => setEmail(e.target.value)}
                         disabled={signupMutation.isLoading}
                         required
@@ -56,16 +56,16 @@ export default function Signup() {
                 </div>
                 <div>
                     <label className="block text-sm mb-1">Password</label>
-                    <input 
-                        type="password" 
-                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500" 
-                        value={password} 
+                    <input
+                        type="password"
+                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        value={password}
                         onChange={e => setPassword(e.target.value)}
                         disabled={signupMutation.isLoading}
                         required
                     />
                 </div>
-                <button 
+                <button
                     type="submit"
                     disabled={signupMutation.isLoading}
                     className="w-full bg-slate-900 text-white rounded py-2 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

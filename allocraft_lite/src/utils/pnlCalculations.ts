@@ -37,11 +37,11 @@ export function calculateOptionPnL(position: OptionPosition): PnLResult {
   const { contracts, averagePrice, currentPrice } = position;
   const absContracts = Math.abs(contracts);
   const multiplier = 100; // Standard option contract multiplier
-  
+
   // Calculate cost basis and market value
   const costBasis = averagePrice * absContracts * multiplier;
   const marketValue = currentPrice * absContracts * multiplier;
-  
+
   // Calculate P&L based on position type
   let profitLoss: number;
   if (contracts > 0) {
@@ -51,10 +51,10 @@ export function calculateOptionPnL(position: OptionPosition): PnLResult {
     // Short position: profit when current < average
     profitLoss = costBasis - marketValue;
   }
-  
+
   // Calculate percentage
   const profitLossPercent = costBasis > 0 ? (profitLoss / costBasis) * 100 : 0;
-  
+
   return {
     profitLoss: Math.round(profitLoss * 100) / 100,
     profitLossPercent: Math.round(profitLossPercent * 100) / 100,
@@ -73,13 +73,13 @@ export function calculateStrategyPnL(
 ): StrategyPnLResult {
   const basicPnL = calculateOptionPnL(position);
   const { contracts, averagePrice, optionType, strikePrice } = position;
-  
+
   let strategyInsights: Partial<StrategyPnLResult> = {
     strategyType: strategyType || 'unknown',
     riskLevel: 'medium',
     timeDecayImpact: 'neutral'
   };
-  
+
   // Add strategy-specific calculations
   if (strategyType === 'wheel' && optionType === 'PUT' && contracts < 0) {
     // Cash-secured put (wheel start)
@@ -107,7 +107,7 @@ export function calculateStrategyPnL(
       timeDecayImpact: 'neutral'
     };
   }
-  
+
   return {
     ...basicPnL,
     ...strategyInsights
@@ -119,7 +119,7 @@ export function calculateStrategyPnL(
  */
 export function formatCurrency(value: number): string {
   if (value === 0) return '$0.00';
-  
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -133,7 +133,7 @@ export function formatCurrency(value: number): string {
  */
 export function formatPercent(value: number): string {
   if (value === 0) return '0.00%';
-  
+
   return new Intl.NumberFormat('en-US', {
     style: 'percent',
     minimumFractionDigits: 2,
@@ -179,7 +179,7 @@ export function getStrategyBadgeClass(strategyType: string): string {
     'naked': 'bg-yellow-100 text-yellow-800 border-yellow-300',
     'unknown': 'bg-slate-100 text-slate-800 border-slate-300'
   };
-  
+
   return strategyColors[strategyType] || strategyColors['unknown'];
 }
 
@@ -200,23 +200,23 @@ export function calculatePortfolioPnL(positions: OptionPosition[]): {
   let totalCostBasis = 0;
   let winningPositions = 0;
   let losingPositions = 0;
-  
+
   positions.forEach(position => {
     const pnl = calculateOptionPnL(position);
     totalProfitLoss += pnl.profitLoss;
     totalMarketValue += pnl.marketValue;
     totalCostBasis += pnl.costBasis;
-    
+
     if (pnl.profitLoss > 0) {
       winningPositions++;
     } else if (pnl.profitLoss < 0) {
       losingPositions++;
     }
   });
-  
+
   const totalProfitLossPercent = totalCostBasis > 0 ? (totalProfitLoss / totalCostBasis) * 100 : 0;
   const winRate = positions.length > 0 ? (winningPositions / positions.length) * 100 : 0;
-  
+
   return {
     totalProfitLoss: Math.round(totalProfitLoss * 100) / 100,
     totalProfitLossPercent: Math.round(totalProfitLossPercent * 100) / 100,
@@ -238,6 +238,6 @@ export function validatePnLCalculation(
 ): boolean {
   const profitLossDiff = Math.abs(frontendPnL.profitLoss - (backendPnL.profit_loss || 0));
   const marketValueDiff = Math.abs(frontendPnL.marketValue - (backendPnL.market_value || 0));
-  
+
   return profitLossDiff <= tolerance && marketValueDiff <= tolerance;
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -73,7 +73,7 @@ const EnhancedRefreshButton: React.FC<EnhancedRefreshButtonProps> = ({
     },
     onSuccess: (data) => {
       toast({
-        title: "Selected Prices Updated", 
+        title: "Selected Prices Updated",
         description: data.message || `Updated prices for ${selectedTickers.length} tickers`,
       });
       queryClient.invalidateQueries({ queryKey: ['positions'] });
@@ -159,20 +159,20 @@ const EnhancedRefreshButton: React.FC<EnhancedRefreshButtonProps> = ({
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Price Update Options</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          
+
           <DropdownMenuItem onClick={handleRefreshAll} disabled={isLoading}>
             <RefreshCcw className="w-4 h-4 mr-2" />
             Refresh All Prices
           </DropdownMenuItem>
-          
+
           <DropdownMenuItem onClick={() => setShowTickerDialog(true)} disabled={isLoading}>
             <Settings className="w-4 h-4 mr-2" />
             Refresh Selected Tickers
           </DropdownMenuItem>
-          
+
           <DropdownMenuSeparator />
-          
-          <DropdownMenuItem 
+
+          <DropdownMenuItem
             onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
             disabled={isLoading}
           >
@@ -188,7 +188,7 @@ const EnhancedRefreshButton: React.FC<EnhancedRefreshButtonProps> = ({
           <DialogHeader>
             <DialogTitle>Refresh Selected Tickers</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="flex gap-2">
               <Input
@@ -202,7 +202,7 @@ const EnhancedRefreshButton: React.FC<EnhancedRefreshButtonProps> = ({
                 Add
               </Button>
             </div>
-            
+
             {selectedTickers.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium">Selected Tickers:</p>
@@ -220,7 +220,7 @@ const EnhancedRefreshButton: React.FC<EnhancedRefreshButtonProps> = ({
                 </div>
               </div>
             )}
-            
+
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"

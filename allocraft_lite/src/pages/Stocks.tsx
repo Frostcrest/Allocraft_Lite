@@ -33,30 +33,30 @@ interface StockPosition extends UnifiedPosition {
 
 const Stocks: React.FC = () => {
   console.log('🎯 Stocks Component: Initializing...');
-  
+
   // Add debug function to test API directly
   const testApiDirectly = async () => {
     console.log('🧪 Testing API endpoints directly...');
     try {
       // Test stocks endpoint
-      const stocksResponse = await fetch('http://127.0.0.1:8001/portfolio/positions/stocks');
+      const stocksResponse = await fetch('http://127.0.0.1:8000/portfolio/positions/stocks');
       const stocksData = await stocksResponse.json();
       console.log('📊 Direct stocks API response:', stocksData);
-      
+
       // Test options endpoint
-      const optionsResponse = await fetch('http://127.0.0.1:8001/portfolio/positions/options');
+      const optionsResponse = await fetch('http://127.0.0.1:8000/portfolio/positions/options');
       const optionsData = await optionsResponse.json();
       console.log('📊 Direct options API response:', optionsData);
-      
+
       // Test all positions endpoint
-      const allResponse = await fetch('http://127.0.0.1:8001/portfolio/positions');
+      const allResponse = await fetch('http://127.0.0.1:8000/portfolio/positions');
       const allData = await allResponse.json();
       console.log('📊 Direct all positions API response:', allData);
     } catch (error) {
       console.error('❌ Direct API test failed:', error);
     }
   };
-  
+
   // React Query hooks replace manual state management
   const {
     allPositions,
@@ -75,7 +75,7 @@ const Stocks: React.FC = () => {
   });
 
   const backendHealth = useBackendHealth();
-  
+
   console.log('🏥 Backend Health Status:', {
     isLoading: backendHealth.isLoading,
     isError: backendHealth.isError,
@@ -92,13 +92,13 @@ const Stocks: React.FC = () => {
   const stockPositions = useMemo<StockPosition[]>(() => {
     console.log('🔄 Stocks Component: Starting data transformation...');
     console.log('📥 Raw allPositions data:', allPositions);
-    
+
     if (!allPositions || allPositions.length === 0) {
       console.warn('⚠️ No positions data available for transformation');
       return [];
     }
 
-    console.log('📋 Position breakdown by asset_type:', 
+    console.log('📋 Position breakdown by asset_type:',
       allPositions.reduce((acc, pos) => {
         acc[pos.asset_type] = (acc[pos.asset_type] || 0) + 1;
         return acc;
@@ -117,7 +117,7 @@ const Stocks: React.FC = () => {
 
     const transformed = filtered.map((pos, index) => {
       const shares = (pos.long_quantity || 0) - (pos.short_quantity || 0);
-      const marketPrice = pos.current_price || 
+      const marketPrice = pos.current_price ||
         (pos.market_value && shares > 0 ? pos.market_value / shares : 0);
 
       console.log(`📦 Transforming position ${index + 1}/${filtered.length}:`, {
@@ -165,9 +165,9 @@ const Stocks: React.FC = () => {
 
   // Function to find covered calls for a given stock symbol
   const getCoveredCalls = (symbol: string) => {
-    return allOptions.filter(option => 
-      option.ticker === symbol && 
-      option.option_type === 'Call' && 
+    return allOptions.filter(option =>
+      option.ticker === symbol &&
+      option.option_type === 'Call' &&
       option.short_quantity > 0
     );
   };
@@ -176,10 +176,10 @@ const Stocks: React.FC = () => {
   const calculateTaxLots = (position: StockPosition): TaxLot[] => {
     const totalShares = position.shares || 0;
     // Use market_value to derive current price if current_price is zero/null
-    const currentPrice = position.current_price || 
+    const currentPrice = position.current_price ||
       (position.market_value && totalShares > 0 ? position.market_value / totalShares : 0);
     const averagePrice = position.average_price || 0;
-    
+
     if (totalShares <= 0) return [];
 
     const lots: TaxLot[] = [];
@@ -263,7 +263,7 @@ const Stocks: React.FC = () => {
     const existingPositions = JSON.parse(localStorage.getItem('stockPositions') || '[]');
     const updatedPositions = [...existingPositions, position];
     localStorage.setItem('stockPositions', JSON.stringify(updatedPositions));
-    
+
     // Trigger refetch to get latest data
     refetch();
   };
@@ -273,7 +273,7 @@ const Stocks: React.FC = () => {
     const existingPositions = JSON.parse(localStorage.getItem('stockPositions') || '[]');
     const updatedPositions = existingPositions.filter((p: StockPosition) => p.id !== id);
     localStorage.setItem('stockPositions', JSON.stringify(updatedPositions));
-    
+
     // Trigger refetch to get latest data
     refetch();
   };
@@ -364,12 +364,12 @@ const Stocks: React.FC = () => {
       stockPositionsLength: stockPositions.length,
       allPositionsLength: allPositions.length
     });
-    
+
     return (
       <div className="container mx-auto p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <h2 className="text-xl font-semibold text-red-800 mb-4">🚨 Data Loading Error</h2>
-          
+
           <div className="space-y-4">
             <div>
               <h3 className="font-medium text-red-700">Primary Error:</h3>
@@ -391,7 +391,7 @@ const Stocks: React.FC = () => {
             <div className="bg-blue-50 p-4 rounded border">
               <h3 className="font-medium text-blue-700 mb-2">🛠️ Troubleshooting Steps:</h3>
               <ol className="text-sm text-blue-600 space-y-1 list-decimal list-inside">
-                <li>Check if backend is running on port 8001</li>
+                <li>Check if backend is running on port 8000</li>
                 <li>Verify API endpoint: <code>/portfolio/positions</code></li>
                 <li>Check browser console for detailed error logs</li>
                 <li>Verify CORS configuration allows frontend requests</li>
@@ -399,7 +399,7 @@ const Stocks: React.FC = () => {
               </ol>
             </div>
 
-            <button 
+            <button
               onClick={() => {
                 console.log('🔄 Manual refetch triggered by user');
                 refetch();
@@ -424,19 +424,19 @@ const Stocks: React.FC = () => {
           <p className="text-slate-600">Manage your stock portfolio with tax lot tracking</p>
         </div>
         <div className="flex gap-3">
-          <RefreshPricesButton 
+          <RefreshPricesButton
             variant="all"
             size="md"
             className="shadow-sm"
           />
-          <Button 
+          <Button
             onClick={testApiDirectly}
             className="bg-green-600 hover:bg-green-700 text-white"
             variant="outline"
           >
             🧪 Test API
           </Button>
-          <Button 
+          <Button
             onClick={() => setIsAddModalOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
@@ -457,7 +457,7 @@ const Stocks: React.FC = () => {
             <p className="text-sm text-slate-600">Stock positions</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Total Value</CardTitle>
@@ -492,8 +492,8 @@ const Stocks: React.FC = () => {
 
             return (
               <Card key={symbol} className="overflow-hidden">
-                <CardHeader 
-                  className="cursor-pointer hover:bg-slate-50 transition-colors" 
+                <CardHeader
+                  className="cursor-pointer hover:bg-slate-50 transition-colors"
                   onClick={() => toggleTicker(symbol)}
                 >
                   <div className="flex items-center justify-between">
@@ -554,7 +554,7 @@ const Stocks: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-slate-900 mb-2">No stock positions yet</h3>
               <p className="text-slate-600 mb-6">Start building your portfolio by adding your first stock position.</p>
-              <Button 
+              <Button
                 onClick={() => setIsAddModalOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
@@ -620,8 +620,8 @@ const TaxLotCard: React.FC<TaxLotCardProps> = ({ lot, symbol, canRemove, onRemov
           }`}>
           {getLotTitle()}
         </span>
-        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit 
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-700' 
+        <span className={`inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-medium ${isProfit
+          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
           : 'border-red-300 bg-red-50 text-red-700'
           }`}>
           {isProfit ? 'Profit' : 'Loss'}

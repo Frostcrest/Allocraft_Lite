@@ -154,7 +154,7 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-3">
-            <RefreshPricesButton 
+            <RefreshPricesButton
               variant="all"
               size="md"
               className="shadow-sm"

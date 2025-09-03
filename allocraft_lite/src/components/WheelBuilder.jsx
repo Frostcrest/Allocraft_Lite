@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Zap, TrendingUp, DollarSign, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { PositionDataService } from "@/services/positionDataService";
 import { WheelDetectionService } from "@/services/wheelDetection";
-import { useCreateWheelCycle } from "@/api/enhancedClient";
+import { useCreateWheelCycle, useWheelDetection } from "@/api/enhancedClient";
 import { formatCurrency } from "@/lib/utils";
 
 const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
@@ -16,9 +16,10 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState('');
     const [selectedResult, setSelectedResult] = useState(null);
-    
-    // React Query hook for creating wheel cycles
+
+    // React Query hooks for wheel operations
     const createWheelMutation = useCreateWheelCycle();
+    const wheelDetectionMutation = useWheelDetection();
 
     // Use external control if provided, otherwise use internal state
     const modalIsOpen = externalIsOpen !== undefined ? externalIsOpen : isOpen;
@@ -59,31 +60,60 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
         setError('');
 
         try {
-            console.log('🔍 Analyzing all positions for wheel opportunities...');
+            console.log('🔍 Starting backend wheel detection analysis...');
 
-            // Get fresh position data from all sources
-            const positions = await PositionDataService.getAllPositions();
+            // Use the new React Query hook for backend detection
+            const detectionResult = await wheelDetectionMutation.mutateAsync({
+                min_confidence_score: 0,
+                include_confidence_details: true,
+                include_market_context: true
+            });
 
-            if (positions.length === 0) {
-                setError('No positions found. Add some stock positions to detect wheel opportunities.');
-                return;
+            console.log('✅ Backend detection complete:', detectionResult);
+
+            // Extract opportunities from backend response
+            const opportunities = detectionResult.opportunities || [];
+            
+            if (opportunities.length === 0) {
+                // Fallback to frontend detection if backend returns no results
+                console.log('🔄 No backend results, falling back to frontend detection...');
+                
+                const positions = await PositionDataService.getAllPositions();
+                if (positions.length === 0) {
+                    setError('No positions found. Add some stock positions to detect wheel opportunities.');
+                    return;
+                }
+
+                const frontendResults = WheelDetectionService.detectWheelStrategies(positions);
+                console.log(`📊 Frontend detection found ${frontendResults.length} opportunities`);
+                setDetectedWheels(frontendResults);
+                
+                if (frontendResults.length === 0) {
+                    setError('No wheel opportunities detected in your current positions. You may need positions with 100+ shares or short options to create wheels.');
+                }
+            } else {
+                console.log(`🎯 Backend found ${opportunities.length} wheel opportunities`);
+                setDetectedWheels(opportunities);
             }
 
-            console.log(`📊 Analyzing ${positions.length} positions for wheel strategies...`);
-
-            // Detect wheel strategies
-            const detectionResults = WheelDetectionService.detectWheelStrategies(positions);
-
-            console.log(`✅ Found ${detectionResults.length} potential wheel strategies:`, detectionResults);
-
-            setDetectedWheels(detectionResults);
-
-            if (detectionResults.length === 0) {
-                setError('No wheel opportunities detected in your current positions. You may need positions with 100+ shares or short options to create wheels.');
-            }
         } catch (err) {
-            console.error('❌ Error detecting wheel opportunities:', err);
-            setError('Failed to analyze positions. Please try again.');
+            console.error('❌ Error in wheel detection:', err);
+            
+            // Fallback to frontend detection on backend error
+            console.log('🔄 Backend error, falling back to frontend detection...');
+            try {
+                const positions = await PositionDataService.getAllPositions();
+                if (positions.length > 0) {
+                    const frontendResults = WheelDetectionService.detectWheelStrategies(positions);
+                    setDetectedWheels(frontendResults);
+                    console.log(`📊 Fallback detection found ${frontendResults.length} opportunities`);
+                } else {
+                    setError('No positions found for analysis.');
+                }
+            } catch (fallbackErr) {
+                console.error('❌ Fallback detection also failed:', fallbackErr);
+                setError('Failed to analyze positions. Please try again.');
+            }
         } finally {
             setIsLoading(false);
         }
