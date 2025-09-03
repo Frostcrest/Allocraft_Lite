@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatCard from "../components/portfolio/StatCard";
 import { formatCurrency } from "@/lib/utils";
+import RefreshPricesButton from "@/components/RefreshPricesButton";
 
 export default function Dashboard() {
   const { stocks, options, wheels, snapshot, isLoading, error } = useDashboardData();
@@ -151,6 +152,13 @@ export default function Dashboard() {
             <p className="text-slate-600 mt-2">
               Track your investments across all asset classes
             </p>
+          </div>
+          <div className="flex gap-3">
+            <RefreshPricesButton 
+              variant="all"
+              size="md"
+              className="shadow-sm"
+            />
           </div>
         </div>
 

@@ -4,7 +4,7 @@
  */
 
 // Default port range for backend development
-const DEFAULT_PORTS = [8001, 8000, 8002, 8003, 8004];
+const DEFAULT_PORTS = [8000, 8001, 8002, 8003, 8004];
 
 // Get API base URL from environment or detect dynamically
 export const getApiBaseUrl = (): string => {
@@ -26,11 +26,11 @@ export const getApiBaseUrl = (): string => {
 const detectApiBaseUrl = (): string => {
   // For production or when VITE_API_BASE_URL is set, use that
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    return `${window.location.protocol}//${window.location.hostname}:8001`;
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
   }
 
-  // For development, default to 8001 (current backend port)
-  return 'http://127.0.0.1:8001';
+  // For development, default to 8000 (current backend port)
+  return 'http://127.0.0.1:8000';
 };
 
 // Function to test if a port is available/responding

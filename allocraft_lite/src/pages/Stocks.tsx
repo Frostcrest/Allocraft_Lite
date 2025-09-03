@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AddStockModal from '@/components/AddStockModal';
 import { usePositionsData, useBackendHealth } from '../api/enhancedClient';
 import { UnifiedPosition } from '../services/unifiedApi';
+import RefreshPricesButton from '@/components/RefreshPricesButton';
 
 // Tax Lot interface for organizing stock positions
 interface TaxLot {
@@ -32,6 +33,29 @@ interface StockPosition extends UnifiedPosition {
 
 const Stocks: React.FC = () => {
   console.log('🎯 Stocks Component: Initializing...');
+  
+  // Add debug function to test API directly
+  const testApiDirectly = async () => {
+    console.log('🧪 Testing API endpoints directly...');
+    try {
+      // Test stocks endpoint
+      const stocksResponse = await fetch('http://127.0.0.1:8001/portfolio/positions/stocks');
+      const stocksData = await stocksResponse.json();
+      console.log('📊 Direct stocks API response:', stocksData);
+      
+      // Test options endpoint
+      const optionsResponse = await fetch('http://127.0.0.1:8001/portfolio/positions/options');
+      const optionsData = await optionsResponse.json();
+      console.log('📊 Direct options API response:', optionsData);
+      
+      // Test all positions endpoint
+      const allResponse = await fetch('http://127.0.0.1:8001/portfolio/positions');
+      const allData = await allResponse.json();
+      console.log('📊 Direct all positions API response:', allData);
+    } catch (error) {
+      console.error('❌ Direct API test failed:', error);
+    }
+  };
   
   // React Query hooks replace manual state management
   const {
@@ -400,6 +424,18 @@ const Stocks: React.FC = () => {
           <p className="text-slate-600">Manage your stock portfolio with tax lot tracking</p>
         </div>
         <div className="flex gap-3">
+          <RefreshPricesButton 
+            variant="all"
+            size="md"
+            className="shadow-sm"
+          />
+          <Button 
+            onClick={testApiDirectly}
+            className="bg-green-600 hover:bg-green-700 text-white"
+            variant="outline"
+          >
+            🧪 Test API
+          </Button>
           <Button 
             onClick={() => setIsAddModalOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -498,7 +534,7 @@ const Stocks: React.FC = () => {
                                 lot={lot}
                                 symbol={symbol}
                                 canRemove={position.data_source === 'manual'}
-                                onRemove={() => removePosition(position.id)}
+                                onRemove={() => removePosition(String(position.id))}
                               />
                             ));
                           })}

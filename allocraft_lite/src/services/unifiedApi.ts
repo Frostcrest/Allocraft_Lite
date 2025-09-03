@@ -8,7 +8,7 @@ import { getApiBaseUrl } from '../utils/apiConfig';
 const API_BASE_URL = getApiBaseUrl();
 
 export interface UnifiedPosition {
-    id: string;
+    id: number | string; // Backend returns number, allow both for compatibility
     symbol: string;
     asset_type: 'EQUITY' | 'OPTION' | 'COLLECTIVE_INVESTMENT';
     long_quantity: number;
@@ -16,9 +16,12 @@ export interface UnifiedPosition {
     market_value: number;
     average_price: number;
     current_price?: number;
-    data_source: 'manual' | 'schwab' | 'fidelity';
+    data_source: 'manual' | 'schwab' | 'fidelity' | 'schwab_import';
     status: string;
     account_id?: number;
+    // Additional backend fields
+    current_day_profit_loss?: number;
+    last_updated?: string;
     // Option-specific fields
     underlying_symbol?: string; // From backend for options
     ticker?: string; // Alternative field name
@@ -40,6 +43,21 @@ export interface UnifiedAccount {
     cash_balance: number;
     position_count: number;
     last_synced: string | null;
+}
+
+export interface RefreshSummary {
+    success: boolean;
+    message: string;
+    summary: {
+        total_positions: number;
+        stocks_updated: number;
+        stocks_failed?: number;
+        options_updated: number;
+        options_failed?: number;
+        market_value_recalculated: number;
+        update_timestamp: string;
+        failed_symbols?: string[];
+    };
 }
 
 class UnifiedApiService {
@@ -80,8 +98,8 @@ class UnifiedApiService {
 
             const data = await response.json();
 
-            // The unified API already returns the correct format
-            return data;
+            // Backend returns direct array - no need to extract from wrapper
+            return Array.isArray(data) ? data : [];
         } catch (error) {
             console.error('Error fetching stock positions:', error);
             throw error;
@@ -101,8 +119,8 @@ class UnifiedApiService {
 
             const data = await response.json();
 
-            // The unified API already returns the correct format
-            return data;
+            // Backend returns direct array - no need to extract from wrapper
+            return Array.isArray(data) ? data : [];
         } catch (error) {
             console.error('Error fetching option positions:', error);
             throw error;
@@ -165,6 +183,53 @@ class UnifiedApiService {
             return await response.json();
         } catch (error) {
             console.error('Error checking backend health:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Refresh all portfolio prices (stocks and options)
+     */
+    async refreshAllPrices(): Promise<RefreshSummary> {
+        try {
+            const response = await fetch(`${this.baseUrl}/portfolio/refresh-all-prices`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error refreshing all prices:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Refresh prices for selected positions only
+     */
+    async refreshSelectedPrices(positionIds: number[]): Promise<RefreshSummary> {
+        try {
+            const response = await fetch(`${this.baseUrl}/portfolio/refresh-selected-prices`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(positionIds),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error refreshing selected prices:', error);
             throw error;
         }
     }

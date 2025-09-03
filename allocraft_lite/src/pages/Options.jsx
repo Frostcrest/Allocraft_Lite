@@ -21,6 +21,7 @@ import {
 import { Plus, Edit, Trash2, Target, RefreshCcw, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import OptionForm from "@/components/forms/OptionForm";
+import RefreshPricesButton from "@/components/RefreshPricesButton";
 import { formatCurrency } from "@/lib/utils";
 import {
   useOptions,
@@ -31,6 +32,15 @@ import {
   useRefreshOptionPrices
 } from "@/api/enhancedClient";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import {
+  calculateOptionPnL,
+  calculateStrategyPnL,
+  formatPercent,
+  getPnLColorClass,
+  getPnLBadgeClass,
+  getStrategyBadgeClass,
+  calculatePortfolioPnL
+} from "@/utils/pnlCalculations";
 
 // Utility function to categorize options by strategy
 const categorizeOptions = (options) => {
@@ -318,15 +328,10 @@ export default function Options() {
               )}
             </div>
             <div className="flex gap-3">
-              <Button
-                onClick={handleRefreshPrices}
-                disabled={isMutating}
+              <RefreshPricesButton 
                 variant="outline"
-                className="border-blue-200 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-              >
-                <RefreshCcw className={`w-4 h-4 mr-2 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
-                Refresh Prices
-              </Button>
+                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              />
               <Button
                 onClick={handleAddNew}
                 disabled={isMutating}
@@ -421,22 +426,48 @@ export default function Options() {
                         return null;
                       }
 
-                      const pl = option.current_price && option.average_price
-                        ? (option.current_price - option.average_price) * (option.contracts || 0) * 100
-                        : (option.profit_loss || 0);
+                      // Use enhanced P&L calculation
+                      const positionData = {
+                        contracts: option.contracts || 0,
+                        averagePrice: option.average_price || 0,
+                        currentPrice: option.current_price || 0,
+                        optionType: option.option_type || 'CALL',
+                        strikePrice: option.strike_price || 0,
+                        symbol: option.symbol
+                      };
 
-                      // Determine position type (Long/Short) based on contracts
+                      // Determine strategy type based on position characteristics
+                      let strategyType = 'unknown';
                       const isShort = (option.contracts || 0) < 0;
+                      if (isShort) {
+                        if (option.option_type === 'Put') {
+                          strategyType = 'wheel';
+                        } else if (option.option_type === 'Call') {
+                          strategyType = 'covered_call';
+                        }
+                      } else {
+                        strategyType = 'long_option';
+                      }
+
+                      // Calculate enhanced P&L with strategy insights
+                      const pnlResult = calculateStrategyPnL(positionData, strategyType);
+                      
+                      // Use backend P&L if available, otherwise use calculated
+                      const profitLoss = option.profit_loss !== undefined ? option.profit_loss : pnlResult.profitLoss;
+                      const profitLossPercent = option.profit_loss_percent !== undefined ? 
+                        option.profit_loss_percent : pnlResult.profitLossPercent;
+
                       const positionType = isShort ? 'Short' : 'Long';
                       const absContracts = Math.abs(option.contracts || 0);
 
-                      // Determine strategy type for display
-                      let strategyType = 'Naked';
-                      if (option.option_type === 'Put' && isShort) {
-                        strategyType = 'Wheel Start';
-                      } else if (option.option_type === 'Call' && isShort) {
-                        strategyType = 'Covered Call'; // Could be PMCC, would need more logic
-                      }
+                      // Strategy display names
+                      const strategyDisplayNames = {
+                        'wheel': 'Wheel Start',
+                        'covered_call': 'Covered Call',
+                        'pmcc': 'PMCC',
+                        'long_option': 'Long Option',
+                        'unknown': 'Naked'
+                      };
 
                       return (
                         <TableRow key={option.id || Math.random()} className="hover:bg-slate-50">
@@ -453,7 +484,9 @@ export default function Options() {
                                   {positionType}
                                 </Badge>
                               </div>
-                              <StrategyBadge strategy={strategyType} />
+                              <Badge className={`${getStrategyBadgeClass(strategyType)} text-xs`}>
+                                {strategyDisplayNames[strategyType]}
+                              </Badge>
                             </div>
                           </TableCell>
                           <TableCell>{formatCurrency(option.strike_price || 0)}</TableCell>
@@ -472,8 +505,20 @@ export default function Options() {
                               'N/A'
                             }
                           </TableCell>
-                          <TableCell className={pl >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {formatCurrency(pl)}
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <span className={getPnLColorClass(profitLoss)}>
+                                {formatCurrency(profitLoss)}
+                              </span>
+                              <span className={`text-xs ${getPnLColorClass(profitLoss)}`}>
+                                {formatPercent(profitLossPercent)}
+                              </span>
+                              {pnlResult.breakevenPrice && (
+                                <span className="text-xs text-slate-500">
+                                  BE: {formatCurrency(pnlResult.breakevenPrice)}
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusBadge(option.status || 'Unknown')}>
