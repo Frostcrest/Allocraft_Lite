@@ -72,29 +72,77 @@ export const queryKeys = {
 };
 
 /**
- * Enhanced fetch with proper TypeScript typing
+ * Enhanced fetch with comprehensive diagnostic logging
  */
 async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+    const requestId = Math.random().toString(36).substr(2, 9);
+    const startTime = performance.now();
+    
+    console.group(`🔄 [${requestId}] API Request: ${path}`);
+    console.log('📊 Request Details:', {
+        path,
+        method: options.method || 'GET',
+        headers: options.headers,
+        body: options.body ? 'Present' : 'None',
+        timestamp: new Date().toISOString()
+    });
+
     try {
+        console.log('📡 Calling apiFetch...');
         const response = await apiFetch(path, options);
+        const responseTime = performance.now() - startTime;
+
+        console.log('📨 Response received:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            url: response.url,
+            responseTime: `${responseTime.toFixed(2)}ms`
+        });
 
         if (!response.ok) {
+            console.error('❌ Response not OK, parsing error data...');
             let errorData;
             try {
                 errorData = await response.json();
-            } catch {
+                console.error('📋 Error data:', errorData);
+            } catch (parseError) {
+                console.error('⚠️ Failed to parse error response:', parseError);
                 errorData = { message: response.statusText };
             }
 
-            throw new ApiError(
+            const apiError = new ApiError(
                 errorData.message || errorData.detail || 'Request failed',
                 response.status,
-                errorData.code
+                errorData.code,
+                { path, responseTime, errorData }
             );
+            
+            console.error('🚨 Throwing ApiError:', apiError);
+            console.groupEnd();
+            throw apiError;
         }
 
-        return await response.json();
+        console.log('✅ Parsing successful response...');
+        const data = await response.json();
+        console.log('📦 Response data preview:', {
+            type: Array.isArray(data) ? 'Array' : typeof data,
+            keys: typeof data === 'object' ? Object.keys(data) : 'N/A',
+            length: Array.isArray(data) ? data.length : 
+                   (data && typeof data === 'object' && 'length' in data) ? data.length : 'N/A'
+        });
+        
+        console.groupEnd();
+        return data;
     } catch (error) {
+        const responseTime = performance.now() - startTime;
+        console.error('💥 Request failed:', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            responseTime: `${responseTime.toFixed(2)}ms`,
+            path
+        });
+        console.groupEnd();
+        
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             error instanceof Error ? error.message : 'Network error',
@@ -507,13 +555,15 @@ export const useOptionPositions = () => {
 };
 
 /**
- * Get portfolio summary with accounts and totals
+ * Get portfolio summary with accounts and totals (optional endpoint)
  */
 export const usePortfolioSummary = () => {
     return useQuery<{ accounts: UnifiedAccount[]; total_accounts: number }>({
         queryKey: queryKeys.portfolioSummary,
         queryFn: () => enhancedFetch<{ accounts: UnifiedAccount[]; total_accounts: number }>('/portfolio/summary'),
         staleTime: 5 * 60 * 1000, // 5 minutes for summary data
+        retry: false, // Don't retry if endpoint doesn't exist
+        enabled: false, // Disable this query since endpoint is not implemented
     });
 };
 
@@ -544,36 +594,82 @@ export const useImportPositions = () => {
  * Check backend health for unified API
  */
 export const useBackendHealth = () => {
-    return useQuery<{ status: string; message: string }>({
+    return useQuery<{ status: string; message?: string }>({
         queryKey: ['backend', 'health'],
-        queryFn: () => enhancedFetch<{ status: string; message: string }>('/health'),
+        queryFn: () => enhancedFetch<{ status: string; message?: string }>('/healthz'),
         staleTime: 1 * 60 * 1000, // 1 minute
         retry: 1, // Only retry once for health checks
     });
 };
 
 /**
- * Combined positions hook for easy consumption
+ * Combined positions hook with comprehensive diagnostics
  */
 export const usePositionsData = () => {
+    console.log('🎯 usePositionsData: Initializing data hooks...');
+    
     const allPositions = useAllPositions();
     const stockPositions = useStockPositions();
     const optionPositions = useOptionPositions();
     const portfolioSummary = usePortfolioSummary();
 
-    return {
+    console.log('📊 usePositionsData: Hook states:', {
+        allPositions: {
+            isLoading: allPositions.isLoading,
+            isError: allPositions.isError,
+            dataCount: allPositions.data?.positions?.length || 0,
+            error: allPositions.error?.message
+        },
+        stockPositions: {
+            isLoading: stockPositions.isLoading,
+            isError: stockPositions.isError,
+            dataCount: stockPositions.data?.length || 0,
+            error: stockPositions.error?.message
+        },
+        optionPositions: {
+            isLoading: optionPositions.isLoading,
+            isError: optionPositions.isError,
+            dataCount: optionPositions.data?.length || 0,
+            error: optionPositions.error?.message
+        }
+    });
+
+    // Log any errors in detail
+    if (allPositions.isError) {
+        console.error('🚨 allPositions error:', allPositions.error);
+    }
+    if (stockPositions.isError) {
+        console.error('🚨 stockPositions error:', stockPositions.error);
+    }
+    if (optionPositions.isError) {
+        console.error('🚨 optionPositions error:', optionPositions.error);
+    }
+
+    const result = {
         allPositions: allPositions.data?.positions || [],
         stockPositions: stockPositions.data || [],
         optionPositions: optionPositions.data || [],
         portfolioSummary: portfolioSummary.data,
-        isLoading: allPositions.isLoading || stockPositions.isLoading || optionPositions.isLoading || portfolioSummary.isLoading,
-        isError: allPositions.isError || stockPositions.isError || optionPositions.isError || portfolioSummary.isError,
-        error: allPositions.error || stockPositions.error || optionPositions.error || portfolioSummary.error,
+        isLoading: allPositions.isLoading || stockPositions.isLoading || optionPositions.isLoading,
+        isError: allPositions.isError || stockPositions.isError || optionPositions.isError, // Exclude portfolioSummary.isError
+        error: allPositions.error || stockPositions.error || optionPositions.error, // Exclude portfolioSummary.error
         refetch: () => {
+            console.log('🔄 usePositionsData: Refetching all data...');
             allPositions.refetch();
             stockPositions.refetch();
             optionPositions.refetch();
-            portfolioSummary.refetch();
+            // portfolioSummary.refetch(); // Skip refetch since it's disabled
         }
     };
+
+    console.log('✅ usePositionsData: Final result:', {
+        allPositionsCount: result.allPositions.length,
+        stockPositionsCount: result.stockPositions.length,
+        optionPositionsCount: result.optionPositions.length,
+        isLoading: result.isLoading,
+        isError: result.isError,
+        errorMessage: result.error?.message
+    });
+
+    return result;
 };

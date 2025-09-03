@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 import AddStockModal from '@/components/AddStockModal';
-import { usePositionsData, useBackendHealth } from '../api/enhancedClient';
+import { usePositionsData, useImportPositions, useBackendHealth } from '../api/enhancedClient';
 import { UnifiedPosition } from '../services/unifiedApi';
+import { isDevelopmentMode } from '../services/backendSchwabApi';
 
 // Tax Lot interface for organizing stock positions
 interface TaxLot {
@@ -16,7 +18,6 @@ interface TaxLot {
   marketValue: number;
   profitLoss: number;
   profitLossPercent: number;
-  coveredCalls?: any[]; // Options covering this lot
 }
 
 // Simplified position interface focused on stocks only
@@ -31,34 +32,18 @@ interface StockPosition extends UnifiedPosition {
 }
 
 const Stocks: React.FC = () => {
-  console.log('🎯 Stocks Component: Initializing...');
-  
   // React Query hooks replace manual state management
   const {
     allPositions,
+    portfolioSummary,
     isLoading,
     isError,
     error,
     refetch
   } = usePositionsData();
 
-  console.log('📊 Stocks Component: Raw data from usePositionsData:', {
-    allPositionsCount: allPositions.length,
-    isLoading,
-    isError,
-    errorMessage: error?.message,
-    errorDetails: error
-  });
-
+  const importPositionsMutation = useImportPositions();
   const backendHealth = useBackendHealth();
-  
-  console.log('🏥 Backend Health Status:', {
-    isLoading: backendHealth.isLoading,
-    isError: backendHealth.isError,
-    isSuccess: backendHealth.isSuccess,
-    data: backendHealth.data,
-    error: backendHealth.error?.message
-  });
 
   // UI state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -66,94 +51,23 @@ const Stocks: React.FC = () => {
 
   // Transform positions for backward compatibility - stocks only
   const stockPositions = useMemo<StockPosition[]>(() => {
-    console.log('🔄 Stocks Component: Starting data transformation...');
-    console.log('📥 Raw allPositions data:', allPositions);
-    
-    if (!allPositions || allPositions.length === 0) {
-      console.warn('⚠️ No positions data available for transformation');
-      return [];
-    }
-
-    console.log('📋 Position breakdown by asset_type:', 
-      allPositions.reduce((acc, pos) => {
-        acc[pos.asset_type] = (acc[pos.asset_type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>)
-    );
-
-    const filtered = allPositions.filter(pos => {
-      const isStock = pos.asset_type !== 'OPTION';
-      if (!isStock) {
-        console.log('🚫 Filtering out option:', pos.symbol);
-      }
-      return isStock;
-    });
-
-    console.log(`📊 Filtered ${filtered.length} stock positions from ${allPositions.length} total positions`);
-
-    const transformed = filtered.map((pos, index) => {
-      const shares = (pos.long_quantity || 0) - (pos.short_quantity || 0);
-      const marketPrice = pos.current_price || 
-        (pos.market_value && shares > 0 ? pos.market_value / shares : 0);
-
-      console.log(`📦 Transforming position ${index + 1}/${filtered.length}:`, {
-        symbol: pos.symbol,
-        asset_type: pos.asset_type,
-        long_quantity: pos.long_quantity,
-        short_quantity: pos.short_quantity,
-        calculated_shares: shares,
-        current_price: pos.current_price,
-        market_value: pos.market_value,
-        calculated_market_price: marketPrice,
-        average_price: pos.average_price
-      });
-
-      const result: StockPosition = {
+    return allPositions
+      .filter(pos => pos.asset_type !== 'OPTION') // Remove all options
+      .map(pos => ({
         ...pos,
         // Legacy compatibility fields
-        shares,
+        shares: (pos.long_quantity || 0) - (pos.short_quantity || 0),
         costBasis: pos.average_price,
-        marketPrice,
+        marketPrice: pos.current_price || 0,
         marketValue: pos.market_value,
         expanded: expandedTickers.has(pos.symbol)
-      };
-
-      return result;
-    });
-
-    console.log('✅ Stock transformation complete:', {
-      transformedCount: transformed.length,
-      symbols: transformed.map(p => p.symbol),
-      totalShares: transformed.reduce((sum, p) => sum + (p.shares || 0), 0),
-      totalValue: transformed.reduce((sum, p) => sum + (p.marketValue || 0), 0)
-    });
-
-    return transformed;
+      }));
   }, [allPositions, expandedTickers]);
-
-  // Get all options for covered call detection
-  const allOptions = useMemo(() => {
-    console.log('🔄 Extracting options for covered call detection...');
-    const options = allPositions.filter(pos => pos.asset_type === 'OPTION');
-    console.log(`📊 Found ${options.length} option positions for covered call detection`);
-    return options;
-  }, [allPositions]);
-
-  // Function to find covered calls for a given stock symbol
-  const getCoveredCalls = (symbol: string) => {
-    return allOptions.filter(option => 
-      option.ticker === symbol && 
-      option.option_type === 'Call' && 
-      option.short_quantity > 0
-    );
-  };
 
   // Calculate tax lots for a given stock position
   const calculateTaxLots = (position: StockPosition): TaxLot[] => {
     const totalShares = position.shares || 0;
-    // Use market_value to derive current price if current_price is zero/null
-    const currentPrice = position.current_price || 
-      (position.market_value && totalShares > 0 ? position.market_value / totalShares : 0);
+    const currentPrice = position.current_price || 0;
     const averagePrice = position.average_price || 0;
     
     if (totalShares <= 0) return [];
@@ -161,9 +75,6 @@ const Stocks: React.FC = () => {
     const lots: TaxLot[] = [];
     let remainingShares = totalShares;
     let lotNumber = 1;
-
-    // Get covered calls for this symbol
-    const coveredCalls = getCoveredCalls(position.symbol);
 
     // Create 100-share lots
     while (remainingShares >= 100) {
@@ -173,9 +84,6 @@ const Stocks: React.FC = () => {
       const lotProfitLoss = lotMarketValue - lotCostBasis;
       const lotProfitLossPercent = lotCostBasis > 0 ? (lotProfitLoss / lotCostBasis) * 100 : 0;
 
-      // Assign covered calls to this lot (simplified distribution)
-      const callsForThisLot = lotNumber <= coveredCalls.length ? [coveredCalls[lotNumber - 1]] : [];
-
       lots.push({
         lotNumber,
         shares: lotShares,
@@ -184,8 +92,7 @@ const Stocks: React.FC = () => {
         currentPrice,
         marketValue: lotMarketValue,
         profitLoss: lotProfitLoss,
-        profitLossPercent: lotProfitLossPercent,
-        coveredCalls: callsForThisLot.length > 0 ? callsForThisLot : undefined
+        profitLossPercent: lotProfitLossPercent
       });
 
       remainingShares -= 100;
@@ -207,8 +114,7 @@ const Stocks: React.FC = () => {
         currentPrice,
         marketValue: lotMarketValue,
         profitLoss: lotProfitLoss,
-        profitLossPercent: lotProfitLossPercent,
-        coveredCalls: undefined // Remainders typically don't have covered calls
+        profitLossPercent: lotProfitLossPercent
       });
     }
 
@@ -219,6 +125,8 @@ const Stocks: React.FC = () => {
   const addPosition = (newPositionData: { symbol: string; shares: number; costBasis: number; marketPrice: number; }) => {
     // Calculate derived values
     const marketValue = newPositionData.shares * newPositionData.marketPrice;
+    const profitLoss = marketValue - (newPositionData.costBasis * newPositionData.shares);
+    const profitLossPercent = newPositionData.costBasis > 0 ? ((newPositionData.marketPrice - newPositionData.costBasis) / newPositionData.costBasis) * 100 : 0;
 
     const position: StockPosition = {
       id: Date.now().toString(),
@@ -232,6 +140,8 @@ const Stocks: React.FC = () => {
       data_source: 'manual',
       status: 'Open',
       account_id: 1,
+      profit_loss: profitLoss,
+      profit_loss_percent: profitLossPercent,
       ticker: newPositionData.symbol
     };
 
@@ -323,7 +233,6 @@ const Stocks: React.FC = () => {
   };
 
   if (isLoading) {
-    console.log('🔄 Stocks Component: Showing loading state');
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
@@ -334,63 +243,14 @@ const Stocks: React.FC = () => {
   }
 
   if (isError) {
-    console.error('💥 Stocks Component: Error state detected:', {
-      error: error?.message,
-      errorDetails: error,
-      stockPositionsLength: stockPositions.length,
-      allPositionsLength: allPositions.length
-    });
-    
     return (
       <div className="container mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-red-800 mb-4">🚨 Data Loading Error</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-medium text-red-700">Primary Error:</h3>
-              <p className="text-red-600">{error?.message || 'Unknown error'}</p>
-            </div>
-
-            <div className="bg-white p-4 rounded border">
-              <h3 className="font-medium text-gray-700 mb-2">🔍 Diagnostic Information:</h3>
-              <div className="text-sm space-y-1">
-                <p><strong>API Error Status:</strong> {(error as any)?.status || 'Unknown'}</p>
-                <p><strong>API Error Code:</strong> {(error as any)?.code || 'None'}</p>
-                <p><strong>Request URL:</strong> {(error as any)?.context?.path || 'Unknown'}</p>
-                <p><strong>Backend Health:</strong> {backendHealth.isSuccess ? '✅ Connected' : '❌ Failed'}</p>
-                <p><strong>Positions Count:</strong> {allPositions.length}</p>
-                <p><strong>Stock Positions Count:</strong> {stockPositions.length}</p>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 p-4 rounded border">
-              <h3 className="font-medium text-blue-700 mb-2">🛠️ Troubleshooting Steps:</h3>
-              <ol className="text-sm text-blue-600 space-y-1 list-decimal list-inside">
-                <li>Check if backend is running on port 8001</li>
-                <li>Verify API endpoint: <code>/portfolio/positions</code></li>
-                <li>Check browser console for detailed error logs</li>
-                <li>Verify CORS configuration allows frontend requests</li>
-                <li>Try refreshing the page to retry the request</li>
-              </ol>
-            </div>
-
-            <button 
-              onClick={() => {
-                console.log('🔄 Manual refetch triggered by user');
-                refetch();
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-            >
-              🔄 Retry Loading Data
-            </button>
-          </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-red-600">Error loading positions: {error?.message}</div>
         </div>
       </div>
     );
   }
-
-  console.log('🎨 Stocks Component: Rendering main UI with', stockPositions.length, 'stock positions');
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -437,8 +297,8 @@ const Stocks: React.FC = () => {
             <CardTitle className="text-base font-medium">Backend Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-sm font-medium ${backendHealth.isSuccess ? 'text-emerald-600' : 'text-red-600'}`}>
-              {backendHealth.isSuccess ? '✅ Connected' : '❌ Disconnected'}
+            <div className={`text-sm font-medium ${backendHealth.isHealthy ? 'text-emerald-600' : 'text-red-600'}`}>
+              {backendHealth.isHealthy ? '✅ Connected' : '❌ Disconnected'}
             </div>
             <p className="text-xs text-slate-600">
               {stockPositions.length} positions loaded from backend
@@ -453,6 +313,7 @@ const Stocks: React.FC = () => {
           Object.entries(groupedStockPositions).map(([symbol, positions]) => {
             const summary = getStockTickerSummary(positions);
             const isExpanded = expandedTickers.has(symbol);
+            const position = positions[0]; // Use first position for main data
 
             return (
               <Card key={symbol} className="overflow-hidden">
@@ -531,9 +392,9 @@ const Stocks: React.FC = () => {
       </div>
 
       <AddStockModal
-        isOpen={isAddModalOpen}
+        open={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAdd={addPosition}
+        onSubmit={addPosition}
       />
     </div>
   );
@@ -648,24 +509,6 @@ const TaxLotCard: React.FC<TaxLotCardProps> = ({ lot, symbol, canRemove, onRemov
             </span>
           </div>
         </div>
-
-        {/* Covered Call Information */}
-        {lot.coveredCalls && lot.coveredCalls.length > 0 && (
-          <div className="pt-2 border-t border-slate-100">
-            <div className="text-xs text-slate-500 mb-1">Covered Calls</div>
-            {lot.coveredCalls.map((call, index) => (
-              <div key={index} className="flex items-center justify-between text-xs bg-purple-50 border border-purple-200 rounded-lg p-2 mb-1">
-                <div className="text-purple-700">
-                  <span className="font-medium">{call.option_type} ${call.strike_price}</span>
-                  <span className="ml-1 text-purple-600">exp: {new Date(call.expiration_date).toLocaleDateString()}</span>
-                </div>
-                <div className="text-purple-600 font-medium">
-                  {call.short_quantity} contracts
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
