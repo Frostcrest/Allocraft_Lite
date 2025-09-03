@@ -2,11 +2,11 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Zap, 
-  TrendingUp, 
-  DollarSign, 
-  Target, 
+import {
+  Zap,
+  TrendingUp,
+  DollarSign,
+  Target,
   AlertCircle,
   Info,
   Plus,
@@ -23,11 +23,11 @@ import { formatCurrency } from "@/lib/utils";
  * Wheel Opportunity Card Component
  * Displays individual wheel opportunities with strategy details and actions
  */
-const WheelOpportunityCard = ({ 
-  opportunity, 
-  onCreateWheel, 
-  onViewDetails, 
-  className = "" 
+const WheelOpportunityCard = ({
+  opportunity,
+  onCreateWheel,
+  onViewDetails,
+  className = ""
 }) => {
   if (!opportunity) {
     return null;
@@ -82,7 +82,7 @@ const WheelOpportunityCard = ({
         description: "Ready for wheel strategy initiation"
       }
     };
-    
+
     return configs[strategy] || configs.naked_stock;
   };
 
@@ -109,7 +109,7 @@ const WheelOpportunityCard = ({
 
     const stockPositions = positions.filter(p => p.type === 'stock' || p.instrument_type === 'stock');
     const optionPositions = positions.filter(p => p.type === 'option' || p.instrument_type === 'option');
-    
+
     const shares = stockPositions.reduce((sum, p) => sum + (p.quantity || p.shares || 0), 0);
     const options = optionPositions.length;
     const totalValue = positions.reduce((sum, p) => sum + (p.market_value || p.value || 0), 0);
@@ -124,7 +124,7 @@ const WheelOpportunityCard = ({
     if (!Array.isArray(recommendations) || recommendations.length === 0) {
       return "Analyze this opportunity";
     }
-    
+
     return recommendations[0]?.action || recommendations[0] || "Create wheel strategy";
   };
 
@@ -144,7 +144,7 @@ const WheelOpportunityCard = ({
               <p className="text-sm text-slate-600">{strategyConfig.title}</p>
             </div>
           </div>
-          
+
           {/* Confidence Badge */}
           <div className="flex flex-col items-end gap-1">
             <Badge variant="outline" className={confidenceStyle.style}>
@@ -200,12 +200,12 @@ const WheelOpportunityCard = ({
             </div>
           </div>
           {risk_assessment?.level && (
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={
                 risk_assessment.level === 'low' ? 'bg-green-50 text-green-700 border-green-200' :
-                risk_assessment.level === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                'bg-red-50 text-red-700 border-red-200'
+                  risk_assessment.level === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                    'bg-red-50 text-red-700 border-red-200'
               }
             >
               Risk: {risk_assessment.level}

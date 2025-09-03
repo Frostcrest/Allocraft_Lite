@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Search, TrendingUp, TrendingDown, RotateCcw, Target,
   ArrowDown, ArrowUp, Shield, DollarSign, Zap,
   AlertCircle, CheckCircle2, Info
@@ -13,9 +13,9 @@ import {
  * StrategySelectionStep - First step in wheel creation wizard
  * Allows users to select strategy type and target ticker
  */
-export default function StrategySelectionStep({ 
-  formData, 
-  updateFormData, 
+export default function StrategySelectionStep({
+  formData,
+  updateFormData,
   validationErrors,
   isQuickMode = false,
   prefilledData = null
@@ -174,7 +174,7 @@ export default function StrategySelectionStep({
           {strategies.map((strategy) => {
             const Icon = strategy.icon;
             const isSelected = selectedStrategy === strategy.id;
-            
+
             return (
               <button
                 key={strategy.id}
@@ -182,8 +182,8 @@ export default function StrategySelectionStep({
                 className={`
                   p-4 border-2 rounded-xl text-left transition-all duration-200
                   hover:shadow-lg hover:scale-[1.02]
-                  ${isSelected 
-                    ? `border-${strategy.color}-500 bg-${strategy.color}-50 shadow-lg` 
+                  ${isSelected
+                    ? `border-${strategy.color}-500 bg-${strategy.color}-50 shadow-lg`
                     : 'border-slate-200 bg-white hover:border-slate-300'
                   }
                 `}
@@ -191,20 +191,20 @@ export default function StrategySelectionStep({
                 <div className="flex items-start gap-3">
                   <div className={`
                     p-2 rounded-lg
-                    ${isSelected 
-                      ? `bg-${strategy.color}-100` 
+                    ${isSelected
+                      ? `bg-${strategy.color}-100`
                       : 'bg-slate-100'
                     }
                   `}>
                     <Icon className={`
                       w-5 h-5
-                      ${isSelected 
-                        ? `text-${strategy.color}-600` 
+                      ${isSelected
+                        ? `text-${strategy.color}-600`
                         : 'text-slate-600'
                       }
                     `} />
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-semibold text-slate-900">
@@ -214,11 +214,11 @@ export default function StrategySelectionStep({
                         <CheckCircle2 className={`w-5 h-5 text-${strategy.color}-600`} />
                       )}
                     </div>
-                    
+
                     <p className="text-sm text-slate-600 mb-3">
                       {strategy.description}
                     </p>
-                    
+
                     <div className="space-y-2">
                       <div className="flex items-center gap-4 text-xs">
                         <span className={`px-2 py-1 rounded ${getRiskColor(strategy.riskLevel)}`}>
@@ -228,7 +228,7 @@ export default function StrategySelectionStep({
                           {strategy.complexity}
                         </span>
                       </div>
-                      
+
                       <div className="text-xs text-slate-500">
                         Capital: {strategy.minCapital}
                       </div>
@@ -246,7 +246,7 @@ export default function StrategySelectionStep({
             <h4 className="font-semibold text-slate-900 mb-4">
               {selectedStrategyData.name} Details
             </h4>
-            
+
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-3">
                 <div>
@@ -296,16 +296,16 @@ export default function StrategySelectionStep({
                     <span className="font-medium text-sm">Strategy Tip</span>
                   </div>
                   <p className="text-xs text-amber-700 mt-1">
-                    {selectedStrategyData.id === 'covered_call' && 
+                    {selectedStrategyData.id === 'covered_call' &&
                       "Best for generating income from stocks you plan to hold long-term."
                     }
-                    {selectedStrategyData.id === 'cash_secured_put' && 
+                    {selectedStrategyData.id === 'cash_secured_put' &&
                       "Ideal for entering stock positions at your desired price while earning premium."
                     }
-                    {selectedStrategyData.id === 'full_wheel' && 
+                    {selectedStrategyData.id === 'full_wheel' &&
                       "Combines both strategies for maximum income potential but requires more capital."
                     }
-                    {selectedStrategyData.id === 'poor_mans_covered_call' && 
+                    {selectedStrategyData.id === 'poor_mans_covered_call' &&
                       "Advanced strategy that reduces capital requirements but increases complexity."
                     }
                   </p>
@@ -352,28 +352,27 @@ export default function StrategySelectionStep({
                 className={`
                   p-3 border rounded-lg text-left transition-all duration-200
                   hover:shadow-md hover:border-blue-300
-                  ${tickerSearch === ticker.symbol 
-                    ? 'border-blue-500 bg-blue-50' 
+                  ${tickerSearch === ticker.symbol
+                    ? 'border-blue-500 bg-blue-50'
                     : 'border-slate-200 bg-white'
                   }
                 `}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-bold text-slate-900">{ticker.symbol}</span>
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-xs ${
-                      ticker.suitability >= 90 ? 'bg-green-100 text-green-700' :
-                      ticker.suitability >= 85 ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-slate-100 text-slate-700'
-                    }`}
+                  <Badge
+                    variant="secondary"
+                    className={`text-xs ${ticker.suitability >= 90 ? 'bg-green-100 text-green-700' :
+                        ticker.suitability >= 85 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-slate-100 text-slate-700'
+                      }`}
                   >
                     {ticker.suitability}%
                   </Badge>
                 </div>
-                
+
                 <p className="text-xs text-slate-600 mb-2">{ticker.name}</p>
-                
+
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <span>{ticker.liquidity}</span>
                   <span>•</span>
@@ -407,7 +406,7 @@ export default function StrategySelectionStep({
             <span className="font-medium text-green-900">Strategy Selection Complete</span>
           </div>
           <p className="text-sm text-green-700 mt-1">
-            Ready to configure {getStrategyById(selectedStrategy)?.name} for {tickerSearch}. 
+            Ready to configure {getStrategyById(selectedStrategy)?.name} for {tickerSearch}.
             Click "Next" to set up parameters and position sizing.
           </p>
         </div>

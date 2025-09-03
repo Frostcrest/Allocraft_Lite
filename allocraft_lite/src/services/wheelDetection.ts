@@ -83,7 +83,7 @@ export class WheelDetectionService {
      * Enhanced detection method with unified data model support
      */
     static detectWheelStrategies(
-        positions: any[], 
+        positions: any[],
         options: WheelDetectionOptions = {}
     ): WheelDetectionResult[] {
         console.log('🎯 Starting enhanced wheel strategy detection with positions:', positions);
@@ -155,8 +155,8 @@ export class WheelDetectionService {
      * Enhanced analysis for ticker positions with unified data model support
      */
     private static analyzeTickerPositions(
-        ticker: string, 
-        positions: ParsedPosition[], 
+        ticker: string,
+        positions: ParsedPosition[],
         options: WheelDetectionOptions = {}
     ): WheelDetectionResult | null {
         console.log(`🔍 Analyzing ${ticker} positions for wheel strategies:`, positions);

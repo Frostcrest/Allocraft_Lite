@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Grid, 
-  List, 
-  SlidersHorizontal, 
+import {
+  Grid,
+  List,
+  SlidersHorizontal,
   Search,
   TrendingUp,
   TrendingDown,
@@ -43,7 +43,7 @@ const WheelOpportunityGrid = ({
 
     // Filter by ticker search
     if (searchTicker.trim()) {
-      filtered = filtered.filter(op => 
+      filtered = filtered.filter(op =>
         op.ticker?.toLowerCase().includes(searchTicker.toLowerCase())
       );
     }
@@ -107,7 +107,7 @@ const WheelOpportunityGrid = ({
   // Grid layout class based on view mode and number of items
   const getGridClass = () => {
     if (viewMode === 'list') return 'grid grid-cols-1 gap-4';
-    
+
     const count = filteredAndSortedOpportunities.length;
     if (count === 1) return 'grid grid-cols-1 gap-6 max-w-md mx-auto';
     if (count === 2) return 'grid grid-cols-1 lg:grid-cols-2 gap-6';

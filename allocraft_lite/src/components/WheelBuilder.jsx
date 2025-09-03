@@ -73,11 +73,11 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
 
             // Extract opportunities from backend response
             const opportunities = detectionResult.opportunities || [];
-            
+
             if (opportunities.length === 0) {
                 // Fallback to frontend detection if backend returns no results
                 console.log('🔄 No backend results, falling back to frontend detection...');
-                
+
                 const positions = await PositionDataService.getAllPositions();
                 if (positions.length === 0) {
                     setError('No positions found. Add some stock positions to detect wheel opportunities.');
@@ -87,7 +87,7 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
                 const frontendResults = WheelDetectionService.detectWheelStrategies(positions);
                 console.log(`📊 Frontend detection found ${frontendResults.length} opportunities`);
                 setDetectedWheels(frontendResults);
-                
+
                 if (frontendResults.length === 0) {
                     setError('No wheel opportunities detected in your current positions. You may need positions with 100+ shares or short options to create wheels.');
                 }
@@ -98,7 +98,7 @@ const WheelBuilder = ({ onWheelCreated, onClose, isOpen: externalIsOpen }) => {
 
         } catch (err) {
             console.error('❌ Error in wheel detection:', err);
-            
+
             // Fallback to frontend detection on backend error
             console.log('🔄 Backend error, falling back to frontend detection...');
             try {

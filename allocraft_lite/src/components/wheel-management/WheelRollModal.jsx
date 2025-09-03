@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  RotateCcw, Calendar, DollarSign, Target, 
+import {
+  RotateCcw, Calendar, DollarSign, Target,
   TrendingUp, AlertTriangle, Clock, Zap,
   ArrowRight, CheckCircle, Settings
 } from "lucide-react";
@@ -15,11 +15,11 @@ import {
  * WheelRollModal - Roll expiring or ITM options to new strikes/dates
  * Handles both puts and calls with different rolling strategies
  */
-export default function WheelRollModal({ 
-  isOpen, 
-  onClose, 
+export default function WheelRollModal({
+  isOpen,
+  onClose,
   wheel,
-  onRoll = () => {}
+  onRoll = () => { }
 }) {
   const [rollOptions, setRollOptions] = useState([]);
   const [selectedOptions, setSelectedOptions] = useState([]);
@@ -181,11 +181,10 @@ export default function WheelRollModal({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button
                     onClick={() => setRollStrategy('extend_dte')}
-                    className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                      rollStrategy === 'extend_dte' 
-                        ? 'border-blue-500 bg-blue-50' 
+                    className={`p-4 border-2 rounded-lg text-left transition-colors ${rollStrategy === 'extend_dte'
+                        ? 'border-blue-500 bg-blue-50'
                         : 'border-slate-200 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Calendar className="h-5 w-5 text-blue-600" />
@@ -198,11 +197,10 @@ export default function WheelRollModal({
 
                   <button
                     onClick={() => setRollStrategy('adjust_strike')}
-                    className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                      rollStrategy === 'adjust_strike' 
-                        ? 'border-blue-500 bg-blue-50' 
+                    className={`p-4 border-2 rounded-lg text-left transition-colors ${rollStrategy === 'adjust_strike'
+                        ? 'border-blue-500 bg-blue-50'
                         : 'border-slate-200 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Target className="h-5 w-5 text-green-600" />
@@ -215,11 +213,10 @@ export default function WheelRollModal({
 
                   <button
                     onClick={() => setRollStrategy('defensive')}
-                    className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                      rollStrategy === 'defensive' 
-                        ? 'border-blue-500 bg-blue-50' 
+                    className={`p-4 border-2 rounded-lg text-left transition-colors ${rollStrategy === 'defensive'
+                        ? 'border-blue-500 bg-blue-50'
                         : 'border-slate-200 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -253,7 +250,7 @@ export default function WheelRollModal({
 
                   <div className="space-y-2">
                     <Label>Strike Adjustment</Label>
-                    <Select 
+                    <Select
                       value={rollParameters.strike_adjustment}
                       onValueChange={(value) => setRollParameters(prev => ({
                         ...prev,
@@ -274,7 +271,7 @@ export default function WheelRollModal({
 
                   <div className="space-y-2">
                     <Label>Premium Target</Label>
-                    <Select 
+                    <Select
                       value={rollParameters.premium_target}
                       onValueChange={(value) => setRollParameters(prev => ({
                         ...prev,
@@ -309,7 +306,7 @@ export default function WheelRollModal({
                 </div>
 
                 <div className="mt-4">
-                  <Button 
+                  <Button
                     onClick={calculateRollScenarios}
                     disabled={calculating || selectedOptions.length === 0}
                     variant="outline"
@@ -330,13 +327,12 @@ export default function WheelRollModal({
                 <h3 className="text-lg font-semibold mb-4">Options to Roll</h3>
                 <div className="space-y-4">
                   {rollOptions.map((option) => (
-                    <div 
+                    <div
                       key={option.id}
-                      className={`border rounded-lg p-4 transition-colors ${
-                        selectedOptions.includes(option.id)
+                      className={`border rounded-lg p-4 transition-colors ${selectedOptions.includes(option.id)
                           ? 'border-blue-200 bg-blue-50'
                           : 'border-slate-200'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -366,7 +362,7 @@ export default function WheelRollModal({
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="text-right">
                           <div className="text-lg font-semibold">
                             {formatCurrency(option.current_price)}
@@ -395,9 +391,8 @@ export default function WheelRollModal({
                             </div>
                             <div>
                               <span className="text-slate-600">Net Credit/Debit: </span>
-                              <span className={`font-medium ${
-                                option.scenarios.net_credit >= 0 ? 'text-green-600' : 'text-red-600'
-                              }`}>
+                              <span className={`font-medium ${option.scenarios.net_credit >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
                                 {option.scenarios.net_credit >= 0 ? '+' : ''}{formatCurrency(option.scenarios.net_credit)}
                               </span>
                             </div>
@@ -414,9 +409,9 @@ export default function WheelRollModal({
                 <Button variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                
+
                 <div className="flex gap-2">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={calculateRollScenarios}
                     disabled={calculating || selectedOptions.length === 0}
@@ -428,8 +423,8 @@ export default function WheelRollModal({
                     )}
                     Recalculate
                   </Button>
-                  
-                  <Button 
+
+                  <Button
                     onClick={executeRoll}
                     disabled={loading || selectedOptions.length === 0}
                     className="min-w-[120px]"

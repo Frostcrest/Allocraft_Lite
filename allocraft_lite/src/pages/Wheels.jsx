@@ -13,6 +13,7 @@ import WheelDetailsModal from '../components/wheel-management/WheelDetailsModal'
 import WheelEditModal from '../components/wheel-management/WheelEditModal';
 import WheelRollModal from '../components/wheel-management/WheelRollModal';
 import WheelCloseModal from '../components/wheel-management/WheelCloseModal';
+import { WheelManagementService } from '../services/WheelManagementService';
 
 // Enhanced Wheels page with improved structure for wheel detection and management
 export default function Wheels() {
@@ -48,7 +49,7 @@ export default function Wheels() {
   const [showWheelCreationModal, setShowWheelCreationModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [detectedOpportunities, setDetectedOpportunities] = useState([]);
-  
+
   // Wheel management modals
   const [showWheelDetails, setShowWheelDetails] = useState(false);
   const [showWheelEdit, setShowWheelEdit] = useState(false);
@@ -67,7 +68,7 @@ export default function Wheels() {
   // Real wheel detection using unified position data
   const runWheelDetection = async (isAutoRefresh = false) => {
     console.log(`🔍 Starting ${isAutoRefresh ? 'automatic' : 'manual'} wheel detection with unified data...`);
-    
+
     try {
       // Prepare unified position data for detection
       const detectionData = {
@@ -88,23 +89,23 @@ export default function Wheels() {
       });
 
       const result = await wheelDetectionMutation.mutateAsync(detectionData);
-      
+
       console.log('✅ Real detection complete:', result);
-      
+
       // Update with real detection results
       setDetectedOpportunities(result.opportunities || []);
       setLastUpdateTime(new Date());
-      
+
       return result;
     } catch (error) {
       console.error('❌ Real wheel detection failed:', error);
-      
+
       // Fall back to demo data if detection fails (only for manual runs)
       if (!isAutoRefresh) {
         console.log('🔄 Falling back to demo opportunities...');
         loadDemoOpportunities();
       }
-      
+
       throw error;
     }
   };
@@ -114,7 +115,7 @@ export default function Wheels() {
     const now = new Date();
     const hour = now.getHours();
     const day = now.getDay(); // 0 = Sunday, 6 = Saturday
-    
+
     // Simple market hours check (9:30 AM - 4:00 PM, Mon-Fri)
     return day >= 1 && day <= 5 && hour >= 9 && hour < 16;
   };
@@ -124,14 +125,14 @@ export default function Wheels() {
     if (refreshInterval) return; // Already running
 
     console.log('🔄 Starting auto-refresh for real-time monitoring...');
-    
+
     const interval = setInterval(() => {
       if (autoRefreshEnabled && isMarketHours() && allPositions.length > 0) {
         console.log('🕐 Auto-refresh triggered during market hours');
         runWheelDetection(true).catch(error => {
           console.log('📝 Auto-refresh detection failed, continuing...');
         });
-        
+
         // Also refresh position data
         refetchPositions();
       }
@@ -169,7 +170,7 @@ export default function Wheels() {
         optionPositionsCount: optionPositions.length,
         samplePositions: allPositions.slice(0, 3) // Show first 3 positions
       });
-      
+
       runWheelDetection(false).catch(error => {
         console.log('📝 Auto-detection failed, user can manually trigger detection');
       });
@@ -218,7 +219,7 @@ export default function Wheels() {
   // Handle detection results from Strategy Detection Panel (enhanced with real data)
   const handleDetectionComplete = (detectionResult) => {
     console.log('🎯 Wheels page: Detection complete', detectionResult);
-    
+
     if (detectionResult.opportunities && detectionResult.opportunities.length > 0) {
       setDetectedOpportunities(detectionResult.opportunities);
     } else {
@@ -231,7 +232,7 @@ export default function Wheels() {
   // Handle wheel creation from opportunity card
   const handleCreateWheelFromOpportunity = (opportunity) => {
     console.log('🚀 Creating wheel from opportunity:', opportunity);
-    
+
     // Prepare quick creation data
     const quickData = {
       strategy: opportunity.strategy,
@@ -243,62 +244,127 @@ export default function Wheels() {
       positionSize: opportunity.positions?.find(p => p.type === 'cash')?.market_value || '',
       notes: `Quick creation from ${opportunity.confidence_level} confidence opportunity`
     };
-    
+
     setQuickCreationData(quickData);
     setShowWheelCreationModal(true);
   };
 
-  // Handle wheel management actions
-  const handleWheelAction = (action, wheel) => {
-    console.log('� Wheel management action:', action, wheel);
-    
-    switch (action) {
-      case 'view_details':
-        setSelectedWheel(wheel);
-        setShowWheelDetails(true);
-        break;
-      case 'edit_parameters':
-        setSelectedWheel(wheel);
-        setShowWheelEdit(true);
-        break;
-      case 'roll_options':
-        setSelectedWheel(wheel);
-        setShowWheelRoll(true);
-        break;
-      case 'close_wheel':
-        setSelectedWheel(wheel);
-        setShowWheelClose(true);
-        break;
-      case 'add_notes':
-        // TODO: Open notes modal - will implement later
-        const notes = prompt(`Add notes for ${wheel.ticker} wheel strategy:`);
-        if (notes) {
-          // Save notes via API
-          console.log(`Notes added for ${wheel.ticker}:`, notes);
-        }
-        break;
-      default:
-        console.log('Unknown wheel action:', action);
+  // Handle wheel management actions using WheelManagementService
+  const handleWheelAction = async (action, wheel) => {
+    console.log('🎯 Wheel management action:', action, wheel);
+
+    try {
+      switch (action) {
+        case 'view_details':
+          // Use service to get comprehensive wheel details
+          setSelectedWheel(wheel);
+          setShowWheelDetails(true);
+          break;
+          
+        case 'edit_parameters':
+          setSelectedWheel(wheel);
+          setShowWheelEdit(true);
+          break;
+          
+        case 'roll_options':
+          setSelectedWheel(wheel);
+          setShowWheelRoll(true);
+          break;
+          
+        case 'close_wheel':
+          setSelectedWheel(wheel);
+          setShowWheelClose(true);
+          break;
+          
+        case 'add_notes':
+          const notes = prompt(`Add notes for ${wheel.ticker} wheel strategy:`);
+          if (notes) {
+            // Log event through service
+            await WheelManagementService.logWheelEvent(wheel.id, {
+              event_type: 'notes_added',
+              description: 'Notes added to wheel strategy',
+              metadata: { notes: notes }
+            });
+            console.log(`✅ Notes added for ${wheel.ticker}:`, notes);
+          }
+          break;
+          
+        case 'update_status':
+          // Example of status update through service
+          const newStatus = prompt(`Enter new status for ${wheel.ticker} wheel:`, wheel.status);
+          if (newStatus && newStatus !== wheel.status) {
+            await WheelManagementService.updateWheelStatus(wheel.id, newStatus, {
+              reason: 'Manual status update',
+              updated_by: 'user'
+            });
+            console.log(`✅ Status updated for ${wheel.ticker}: ${wheel.status} → ${newStatus}`);
+          }
+          break;
+          
+        default:
+          console.log('Unknown wheel action:', action);
+      }
+    } catch (error) {
+      console.error('❌ Wheel action failed:', error);
+      alert(`Action failed: ${error.message}`);
     }
   };
 
-  // Modal callback functions
-  const handleWheelSave = (updatedWheel) => {
-    console.log('💾 Wheel updated:', updatedWheel);
-    // Refresh wheel data
-    refetchCycles();
+  // Modal callback functions using WheelManagementService
+  const handleWheelSave = async (updatedWheel) => {
+    try {
+      console.log('💾 Saving wheel updates:', updatedWheel);
+      
+      const result = await WheelManagementService.updateWheel(selectedWheel.id, updatedWheel);
+      
+      console.log('✅ Wheel updated successfully:', result);
+      
+      // Close modal and refresh data
+      setShowWheelEdit(false);
+      setSelectedWheel(null);
+      
+      // React Query will automatically update cache through service
+      
+    } catch (error) {
+      console.error('❌ Wheel update failed:', error);
+      alert(`Update failed: ${error.message}`);
+    }
   };
 
-  const handleWheelRoll = (rollResult) => {
-    console.log('🔄 Wheel roll completed:', rollResult);
-    // Refresh wheel data
-    refetchCycles();
+  const handleWheelRoll = async (rollData) => {
+    try {
+      console.log('🔄 Rolling wheel options:', rollData);
+      
+      const result = await WheelManagementService.rollWheel(selectedWheel.id, rollData);
+      
+      console.log('✅ Wheel roll completed:', result);
+      
+      // Close modal and refresh data
+      setShowWheelRoll(false);
+      setSelectedWheel(null);
+      
+    } catch (error) {
+      console.error('❌ Wheel roll failed:', error);
+      alert(`Roll failed: ${error.message}`);
+    }
   };
 
-  const handleWheelClose = (closeResult) => {
-    console.log('❌ Wheel closed:', closeResult);
-    // Refresh wheel data and close modal
-    refetchCycles();
+  const handleWheelClose = async (closeData) => {
+    try {
+      console.log('❌ Closing wheel strategy:', closeData);
+      
+      const result = await WheelManagementService.closeWheel(selectedWheel.id, closeData);
+      
+      console.log('✅ Wheel closed successfully:', result);
+      
+      // Close modal and refresh data
+      setShowWheelClose(false);
+      setSelectedWheel(null);
+      
+    } catch (error) {
+      console.error('❌ Wheel closure failed:', error);
+      alert(`Closure failed: ${error.message}`);
+    }
   };
 
   const closeAllModals = () => {
@@ -364,7 +430,7 @@ export default function Wheels() {
         market_context: { session_type: "Regular Hours", volatility: "Low" }
       }
     ];
-    
+
     console.log('📊 Loading demo opportunities:', demoOpportunities);
     setDetectedOpportunities(demoOpportunities);
   };
@@ -440,7 +506,7 @@ export default function Wheels() {
               )}
             </div>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex gap-3">
             <Button
@@ -473,30 +539,30 @@ export default function Wheels() {
               onClick={() => setShowWheelCreationModal(true)}
               className="bg-blue-600 hover:bg-blue-700 shadow-lg transition-all duration-200"
             >
-              <Target className="w-5 h-5 mr-2" /> 
+              <Target className="w-5 h-5 mr-2" />
               Create Wheel Strategy
             </Button>
-            <Button 
+            <Button
               onClick={loadDemoOpportunities}
-              variant="outline" 
+              variant="outline"
               className="border-purple-300 text-purple-600 hover:bg-purple-50 shadow-sm"
             >
-              <Zap className="w-5 h-5 mr-2" /> 
+              <Zap className="w-5 h-5 mr-2" />
               Demo Data
             </Button>
-            <Button 
+            <Button
               onClick={() => setShowWheelCreationModal(true)}
-              variant="outline" 
+              variant="outline"
               className="border-slate-300 hover:bg-slate-50 shadow-sm"
             >
-              <Plus className="w-5 h-5 mr-2" /> 
+              <Plus className="w-5 h-5 mr-2" />
               Manual Creation
             </Button>
           </div>
         </div>
 
         {/* Strategy Detection Panel */}
-        <StrategyDetectionPanel 
+        <StrategyDetectionPanel
           onDetectionComplete={handleDetectionComplete}
           positionsData={{
             allPositions,
@@ -512,7 +578,7 @@ export default function Wheels() {
         />
 
         {/* Performance Summary Widget */}
-        <WheelPerformanceSummary 
+        <WheelPerformanceSummary
           opportunities={detectedOpportunities}
           cycles={cycles}
           stockPositions={stockPositions}
@@ -521,7 +587,7 @@ export default function Wheels() {
         />
 
         {/* Wheel Opportunities Grid */}
-        <WheelOpportunityGrid 
+        <WheelOpportunityGrid
           opportunities={detectedOpportunities}
           isLoading={wheelDetectionMutation.isPending}
           onCreateWheel={handleCreateWheelFromOpportunity}
@@ -539,7 +605,7 @@ export default function Wheels() {
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-3">No wheel cycles found</h3>
               <p className="text-slate-500 mb-8 max-w-md mx-auto">
-                Get started by analyzing your current positions for wheel opportunities, 
+                Get started by analyzing your current positions for wheel opportunities,
                 or create a wheel cycle manually.
               </p>
               <div className="flex gap-3 justify-center">
@@ -547,10 +613,10 @@ export default function Wheels() {
                   onClick={() => setShowWheelCreationModal(true)}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  <Target className="w-5 h-5 mr-2" /> 
+                  <Target className="w-5 h-5 mr-2" />
                   Analyze My Positions
                 </Button>
-                <Button 
+                <Button
                   onClick={() => setShowWheelCreationModal(true)}
                   variant="outline"
                 >
@@ -561,7 +627,7 @@ export default function Wheels() {
             </div>
           ) : (
             /* Active Wheels Display - Using new ActiveWheelsSection component */
-            <ActiveWheelsSection 
+            <ActiveWheelsSection
               wheelCycles={cycles}
               onWheelAction={handleWheelAction}
               className="shadow-lg"

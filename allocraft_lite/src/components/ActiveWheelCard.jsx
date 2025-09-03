@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   MoreHorizontal, Eye, Edit, X, RotateCcw, Calendar,
   DollarSign, TrendingUp, TrendingDown, Target, Clock,
   AlertCircle, CheckCircle2, Play, Pause, ArrowUp, ArrowDown,
@@ -12,11 +12,11 @@ import {
  * ActiveWheelCard - Individual wheel strategy display component
  * Shows comprehensive information about a wheel strategy with management actions
  */
-export default function ActiveWheelCard({ 
-  wheel, 
+export default function ActiveWheelCard({
+  wheel,
   viewMode = 'grid', // 'grid', 'list', 'timeline'
-  onAction = () => {},
-  className = '' 
+  onAction = () => { },
+  className = ''
 }) {
   console.log('🎯 ActiveWheelCard rendering:', { wheel: wheel.ticker, viewMode });
 
@@ -25,27 +25,27 @@ export default function ActiveWheelCard({
   // Strategy type display mapping
   const getStrategyDisplay = (type) => {
     const strategies = {
-      'covered_call': { 
-        name: 'Covered Call', 
-        icon: TrendingDown, 
+      'covered_call': {
+        name: 'Covered Call',
+        icon: TrendingDown,
         color: 'green',
         description: 'Selling calls against stock position'
       },
-      'cash_secured_put': { 
-        name: 'Cash-Secured Put', 
-        icon: TrendingUp, 
+      'cash_secured_put': {
+        name: 'Cash-Secured Put',
+        icon: TrendingUp,
         color: 'blue',
         description: 'Selling puts with cash backing'
       },
-      'full_wheel': { 
-        name: 'Full Wheel', 
-        icon: RotateCcw, 
+      'full_wheel': {
+        name: 'Full Wheel',
+        icon: RotateCcw,
         color: 'purple',
         description: 'Complete wheel cycle strategy'
       },
-      'poor_mans_covered_call': { 
-        name: "Poor Man's CC", 
-        icon: Target, 
+      'poor_mans_covered_call': {
+        name: "Poor Man's CC",
+        icon: Target,
         color: 'orange',
         description: 'LEAPS-based covered call'
       }
@@ -56,33 +56,33 @@ export default function ActiveWheelCard({
   // Status display mapping
   const getStatusDisplay = (status) => {
     const statuses = {
-      'active': { 
-        name: 'Active', 
-        icon: Play, 
+      'active': {
+        name: 'Active',
+        icon: Play,
         color: 'text-green-600 bg-green-100',
         description: 'Strategy is running normally'
       },
-      'pending_assignment': { 
-        name: 'Pending Assignment', 
-        icon: AlertCircle, 
+      'pending_assignment': {
+        name: 'Pending Assignment',
+        icon: AlertCircle,
         color: 'text-yellow-600 bg-yellow-100',
         description: 'Assignment likely at expiration'
       },
-      'completed': { 
-        name: 'Completed', 
-        icon: CheckCircle2, 
+      'completed': {
+        name: 'Completed',
+        icon: CheckCircle2,
         color: 'text-blue-600 bg-blue-100',
         description: 'Strategy has finished successfully'
       },
-      'paused': { 
-        name: 'Paused', 
-        icon: Pause, 
+      'paused': {
+        name: 'Paused',
+        icon: Pause,
         color: 'text-slate-600 bg-slate-100',
         description: 'Strategy temporarily paused'
       },
-      'closed': { 
-        name: 'Closed', 
-        icon: X, 
+      'closed': {
+        name: 'Closed',
+        icon: X,
         color: 'text-red-600 bg-red-100',
         description: 'Strategy closed early'
       }
@@ -92,7 +92,7 @@ export default function ActiveWheelCard({
 
   const strategyDisplay = getStrategyDisplay(wheel.strategy_type);
   const statusDisplay = getStatusDisplay(wheel.status);
-  
+
   const StrategyIcon = strategyDisplay.icon;
   const StatusIcon = statusDisplay.icon;
 
@@ -135,11 +135,11 @@ export default function ActiveWheelCard({
   // Get next action recommendation
   const getNextActionRecommendation = () => {
     const daysToExpiry = getDaysToExpiration();
-    
+
     if (wheel.status === 'completed') return 'Strategy completed successfully';
     if (wheel.status === 'paused') return 'Strategy is paused - consider resuming';
     if (wheel.status === 'closed') return 'Strategy was closed early';
-    
+
     if (daysToExpiry <= 7) {
       if (wheel.strategy_type === 'covered_call') {
         return 'Expiration approaching - monitor for assignment';
@@ -147,11 +147,11 @@ export default function ActiveWheelCard({
         return 'Expiration approaching - prepare for potential assignment';
       }
     }
-    
+
     if (wheel.unrealized_pnl && wheel.unrealized_pnl > (wheel.premium_collected * 0.5)) {
       return 'Consider closing for profit (50%+ premium captured)';
     }
-    
+
     return wheel.next_action || 'Monitor position and market conditions';
   };
 
@@ -196,13 +196,13 @@ export default function ActiveWheelCard({
               <p className="text-sm text-slate-600">{strategyDisplay.name}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Badge className={statusDisplay.color}>
               <StatusIcon className="w-3 h-3 mr-1" />
               {statusDisplay.name}
             </Badge>
-            
+
             <div className="relative">
               <Button
                 variant="ghost"
@@ -212,7 +212,7 @@ export default function ActiveWheelCard({
               >
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
-              
+
               {showActions && (
                 <div className="absolute right-0 top-8 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-10 py-1">
                   {actionButtons.map(action => (
@@ -263,14 +263,14 @@ export default function ActiveWheelCard({
               {formatCurrency(wheel.total_pnl)}
             </span>
           </div>
-          
+
           <div className="flex justify-between items-center">
             <span className="text-sm text-slate-600">Premium Collected</span>
             <span className="font-medium text-green-600">
               {formatCurrency(wheel.premium_collected)}
             </span>
           </div>
-          
+
           <div className="flex justify-between items-center">
             <span className="text-sm text-slate-600">Return %</span>
             <span className={`font-medium ${performance.color}`}>
@@ -325,12 +325,12 @@ export default function ActiveWheelCard({
             <div className={`p-2 bg-${strategyDisplay.color}-100 rounded-lg`}>
               <StrategyIcon className={`w-4 h-4 text-${strategyDisplay.color}-600`} />
             </div>
-            
+
             <div>
               <h3 className="font-bold text-slate-900">{wheel.ticker}</h3>
               <p className="text-sm text-slate-600">{strategyDisplay.name}</p>
             </div>
-            
+
             <Badge className={statusDisplay.color}>
               {statusDisplay.name}
             </Badge>
@@ -342,19 +342,19 @@ export default function ActiveWheelCard({
               <div className="text-slate-600">Strike</div>
               <div className="font-semibold">${wheel.strike_price}</div>
             </div>
-            
+
             <div className="text-center">
               <div className="text-slate-600">Days Left</div>
               <div className="font-semibold">{getDaysToExpiration()}</div>
             </div>
-            
+
             <div className="text-center">
               <div className="text-slate-600">Total P&L</div>
               <div className={`font-semibold ${performance.color}`}>
                 {formatCurrency(wheel.total_pnl)}
               </div>
             </div>
-            
+
             <div className="text-center">
               <div className="text-slate-600">Return</div>
               <div className={`font-semibold ${performance.color}`}>
@@ -373,7 +373,7 @@ export default function ActiveWheelCard({
               <Eye className="w-4 h-4 mr-1" />
               Details
             </Button>
-            
+
             <div className="relative">
               <Button
                 variant="ghost"
@@ -382,7 +382,7 @@ export default function ActiveWheelCard({
               >
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
-              
+
               {showActions && (
                 <div className="absolute right-0 top-8 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-10 py-1">
                   {actionButtons.slice(1).map(action => (
@@ -413,7 +413,7 @@ export default function ActiveWheelCard({
             <div className={`p-2 bg-${strategyDisplay.color}-100 rounded-lg`}>
               <StrategyIcon className={`w-4 h-4 text-${strategyDisplay.color}-600`} />
             </div>
-            
+
             <div>
               <h3 className="font-bold text-slate-900">{wheel.ticker} - {strategyDisplay.name}</h3>
               <p className="text-sm text-slate-600">
@@ -421,7 +421,7 @@ export default function ActiveWheelCard({
               </p>
             </div>
           </div>
-          
+
           <Badge className={statusDisplay.color}>
             {statusDisplay.name}
           </Badge>
@@ -454,7 +454,7 @@ export default function ActiveWheelCard({
           <p className="text-xs text-slate-600">
             {getNextActionRecommendation()}
           </p>
-          
+
           <Button
             variant="outline"
             size="sm"

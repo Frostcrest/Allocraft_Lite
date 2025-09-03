@@ -176,7 +176,7 @@ export const testWheelDetectionAccuracy = async (detectionFunction, scenarios = 
 
   for (const [scenarioName, scenario] of Object.entries(testScenarios)) {
     console.log(`\n🎯 Testing scenario: ${scenarioName}`);
-    
+
     try {
       const detectionResult = await detectionFunction({
         positions: scenario.allPositions,
@@ -200,11 +200,11 @@ export const testWheelDetectionAccuracy = async (detectionFunction, scenarios = 
       };
 
       results[scenarioName] = accuracy;
-      
+
       console.log(`✅ Expected: [${expectedStrategies.join(', ')}]`);
       console.log(`🎯 Detected: [${detectedStrategies.join(', ')}]`);
       console.log(`${accuracy.correct ? '✅' : '❌'} Test ${accuracy.correct ? 'PASSED' : 'FAILED'}`);
-      
+
       if (accuracy.extraDetections.length > 0) {
         console.log(`⚠️ Extra detections: [${accuracy.extraDetections.join(', ')}]`);
       }
@@ -270,7 +270,7 @@ export const testEdgeCases = async (detectionFunction) => {
 
   for (const [caseName, caseData] of Object.entries(edgeCases)) {
     console.log(`\n🎯 Testing edge case: ${caseName}`);
-    
+
     try {
       const result = await detectionFunction(caseData);
       console.log(`✅ Edge case handled gracefully:`, result);

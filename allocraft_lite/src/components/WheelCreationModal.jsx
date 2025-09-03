@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  X, ChevronLeft, ChevronRight, Target, Settings, Eye, 
+import {
+  X, ChevronLeft, ChevronRight, Target, Settings, Eye,
   CheckCircle2, AlertCircle, TrendingUp, DollarSign, Calendar,
   RotateCcw, Zap, Shield, Info
 } from "lucide-react";
@@ -18,9 +18,9 @@ import ReviewConfirmationStep from './wheel-creation/ReviewConfirmationStep';
  * WheelCreationModal - Multi-step wizard for creating wheel strategies
  * Implements comprehensive workflow with strategy selection, parameter configuration, and review
  */
-export default function WheelCreationModal({ 
-  isOpen, 
-  onClose, 
+export default function WheelCreationModal({
+  isOpen,
+  onClose,
   onWheelCreated,
   prefilledData = null, // For quick creation from opportunities
   quickMode = false // Skip some steps for quick creation
@@ -33,19 +33,19 @@ export default function WheelCreationModal({
     // Strategy Selection
     strategyType: prefilledData?.strategy || '',
     ticker: prefilledData?.ticker || '',
-    
+
     // Parameter Configuration
     strikePrice: prefilledData?.strikePrice || '',
     expirationDate: prefilledData?.expirationDate || '',
     contractCount: prefilledData?.contractCount || 1,
     premium: prefilledData?.premium || '',
     positionSize: prefilledData?.positionSize || '',
-    
+
     // Risk Management
     stopLoss: prefilledData?.stopLoss || '',
     profitTarget: prefilledData?.profitTarget || '',
     maxDays: prefilledData?.maxDays || '',
-    
+
     // Advanced Settings
     autoRoll: prefilledData?.autoRoll || false,
     notifications: prefilledData?.notifications || true,
@@ -66,7 +66,7 @@ export default function WheelCreationModal({
     },
     {
       id: 2,
-      title: "Parameter Configuration", 
+      title: "Parameter Configuration",
       description: "Set strike prices, expiration, and position sizing",
       icon: Settings,
       component: ParameterConfigurationStep
@@ -106,7 +106,7 @@ export default function WheelCreationModal({
         if (!formData.strategyType) errors.strategyType = "Strategy type is required";
         if (!formData.ticker) errors.ticker = "Ticker symbol is required";
         break;
-        
+
       case 2:
         if (!formData.strikePrice) errors.strikePrice = "Strike price is required";
         if (!formData.expirationDate) errors.expirationDate = "Expiration date is required";
@@ -115,7 +115,7 @@ export default function WheelCreationModal({
         }
         if (!formData.positionSize) errors.positionSize = "Position size is required";
         break;
-        
+
       case 3:
         // Final validation before submission
         if (!formData.strategyType || !formData.ticker || !formData.strikePrice) {
@@ -149,7 +149,7 @@ export default function WheelCreationModal({
   // Form data update handler
   const updateFormData = (updates) => {
     setFormData(prev => ({ ...prev, ...updates }));
-    
+
     // Clear related validation errors
     const newErrors = { ...validationErrors };
     Object.keys(updates).forEach(key => {
@@ -161,7 +161,7 @@ export default function WheelCreationModal({
   // Wheel creation submission
   const handleSubmit = async () => {
     console.log('🚀 Starting wheel creation submission...');
-    
+
     if (!validateStep(3)) {
       console.log('❌ Final validation failed');
       return;
@@ -179,17 +179,17 @@ export default function WheelCreationModal({
         contract_count: parseInt(formData.contractCount),
         premium: parseFloat(formData.premium) || null,
         position_size: parseFloat(formData.positionSize),
-        
+
         // Risk management
         stop_loss: parseFloat(formData.stopLoss) || null,
         profit_target: parseFloat(formData.profitTarget) || null,
         max_days: parseInt(formData.maxDays) || null,
-        
+
         // Settings
         auto_roll: formData.autoRoll,
         notifications_enabled: formData.notifications,
         notes: formData.notes || null,
-        
+
         // Metadata
         created_via: quickMode ? 'quick_creation' : 'full_wizard',
         creation_timestamp: new Date().toISOString()
@@ -199,19 +199,19 @@ export default function WheelCreationModal({
 
       // TODO: Call actual backend API
       // const response = await createWheelCycle(wheelData);
-      
+
       // Simulate API call for now
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       console.log('✅ Wheel creation successful');
-      
+
       // Notify parent component
       onWheelCreated(wheelData);
-      
+
     } catch (error) {
       console.error('❌ Wheel creation failed:', error);
-      setValidationErrors({ 
-        general: 'Failed to create wheel. Please try again.' 
+      setValidationErrors({
+        general: 'Failed to create wheel. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
@@ -241,7 +241,7 @@ export default function WheelCreationModal({
                   {isQuickCreation ? 'Quick Wheel Creation' : 'Create New Wheel Strategy'}
                 </DialogTitle>
                 <p className="text-sm text-slate-600 mt-1">
-                  {isQuickCreation 
+                  {isQuickCreation
                     ? `Fast-track creation for ${prefilledData.ticker} ${prefilledData.strategy}`
                     : 'Set up a new wheel strategy with guided configuration'
                   }
@@ -289,10 +289,10 @@ export default function WheelCreationModal({
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium 
                     transition-all duration-200 whitespace-nowrap
-                    ${isActive 
-                      ? 'bg-blue-600 text-white shadow-lg' 
+                    ${isActive
+                      ? 'bg-blue-600 text-white shadow-lg'
                       : isCompleted
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
                         : isAccessible
                           ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           : 'bg-slate-50 text-slate-400 cursor-not-allowed'

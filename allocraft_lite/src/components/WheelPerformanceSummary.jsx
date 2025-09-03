@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Target, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Target,
   BarChart3,
   Clock,
   CheckCircle2,
@@ -42,21 +42,21 @@ const WheelPerformanceSummary = ({
     // Basic counts
     const totalWheels = opportunities.length;
     const activeCycles = cycles.length;
-    
+
     // Potential income from opportunities
-    const totalPotentialIncome = opportunities.reduce((sum, op) => 
+    const totalPotentialIncome = opportunities.reduce((sum, op) =>
       sum + (op.potential_income || 0), 0
     );
-    
+
     // Average confidence score
-    const averageConfidence = totalWheels > 0 
+    const averageConfidence = totalWheels > 0
       ? Math.round(opportunities.reduce((sum, op) => sum + (op.confidence_score || 0), 0) / totalWheels)
       : 0;
 
     // Calculate basic P&L from positions
     const calculateBasicPnL = () => {
       let totalPnL = 0;
-      
+
       // Stock positions P&L (simplified)
       stockPositions.forEach(position => {
         if (position.cost_basis && position.current_price && position.shares_owned) {
@@ -93,7 +93,7 @@ const WheelPerformanceSummary = ({
       const risk = op.risk_assessment?.level || 'medium';
       return sum + (risk === 'low' ? 1 : risk === 'medium' ? 2 : 3);
     }, 0) / Math.max(totalWheels, 1);
-    
+
     const riskLevel = avgRiskLevel <= 1.5 ? 'low' : avgRiskLevel <= 2.5 ? 'medium' : 'high';
 
     return {
@@ -141,9 +141,9 @@ const WheelPerformanceSummary = ({
               </p>
             </div>
           </div>
-          
-          <Badge 
-            variant="outline" 
+
+          <Badge
+            variant="outline"
             className={getRiskLevelStyle(performanceMetrics.riskLevel)}
           >
             {performanceMetrics.riskLevel.charAt(0).toUpperCase() + performanceMetrics.riskLevel.slice(1)} Risk

@@ -89,7 +89,7 @@ describe('Wheels Page - Phase 1 Tests', () => {
   describe('Component Rendering', () => {
     it('renders main page components without crashing', () => {
       renderWheelsPage();
-      
+
       expect(screen.getByText('Wheel Strategies')).toBeInTheDocument();
       expect(screen.getByTestId('strategy-detection-panel')).toBeInTheDocument();
       expect(screen.getByTestId('opportunity-grid')).toBeInTheDocument();
@@ -98,14 +98,14 @@ describe('Wheels Page - Phase 1 Tests', () => {
 
     it('displays correct page title and description', () => {
       renderWheelsPage();
-      
+
       expect(screen.getByText('Wheel Strategies')).toBeInTheDocument();
       expect(screen.getByText('Discover and manage wheel opportunities from your positions')).toBeInTheDocument();
     });
 
     it('shows action buttons', () => {
       renderWheelsPage();
-      
+
       expect(screen.getByText('Refresh')).toBeInTheDocument();
       expect(screen.getByText(/Auto-Refresh/)).toBeInTheDocument();
       expect(screen.getByText('Detect Opportunities')).toBeInTheDocument();
@@ -115,17 +115,17 @@ describe('Wheels Page - Phase 1 Tests', () => {
   describe('Auto-Refresh Functionality', () => {
     it('toggles auto-refresh state', () => {
       renderWheelsPage();
-      
+
       const autoRefreshButton = screen.getByText(/Auto-Refresh/);
       expect(autoRefreshButton).toHaveTextContent('Auto-Refresh ON');
-      
+
       fireEvent.click(autoRefreshButton);
       expect(autoRefreshButton).toHaveTextContent('Auto-Refresh OFF');
     });
 
     it('displays live status when auto-refresh is enabled', () => {
       renderWheelsPage();
-      
+
       // Check if live status indicators are present
       const statusElements = screen.getAllByText(/Live|Market Hours|After Hours/);
       expect(statusElements.length).toBeGreaterThan(0);
@@ -135,10 +135,10 @@ describe('Wheels Page - Phase 1 Tests', () => {
   describe('Detection Integration', () => {
     it('handles detection results from strategy panel', async () => {
       renderWheelsPage();
-      
+
       const detectButton = screen.getByText('Detect Strategies');
       fireEvent.click(detectButton);
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('opportunity-grid')).toHaveTextContent('0 opportunities');
       });
@@ -153,9 +153,9 @@ describe('Wheels Page - Phase 1 Tests', () => {
         configurable: true,
         value: 375
       });
-      
+
       renderWheelsPage();
-      
+
       expect(screen.getByText('Wheel Strategies')).toBeInTheDocument();
       expect(screen.getByTestId('strategy-detection-panel')).toBeInTheDocument();
     });
@@ -167,9 +167,9 @@ describe('Wheels Page - Phase 1 Tests', () => {
         configurable: true,
         value: 768
       });
-      
+
       renderWheelsPage();
-      
+
       expect(screen.getByText('Wheel Strategies')).toBeInTheDocument();
       expect(screen.getByTestId('opportunity-grid')).toBeInTheDocument();
     });
@@ -181,9 +181,9 @@ describe('Wheels Page - Phase 1 Tests', () => {
         configurable: true,
         value: 1024
       });
-      
+
       renderWheelsPage();
-      
+
       expect(screen.getByText('Wheel Strategies')).toBeInTheDocument();
       expect(screen.getByTestId('performance-summary')).toBeInTheDocument();
     });
@@ -194,7 +194,7 @@ describe('Wheel Detection Algorithm Tests', () => {
   const mockDetectionFunction = async (data) => {
     // Simplified mock detection logic for testing
     const opportunities = [];
-    
+
     // Check for covered call opportunities
     if (data.stocks && data.stocks.length > 0) {
       data.stocks.forEach(stock => {
@@ -208,7 +208,7 @@ describe('Wheel Detection Algorithm Tests', () => {
         }
       });
     }
-    
+
     // Check for cash secured put opportunities
     if (data.cashBalance >= 10000) {
       opportunities.push({
@@ -218,7 +218,7 @@ describe('Wheel Detection Algorithm Tests', () => {
         potential_income: 300
       });
     }
-    
+
     return { opportunities };
   };
 
@@ -227,7 +227,7 @@ describe('Wheel Detection Algorithm Tests', () => {
     const result = await testWheelDetectionAccuracy(mockDetectionFunction, {
       coveredCallReady: scenarios.coveredCallReady
     });
-    
+
     expect(result.summary.accuracy).toBeGreaterThan(0);
     expect(result.results.coveredCallReady.correct).toBe(true);
   });
@@ -237,7 +237,7 @@ describe('Wheel Detection Algorithm Tests', () => {
     const result = await testWheelDetectionAccuracy(mockDetectionFunction, {
       cashSecuredPutReady: scenarios.cashSecuredPutReady
     });
-    
+
     expect(result.summary.accuracy).toBeGreaterThan(0);
   });
 
@@ -248,7 +248,7 @@ describe('Wheel Detection Algorithm Tests', () => {
       options: [],
       cashBalance: 0
     });
-    
+
     expect(result.opportunities).toHaveLength(0);
   });
 
@@ -259,7 +259,7 @@ describe('Wheel Detection Algorithm Tests', () => {
       options: 'invalid',
       cashBalance: NaN
     });
-    
+
     expect(result.opportunities).toHaveLength(0);
   });
 });
@@ -271,7 +271,7 @@ describe('Performance Calculation Tests', () => {
       { potential_income: 300 },
       { potential_income: 200 }
     ];
-    
+
     const total = opportunities.reduce((sum, op) => sum + op.potential_income, 0);
     expect(total).toBe(1000);
   });
@@ -282,7 +282,7 @@ describe('Performance Calculation Tests', () => {
       { confidence_score: 90 },
       { confidence_score: 70 }
     ];
-    
+
     const average = Math.round(
       opportunities.reduce((sum, op) => sum + op.confidence_score, 0) / opportunities.length
     );
@@ -302,7 +302,7 @@ describe('Performance Calculation Tests', () => {
       { potential_income: null },
       { potential_income: 100 }
     ];
-    
+
     const total = opportunities.reduce((sum, op) => sum + (op.potential_income || 0), 0);
     expect(total).toBe(100);
   });
@@ -314,18 +314,18 @@ describe('Market Hours Detection Tests', () => {
     const mockDate = new Date();
     mockDate.setHours(10, 0, 0, 0);
     mockDate.setDay(2); // Tuesday
-    
+
     vi.spyOn(global, 'Date').mockImplementation(() => mockDate);
-    
+
     const isMarketHours = () => {
       const now = new Date();
       const hour = now.getHours();
       const day = now.getDay();
       return day >= 1 && day <= 5 && hour >= 9 && hour < 16;
     };
-    
+
     expect(isMarketHours()).toBe(true);
-    
+
     vi.restoreAllMocks();
   });
 
@@ -334,18 +334,18 @@ describe('Market Hours Detection Tests', () => {
     const mockDate = new Date();
     mockDate.setHours(17, 0, 0, 0);
     mockDate.setDay(2); // Tuesday
-    
+
     vi.spyOn(global, 'Date').mockImplementation(() => mockDate);
-    
+
     const isMarketHours = () => {
       const now = new Date();
       const hour = now.getHours();
       const day = now.getDay();
       return day >= 1 && day <= 5 && hour >= 9 && hour < 16;
     };
-    
+
     expect(isMarketHours()).toBe(false);
-    
+
     vi.restoreAllMocks();
   });
 
@@ -354,18 +354,18 @@ describe('Market Hours Detection Tests', () => {
     const mockDate = new Date();
     mockDate.setHours(10, 0, 0, 0);
     mockDate.setDay(6); // Saturday
-    
+
     vi.spyOn(global, 'Date').mockImplementation(() => mockDate);
-    
+
     const isMarketHours = () => {
       const now = new Date();
       const hour = now.getHours();
       const day = now.getDay();
       return day >= 1 && day <= 5 && hour >= 9 && hour < 16;
     };
-    
+
     expect(isMarketHours()).toBe(false);
-    
+
     vi.restoreAllMocks();
   });
 });

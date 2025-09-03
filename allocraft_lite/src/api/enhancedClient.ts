@@ -319,7 +319,7 @@ export const useWheelDetection = () => {
     return useMutation<any, ApiError, any>({
         mutationFn: async (detectionParams = {}) => {
             console.log('🔍 useWheelDetection: Starting position analysis...', detectionParams);
-            
+
             const requestData = {
                 include_confidence_details: true,
                 include_market_context: true,
@@ -346,7 +346,7 @@ export const useWheelDetection = () => {
                 opportunities: data.opportunities?.length || 0,
                 marketContext: data.market_context
             });
-            
+
             // Optionally invalidate related queries
             queryClient.invalidateQueries({ queryKey: queryKeys.positions });
         },
@@ -370,7 +370,7 @@ export const useWheelDetectionResults = (options: {
         queryKey: queryKeys.wheelDetectionResults,
         queryFn: async () => {
             console.log('🔄 useWheelDetectionResults: Fetching cached results...');
-            
+
             // This could fetch cached results from backend if available
             // For now, return empty results to indicate no cached data
             return {
@@ -419,6 +419,108 @@ export const useCreateWheelEvent = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(eventData)
         }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.cycles });
+        }
+    });
+};
+
+// =====================
+// WHEEL MANAGEMENT SERVICE HOOKS
+// =====================
+
+/**
+ * Hook for updating wheel parameters through service layer
+ */
+export const useUpdateWheel = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<any, ApiError, { wheelId: string | number; updates: any }>({
+        mutationFn: async ({ wheelId, updates }) => {
+            const { WheelManagementService } = await import('../services/WheelManagementService.ts');
+            return WheelManagementService.updateWheel(wheelId, updates);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.cycles });
+        }
+    });
+};
+
+/**
+ * Hook for rolling wheel options through service layer
+ */
+export const useRollWheel = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<any, ApiError, { wheelId: string | number; rollData: any }>({
+        mutationFn: async ({ wheelId, rollData }) => {
+            const { WheelManagementService } = await import('../services/WheelManagementService');
+            return WheelManagementService.rollWheel(wheelId, rollData);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.cycles });
+        }
+    });
+};
+
+/**
+ * Hook for closing wheel strategies through service layer
+ */
+export const useCloseWheel = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<any, ApiError, { wheelId: string | number; closeData: any }>({
+        mutationFn: async ({ wheelId, closeData }) => {
+            const { WheelManagementService } = await import('../services/WheelManagementService');
+            return WheelManagementService.closeWheel(wheelId, closeData);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.cycles });
+        }
+    });
+};
+
+/**
+ * Hook for getting comprehensive wheel details through service layer
+ */
+export const useWheelDetails = (wheelId?: string | number) => {
+    return useQuery<any>({
+        queryKey: ['wheel-details', wheelId],
+        queryFn: async () => {
+            const { WheelManagementService } = await import('../services/WheelManagementService');
+            return WheelManagementService.getWheelDetails(wheelId!);
+        },
+        enabled: !!wheelId,
+        staleTime: 2 * 60 * 1000, // 2 minutes
+    });
+};
+
+/**
+ * Hook for getting wheel events through service layer
+ */
+export const useWheelEvents = (wheelId?: string | number) => {
+    return useQuery<any[]>({
+        queryKey: ['wheel-events', wheelId],
+        queryFn: async () => {
+            const { WheelManagementService } = await import('../services/WheelManagementService');
+            return WheelManagementService.getWheelEvents(wheelId!);
+        },
+        enabled: !!wheelId,
+        staleTime: 1 * 60 * 1000, // 1 minute
+    });
+};
+
+/**
+ * Hook for updating wheel status through service layer
+ */
+export const useUpdateWheelStatus = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<any, ApiError, { wheelId: string | number; status: string; context?: any }>({
+        mutationFn: async ({ wheelId, status, context }) => {
+            const { WheelManagementService } = await import('../services/WheelManagementService');
+            return WheelManagementService.updateWheelStatus(wheelId, status, context);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.cycles });
         }

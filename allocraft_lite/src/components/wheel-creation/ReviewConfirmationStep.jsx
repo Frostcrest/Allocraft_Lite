@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   CheckCircle2, AlertTriangle, Info, Eye, DollarSign,
   Calendar, Hash, Target, Shield, Settings, TrendingUp,
   TrendingDown, Clock, Percent, RotateCcw, Zap,
@@ -12,9 +12,9 @@ import {
  * ReviewConfirmationStep - Final step in wheel creation wizard
  * Review all parameters and confirm wheel strategy creation
  */
-export default function ReviewConfirmationStep({ 
-  formData, 
-  updateFormData, 
+export default function ReviewConfirmationStep({
+  formData,
+  updateFormData,
   validationErrors,
   isQuickMode = false,
   prefilledData = null
@@ -41,10 +41,10 @@ export default function ReviewConfirmationStep({
       const premium = parseFloat(formData.premium) || 0;
       const contracts = parseInt(formData.contractCount) || 1;
       const positionSize = parseFloat(formData.positionSize) || 0;
-      
+
       // Assume current stock price is around strike for calculations
       const assumedCurrentPrice = strike * (formData.strategyType === 'covered_call' ? 0.95 : 1.05);
-      
+
       const scenarios = {
         bullish: { priceMove: 1.15, label: '+15%' },
         neutral: { priceMove: 1.0, label: 'No Change' },
@@ -139,7 +139,7 @@ export default function ReviewConfirmationStep({
     const positionSize = parseFloat(formData.positionSize) || 0;
 
     const potentialReturn = positionSize > 0 ? (premium * contracts * 100 / positionSize) * 100 : 0;
-    const maxRisk = formData.strategyType === 'cash_secured_put' ? 
+    const maxRisk = formData.strategyType === 'cash_secured_put' ?
       (strike * contracts * 100) - (premium * contracts * 100) : positionSize;
 
     let riskLevel = 'Low';
@@ -240,7 +240,7 @@ export default function ReviewConfirmationStep({
               </p>
             </div>
           </div>
-          
+
           <Badge className={riskAssessment.riskColor}>
             {riskAssessment.riskLevel} Risk
           </Badge>
@@ -458,7 +458,7 @@ export default function ReviewConfirmationStep({
           <CheckCircle2 className="w-5 h-5 text-green-600" />
           <span className="font-semibold text-green-900">Ready to Create Wheel Strategy</span>
         </div>
-        
+
         <p className="text-sm text-green-800 mb-4">
           Your {strategyDisplay.name} strategy for {formData.ticker} is configured and ready for creation.
           You can monitor progress, adjust parameters, and manage the strategy from your dashboard.

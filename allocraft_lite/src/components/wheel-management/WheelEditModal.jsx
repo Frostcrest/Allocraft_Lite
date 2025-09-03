@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Settings, AlertTriangle, DollarSign, 
+import {
+  Settings, AlertTriangle, DollarSign,
   Target, Calendar, TrendingUp, Save,
   RotateCcw, Percent, Clock
 } from "lucide-react";
@@ -16,11 +16,11 @@ import {
  * WheelEditModal - Edit wheel strategy parameters
  * Allows modification of key strategy parameters while wheel is running
  */
-export default function WheelEditModal({ 
-  isOpen, 
-  onClose, 
+export default function WheelEditModal({
+  isOpen,
+  onClose,
   wheel,
-  onSave = () => {}
+  onSave = () => { }
 }) {
   const [formData, setFormData] = useState({
     target_premium_rate: '',
@@ -33,7 +33,7 @@ export default function WheelEditModal({
     max_position_size: '',
     notes: ''
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -114,14 +114,14 @@ export default function WheelEditModal({
 
         <div className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-            
+
             {/* Premium Strategy */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-green-600" />
                 Premium Strategy
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="target_premium_rate">Target Premium Rate (%)</Label>
@@ -171,12 +171,12 @@ export default function WheelEditModal({
                 <Target className="h-5 w-5 text-blue-600" />
                 Strike Selection
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="strike_selection_method">Selection Method</Label>
-                  <Select 
-                    value={formData.strike_selection_method} 
+                  <Select
+                    value={formData.strike_selection_method}
                     onValueChange={(value) => handleInputChange('strike_selection_method', value)}
                   >
                     <SelectTrigger>
@@ -218,7 +218,7 @@ export default function WheelEditModal({
                 <Calendar className="h-5 w-5 text-purple-600" />
                 Time Management
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="min_dte">Minimum DTE</Label>
@@ -266,7 +266,7 @@ export default function WheelEditModal({
                 <AlertTriangle className="h-5 w-5 text-red-600" />
                 Risk Management
               </h3>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="loss_limit_percentage">Loss Limit (%)</Label>
                 <Input
@@ -321,7 +321,7 @@ export default function WheelEditModal({
                   <div>
                     <h4 className="text-sm font-medium text-amber-800">Active Strategy Warning</h4>
                     <p className="text-sm text-amber-700 mt-1">
-                      This wheel strategy is currently active. Changes to parameters will apply to new positions only. 
+                      This wheel strategy is currently active. Changes to parameters will apply to new positions only.
                       Existing positions will maintain their original parameters.
                     </p>
                   </div>
@@ -335,9 +335,9 @@ export default function WheelEditModal({
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            
-            <Button 
-              onClick={handleSave} 
+
+            <Button
+              onClick={handleSave}
               disabled={!hasChanges || loading}
               className="min-w-[100px]"
             >

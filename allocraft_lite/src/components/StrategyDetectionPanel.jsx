@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Zap, 
-  TrendingUp, 
-  DollarSign, 
-  Target, 
-  RefreshCw, 
-  AlertCircle, 
+import {
+  Zap,
+  TrendingUp,
+  DollarSign,
+  Target,
+  RefreshCw,
+  AlertCircle,
   CheckCircle2,
   Clock,
   Activity,
@@ -22,12 +22,12 @@ import { formatCurrency } from "@/lib/utils";
  * Strategy Detection Panel Component
  * Provides real-time analysis of positions for wheel opportunities
  */
-const StrategyDetectionPanel = ({ 
-  onDetectionComplete, 
+const StrategyDetectionPanel = ({
+  onDetectionComplete,
   positionsData = null,
   onManualDetection = null,
   autoRefresh = true,
-  className = "" 
+  className = ""
 }) => {
   const [lastAnalysis, setLastAnalysis] = useState(null);
   const [analysisStats, setAnalysisStats] = useState({
@@ -39,11 +39,11 @@ const StrategyDetectionPanel = ({
 
   // React Query hooks
   const wheelDetectionMutation = useWheelDetection();
-  const { 
-    data: detectionResults, 
+  const {
+    data: detectionResults,
     isLoading: resultsLoading,
-    refetch: refetchResults 
-  } = useWheelDetectionResults({ 
+    refetch: refetchResults
+  } = useWheelDetectionResults({
     enabled: autoRefresh,
     refetchInterval: autoRefresh ? 30000 : false // 30 seconds during market hours
   });
@@ -53,7 +53,7 @@ const StrategyDetectionPanel = ({
     const now = new Date();
     const hour = now.getHours();
     const day = now.getDay(); // 0 = Sunday, 6 = Saturday
-    
+
     // Simple market hours check (9:30 AM - 4:00 PM, Mon-Fri)
     return day >= 1 && day <= 5 && hour >= 9 && hour < 16;
   };
@@ -78,20 +78,20 @@ const StrategyDetectionPanel = ({
   const handleRunAnalysis = async () => {
     try {
       console.log('🔍 StrategyDetectionPanel: Starting manual analysis...');
-      
+
       // Use parent-provided manual detection function if available
       if (onManualDetection) {
         console.log('🎯 Using parent manual detection function...');
         const result = await onManualDetection();
         setLastAnalysis(result);
-        
+
         // Notify parent component
         if (onDetectionComplete) {
           onDetectionComplete(result);
         }
         return;
       }
-      
+
       // Fallback to direct mutation with position data
       const detectionData = {
         min_confidence_score: 0,
@@ -99,13 +99,13 @@ const StrategyDetectionPanel = ({
         include_market_context: true,
         strategy_filters: [] // Include all strategies
       };
-      
+
       // Include position data if provided
       if (positionsData) {
         detectionData.positions = positionsData.allPositions || [];
         detectionData.stocks = positionsData.stockPositions || [];
         detectionData.options = positionsData.optionPositions || [];
-        
+
         console.log('📊 StrategyDetectionPanel: Using provided position data', {
           positionsCount: detectionData.positions.length,
           stocksCount: detectionData.stocks.length,
@@ -117,7 +117,7 @@ const StrategyDetectionPanel = ({
 
       console.log('✅ StrategyDetectionPanel: Analysis complete', result);
       setLastAnalysis(result);
-      
+
       // Notify parent component
       if (onDetectionComplete) {
         onDetectionComplete(result);
@@ -125,7 +125,7 @@ const StrategyDetectionPanel = ({
 
       // Refresh cached results
       refetchResults();
-      
+
     } catch (error) {
       console.error('❌ StrategyDetectionPanel: Analysis failed', error);
     }
@@ -167,7 +167,7 @@ const StrategyDetectionPanel = ({
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     const diffHours = Math.floor(diffMins / 60);
@@ -192,7 +192,7 @@ const StrategyDetectionPanel = ({
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {isMarketHours() && autoRefresh && (
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -311,9 +311,9 @@ const StrategyDetectionPanel = ({
             <h4 className="text-sm font-semibold text-slate-900 mb-3">Strategy Breakdown</h4>
             <div className="flex flex-wrap gap-2">
               {Object.entries(analysisStats.strategiesByType).map(([strategy, count]) => (
-                <Badge 
+                <Badge
                   key={strategy}
-                  variant="outline" 
+                  variant="outline"
                   className={`${getStrategyColor(strategy)} flex items-center gap-1`}
                 >
                   {getStrategyIcon(strategy)}

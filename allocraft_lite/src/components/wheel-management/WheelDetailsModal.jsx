@@ -2,25 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Calendar, DollarSign, TrendingUp, TrendingDown, Clock, 
+import {
+  Calendar, DollarSign, TrendingUp, TrendingDown, Clock,
   Activity, FileText, Target, RotateCcw, AlertCircle,
-  Eye, BarChart3, History, Settings
+  Eye, BarChart3, History, Settings, Bot
 } from "lucide-react";
+import WheelStatusBadge from '../status-tracking/WheelStatusBadge';
+import WheelStatusHistory from '../status-tracking/WheelStatusHistory';
+import StatusUpdateModal from '../status-tracking/StatusUpdateModal';
+import { useWheelStatusHistory, useWheelStatusUpdate } from '../../hooks/useWheelStatus';
+import { WheelManagementService } from '../../services/WheelManagementService';
 
 /**
  * WheelDetailsModal - Comprehensive view of wheel strategy details
  * Shows full history, performance metrics, and current status
  */
-export default function WheelDetailsModal({ 
-  isOpen, 
-  onClose, 
+export default function WheelDetailsModal({
+  isOpen,
+  onClose,
   wheel,
-  onAction = () => {}
+  onAction = () => { }
 }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [wheelData, setWheelData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+
+  // React Query hooks for status tracking
+  const { data: statusHistory, refetch: refetchStatusHistory } = useWheelStatusHistory(
+    wheel?.id, 
+    { enabled: isOpen && !!wheel?.id }
+  );
+  const statusUpdateMutation = useWheelStatusUpdate();
 
   // Fetch detailed wheel data when modal opens
   useEffect(() => {
@@ -67,9 +80,22 @@ export default function WheelDetailsModal({
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Eye },
     { id: 'performance', label: 'Performance', icon: BarChart3 },
+    { id: 'status', label: 'Status Tracking', icon: Activity },
     { id: 'history', label: 'History', icon: History },
     { id: 'positions', label: 'Positions', icon: Target }
   ];
+
+  // Handle status update
+  const handleStatusUpdate = (newStatus) => {
+    // Update local wheel data
+    if (wheelData) {
+      setWheelData({ ...wheelData, status: newStatus });
+    }
+    // Trigger parent component update
+    onAction('statusUpdated', { ...wheel, status: newStatus });
+    // Refetch status history
+    refetchStatusHistory();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -97,8 +123,8 @@ export default function WheelDetailsModal({
                   onClick={() => setActiveTab(tab.id)}
                   className={`
                     flex items-center gap-2 px-4 py-2 border-b-2 transition-colors
-                    ${activeTab === tab.id 
-                      ? 'border-blue-500 text-blue-600' 
+                    ${activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
                     }
                   `}
@@ -123,18 +149,22 @@ export default function WheelDetailsModal({
                     {/* Strategy Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="bg-slate-50 p-4 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Activity className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium text-slate-600">Status</span>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-slate-600">Status</span>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setIsStatusModalOpen(true)}
+                            className="text-xs"
+                          >
+                            <Settings className="h-3 w-3 mr-1" />
+                            Update
+                          </Button>
                         </div>
-                        <Badge className={`
-                          ${wheel.status === 'active' ? 'bg-green-100 text-green-800' :
-                            wheel.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                            'bg-slate-100 text-slate-800'
-                          }
-                        `}>
-                          {wheel.status?.toUpperCase()}
-                        </Badge>
+                        <WheelStatusBadge status={wheel.status} size="lg" showTooltip={true} />
                       </div>
 
                       <div className="bg-slate-50 p-4 rounded-lg">
@@ -150,9 +180,8 @@ export default function WheelDetailsModal({
                           <DollarSign className="h-4 w-4 text-green-600" />
                           <span className="text-sm font-medium text-slate-600">P&L</span>
                         </div>
-                        <span className={`text-lg font-semibold ${
-                          (wheel.total_pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        <span className={`text-lg font-semibold ${(wheel.total_pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
                           {formatCurrency(wheel.total_pnl)}
                         </span>
                       </div>
@@ -168,8 +197,8 @@ export default function WheelDetailsModal({
                             {action}
                           </div>
                         )) || (
-                          <div className="text-sm text-blue-700">No immediate actions required</div>
-                        )}
+                            <div className="text-sm text-blue-700">No immediate actions required</div>
+                          )}
                       </div>
                     </div>
 
@@ -198,9 +227,8 @@ export default function WheelDetailsModal({
 
                       <div className="bg-slate-50 p-4 rounded-lg">
                         <div className="text-sm text-slate-600 mb-1">Realized P&L</div>
-                        <div className={`text-xl font-semibold ${
-                          (wheelData?.realized_pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        <div className={`text-xl font-semibold ${(wheelData?.realized_pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
                           {formatCurrency(wheelData?.realized_pnl || 0)}
                         </div>
                       </div>
@@ -224,6 +252,83 @@ export default function WheelDetailsModal({
                     <div className="bg-slate-50 p-8 rounded-lg text-center">
                       <BarChart3 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                       <p className="text-slate-600">Performance chart coming soon</p>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'status' && (
+                  <div className="space-y-6">
+                    {/* Current Status Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-slate-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-slate-700">Current Status</span>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setIsStatusModalOpen(true)}
+                            className="text-xs"
+                          >
+                            <Settings className="h-3 w-3 mr-1" />
+                            Update Status
+                          </Button>
+                        </div>
+                        <WheelStatusBadge status={wheel.status} size="lg" showTooltip={true} />
+                        <div className="mt-2 text-xs text-slate-600">
+                          Last updated: {wheel.last_status_update ? 
+                            new Date(wheel.last_status_update).toLocaleString() : 
+                            'Unknown'
+                          }
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Bot className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium text-slate-700">Auto-Detection</span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={async () => {
+                            try {
+                              // Trigger auto-detection for this wheel
+                              const detection = await WheelManagementService.detectWheelStatus(wheel.id);
+                              if (detection.recommended_status !== wheel.status) {
+                                setIsStatusModalOpen(true);
+                              } else {
+                                alert('Status is already up to date!');
+                              }
+                            } catch (error) {
+                              console.error('Auto-detection failed:', error);
+                              alert('Auto-detection failed. Please try again.');
+                            }
+                          }}
+                        >
+                          <Bot className="h-3 w-3 mr-1" />
+                          Run Auto-Detection
+                        </Button>
+                        <div className="mt-2 text-xs text-slate-600">
+                          Automatically detects recommended status based on current positions and market conditions
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status History */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <History className="h-5 w-5" />
+                        Status History
+                      </h3>
+                      <WheelStatusHistory 
+                        wheelId={wheel.id} 
+                        statusHistory={statusHistory}
+                        loading={!statusHistory}
+                      />
                     </div>
                   </div>
                 )}
@@ -304,15 +409,15 @@ export default function WheelDetailsModal({
           {/* Action Buttons */}
           <div className="flex justify-between pt-4 border-t">
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => onAction('edit_parameters', wheel)}
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Edit Parameters
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => onAction('add_notes', wheel)}
               >
                 <FileText className="h-4 w-4 mr-2" />
@@ -327,6 +432,14 @@ export default function WheelDetailsModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Status Update Modal */}
+      <StatusUpdateModal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        wheel={wheel}
+        onStatusUpdate={handleStatusUpdate}
+      />
     </Dialog>
   );
 }

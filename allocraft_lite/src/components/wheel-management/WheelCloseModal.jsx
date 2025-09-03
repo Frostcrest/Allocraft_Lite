@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { 
-  XCircle, AlertTriangle, DollarSign, Target, 
-  TrendingUp, TrendingDown, Calendar, 
+import {
+  XCircle, AlertTriangle, DollarSign, Target,
+  TrendingUp, TrendingDown, Calendar,
   CheckCircle, Clock, BarChart3, FileText
 } from "lucide-react";
 
@@ -14,11 +14,11 @@ import {
  * WheelCloseModal - Close wheel strategy with summary and options
  * Handles closing positions and provides final P&L summary
  */
-export default function WheelCloseModal({ 
-  isOpen, 
-  onClose, 
+export default function WheelCloseModal({
+  isOpen,
+  onClose,
   wheel,
-  onCloseWheel = () => {}
+  onCloseWheel = () => { }
 }) {
   const [closeMethod, setCloseMethod] = useState('market_close');
   const [closeNotes, setCloseNotes] = useState('');
@@ -143,7 +143,7 @@ export default function WheelCloseModal({
                   <div>
                     <h4 className="text-sm font-medium text-red-800">Strategy Closure Warning</h4>
                     <p className="text-sm text-red-700 mt-1">
-                      Closing this wheel strategy will liquidate all open positions and end the strategy permanently. 
+                      Closing this wheel strategy will liquidate all open positions and end the strategy permanently.
                       This action cannot be undone.
                     </p>
                   </div>
@@ -157,14 +157,13 @@ export default function WheelCloseModal({
                     <BarChart3 className="h-5 w-5 text-blue-600" />
                     Final Performance Summary
                   </h3>
-                  
+
                   {/* Key Metrics */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div className="bg-slate-50 p-4 rounded-lg">
                       <div className="text-sm text-slate-600 mb-1">Total P&L</div>
-                      <div className={`text-xl font-semibold ${
-                        wheelSummary.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
+                      <div className={`text-xl font-semibold ${wheelSummary.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
                         {formatCurrency(wheelSummary.total_pnl)}
                       </div>
                     </div>
@@ -220,25 +219,22 @@ export default function WheelCloseModal({
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-slate-600">Realized P&L:</span>
-                          <span className={`font-medium ${
-                            wheelSummary.realized_pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
+                          <span className={`font-medium ${wheelSummary.realized_pnl >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
                             {formatCurrency(wheelSummary.realized_pnl)}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-600">Unrealized P&L:</span>
-                          <span className={`font-medium ${
-                            wheelSummary.unrealized_pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
+                          <span className={`font-medium ${wheelSummary.unrealized_pnl >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
                             {formatCurrency(wheelSummary.unrealized_pnl)}
                           </span>
                         </div>
                         <div className="border-t pt-2 flex justify-between">
                           <span className="text-slate-600 font-medium">Total P&L:</span>
-                          <span className={`font-semibold ${
-                            wheelSummary.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
+                          <span className={`font-semibold ${wheelSummary.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
                             {formatCurrency(wheelSummary.total_pnl)}
                           </span>
                         </div>
@@ -255,7 +251,7 @@ export default function WheelCloseModal({
                     <Target className="h-5 w-5 text-orange-600" />
                     Positions to Close
                   </h3>
-                  
+
                   <div className="space-y-2">
                     {wheelSummary.current_positions.map((position) => (
                       <div key={position.id} className="border rounded-lg p-3">
@@ -269,9 +265,8 @@ export default function WheelCloseModal({
                           </div>
                           <div className="text-right">
                             <div className="font-medium">{formatCurrency(position.current_value)}</div>
-                            <div className={`text-sm ${
-                              position.unrealized_pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
+                            <div className={`text-sm ${position.unrealized_pnl >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
                               {position.unrealized_pnl >= 0 ? '+' : ''}{formatCurrency(position.unrealized_pnl)}
                             </div>
                           </div>
@@ -288,11 +283,10 @@ export default function WheelCloseModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button
                     onClick={() => setCloseMethod('market_close')}
-                    className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                      closeMethod === 'market_close' 
-                        ? 'border-red-500 bg-red-50' 
+                    className={`p-4 border-2 rounded-lg text-left transition-colors ${closeMethod === 'market_close'
+                        ? 'border-red-500 bg-red-50'
                         : 'border-slate-200 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="h-5 w-5 text-red-600" />
@@ -305,11 +299,10 @@ export default function WheelCloseModal({
 
                   <button
                     onClick={() => setCloseMethod('limit_close')}
-                    className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                      closeMethod === 'limit_close' 
-                        ? 'border-red-500 bg-red-50' 
+                    className={`p-4 border-2 rounded-lg text-left transition-colors ${closeMethod === 'limit_close'
+                        ? 'border-red-500 bg-red-50'
                         : 'border-slate-200 hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Target className="h-5 w-5 text-blue-600" />
@@ -342,8 +335,8 @@ export default function WheelCloseModal({
                 <Button variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                
-                <Button 
+
+                <Button
                   onClick={executeClose}
                   disabled={loading}
                   variant="destructive"

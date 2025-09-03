@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
+import {
   Grid, List, Clock, Search, Filter, SortDesc, SortAsc,
   RotateCcw, Target, TrendingUp, TrendingDown, Calendar,
   DollarSign, AlertCircle, CheckCircle2, Play, Pause,
@@ -16,10 +16,10 @@ import ActiveWheelCard from './ActiveWheelCard';
  * ActiveWheelsSection - Container for displaying and managing active wheel strategies
  * Supports multiple view modes, filtering, and sorting options
  */
-export default function ActiveWheelsSection({ 
-  wheelCycles = [], 
-  onWheelAction = () => {},
-  className = '' 
+export default function ActiveWheelsSection({
+  wheelCycles = [],
+  onWheelAction = () => { },
+  className = ''
 }) {
   console.log('⚙️ ActiveWheelsSection rendering:', { wheelCyclesCount: wheelCycles.length });
 
@@ -108,7 +108,7 @@ export default function ActiveWheelsSection({
 
     // Text search
     if (searchTerm) {
-      filtered = filtered.filter(wheel => 
+      filtered = filtered.filter(wheel =>
         wheel.ticker.toLowerCase().includes(searchTerm.toLowerCase()) ||
         wheel.strategy_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
         wheel.status.toLowerCase().includes(searchTerm.toLowerCase())
@@ -128,7 +128,7 @@ export default function ActiveWheelsSection({
     // Sorting
     filtered.sort((a, b) => {
       let aValue, bValue;
-      
+
       switch (sortBy) {
         case 'performance':
           aValue = a.total_pnl || 0;
@@ -153,7 +153,7 @@ export default function ActiveWheelsSection({
       if (typeof aValue === 'string') {
         return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
-      
+
       return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
     });
 
@@ -213,7 +213,7 @@ export default function ActiveWheelsSection({
               w-3 h-3 rounded-full 
               ${wheel.status === 'active' ? 'bg-green-500' :
                 wheel.status === 'pending_assignment' ? 'bg-yellow-500' :
-                wheel.status === 'completed' ? 'bg-blue-500' : 'bg-slate-400'
+                  wheel.status === 'completed' ? 'bg-blue-500' : 'bg-slate-400'
               }
             `} />
             {index < filteredAndSortedWheels.length - 1 && (
@@ -221,8 +221,8 @@ export default function ActiveWheelsSection({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <ActiveWheelCard 
-              wheel={wheel} 
+            <ActiveWheelCard
+              wheel={wheel}
               viewMode="timeline"
               onAction={handleWheelAction}
             />
@@ -307,7 +307,7 @@ export default function ActiveWheelsSection({
                 </option>
               ))}
             </select>
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -330,7 +330,7 @@ export default function ActiveWheelsSection({
             <Play className="w-3 h-3 mr-1" />
             Active ({statusOptions.find(s => s.value === 'active')?.count || 0})
           </Button>
-          
+
           <Button
             variant={statusFilter === 'pending_assignment' ? "default" : "outline"}
             size="sm"
@@ -340,7 +340,7 @@ export default function ActiveWheelsSection({
             <AlertCircle className="w-3 h-3 mr-1" />
             Pending ({statusOptions.find(s => s.value === 'pending_assignment')?.count || 0})
           </Button>
-          
+
           <Button
             variant={statusFilter === 'completed' ? "default" : "outline"}
             size="sm"
@@ -389,9 +389,9 @@ export default function ActiveWheelsSection({
           {viewMode === 'grid' && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredAndSortedWheels.map(wheel => (
-                <ActiveWheelCard 
-                  key={wheel.id} 
-                  wheel={wheel} 
+                <ActiveWheelCard
+                  key={wheel.id}
+                  wheel={wheel}
                   viewMode="grid"
                   onAction={handleWheelAction}
                 />
@@ -402,9 +402,9 @@ export default function ActiveWheelsSection({
           {viewMode === 'list' && (
             <div className="space-y-3">
               {filteredAndSortedWheels.map(wheel => (
-                <ActiveWheelCard 
-                  key={wheel.id} 
-                  wheel={wheel} 
+                <ActiveWheelCard
+                  key={wheel.id}
+                  wheel={wheel}
                   viewMode="list"
                   onAction={handleWheelAction}
                 />

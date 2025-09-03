@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   Calendar, DollarSign, Hash, Target, Shield, Settings,
   AlertCircle, CheckCircle2, Info, TrendingUp, Calculator,
   Clock, Percent, ArrowUp, ArrowDown
@@ -15,9 +15,9 @@ import {
  * ParameterConfigurationStep - Second step in wheel creation wizard
  * Configure strike prices, expiration dates, position sizing, and risk management
  */
-export default function ParameterConfigurationStep({ 
-  formData, 
-  updateFormData, 
+export default function ParameterConfigurationStep({
+  formData,
+  updateFormData,
   validationErrors,
   isQuickMode = false,
   prefilledData = null
@@ -45,7 +45,7 @@ export default function ParameterConfigurationStep({
       case 'cash_secured_put':
         return {
           requiresCash: true,
-          optionType: 'put', 
+          optionType: 'put',
           direction: 'sell',
           parameters: ['strikePrice', 'expirationDate', 'contractCount', 'premium', 'positionSize']
         };
@@ -76,7 +76,7 @@ export default function ParameterConfigurationStep({
   const getExpirationDates = () => {
     const dates = [];
     const today = new Date();
-    
+
     // Weekly Friday expirations for next 8 weeks
     for (let i = 1; i <= 8; i++) {
       const friday = new Date(today);
@@ -98,7 +98,7 @@ export default function ParameterConfigurationStep({
       firstFriday.setDate(1 + (5 - firstDay.getDay() + 7) % 7);
       const thirdFriday = new Date(firstFriday);
       thirdFriday.setDate(firstFriday.getDate() + 14);
-      
+
       dates.push({
         date: thirdFriday.toISOString().split('T')[0],
         label: `${thirdFriday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${i}m)`,
@@ -131,13 +131,13 @@ export default function ParameterConfigurationStep({
           breakeven = positionSize / (contracts * 100); // Cost basis per share
           returnOnCapital = positionSize > 0 ? (potentialIncome / positionSize) * 100 : 0;
           break;
-          
+
         case 'cash_secured_put':
           maxRisk = (strike * contracts * 100) - potentialIncome;
           breakeven = strike - premium;
           returnOnCapital = (strike * contracts * 100) > 0 ? (potentialIncome / (strike * contracts * 100)) * 100 : 0;
           break;
-          
+
         case 'full_wheel':
           maxRisk = (strike * contracts * 100) - potentialIncome;
           breakeven = strike - premium;
@@ -171,7 +171,7 @@ export default function ParameterConfigurationStep({
       },
       cash_secured_put: {
         strikePrice: "5-15% below current stock price",
-        expirationDate: "15-45 days for optimal theta decay", 
+        expirationDate: "15-45 days for optimal theta decay",
         premium: "1-3% of strike price for good income"
       },
       full_wheel: {
@@ -180,7 +180,7 @@ export default function ParameterConfigurationStep({
         premium: "Target 1-2% monthly return on capital"
       }
     };
-    
+
     return suggestions[formData.strategyType] || {};
   };
 
@@ -266,7 +266,7 @@ export default function ParameterConfigurationStep({
                 </Badge>
               )}
             </div>
-            
+
             {/* Quick Date Buttons */}
             <div className="grid grid-cols-3 gap-2 mb-2">
               {expirationDates.slice(0, 6).map((exp) => (
@@ -281,7 +281,7 @@ export default function ParameterConfigurationStep({
                 </Button>
               ))}
             </div>
-            
+
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
@@ -601,8 +601,8 @@ export default function ParameterConfigurationStep({
             <span className="font-medium text-blue-900">Parameters Configured</span>
           </div>
           <p className="text-sm text-blue-700 mt-1">
-            {formData.strategyType.replace('_', ' ')} for {formData.ticker} - 
-            ${formData.strikePrice} strike, {formData.contractCount} contract(s), 
+            {formData.strategyType.replace('_', ' ')} for {formData.ticker} -
+            ${formData.strikePrice} strike, {formData.contractCount} contract(s),
             expires {new Date(formData.expirationDate).toLocaleDateString()}.
             Proceed to review and confirm your wheel strategy.
           </p>
