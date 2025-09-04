@@ -20,7 +20,7 @@ export default function StrategySelectionStep({
   isQuickMode = false,
   prefilledData = null
 }) {
-  console.log('📋 StrategySelectionStep rendering:', { formData, isQuickMode });
+  // console.log('📋 StrategySelectionStep rendering:', { formData, isQuickMode });
 
   const [tickerSearch, setTickerSearch] = useState(formData.ticker || '');
   const [selectedStrategy, setSelectedStrategy] = useState(formData.strategyType || '');

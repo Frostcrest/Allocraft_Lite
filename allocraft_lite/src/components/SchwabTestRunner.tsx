@@ -7,9 +7,9 @@ import { schwabApi } from '@/services/schwabApi';
 
 // Simple logging function to replace console.log
 const schwabTestLog = (...args: any[]) => {
-  // Logging disabled for SchwabTestRunner
-  // console.log('[SchwabTestRunner]', ...args);
-  void args; // Suppress unused parameter warning
+    // Logging disabled for SchwabTestRunner
+    // console.log('[SchwabTestRunner]', ...args);
+    void args; // Suppress unused parameter warning
 };
 
 export async function runSchwabIntegrationTests() {

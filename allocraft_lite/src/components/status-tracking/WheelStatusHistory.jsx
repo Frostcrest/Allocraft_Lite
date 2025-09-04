@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-    History, 
-    Clock, 
-    User, 
-    Bot, 
-    ChevronDown, 
+import {
+    History,
+    Clock,
+    User,
+    Bot,
+    ChevronDown,
     ChevronUp,
     Activity,
     Filter,
@@ -22,12 +22,12 @@ import WheelStatusBadge, { StatusChangeIndicator } from './WheelStatusBadge';
  * Displays a chronological view of all status changes for a wheel strategy
  * with filtering, detailed metadata, and transition analysis.
  */
-export default function WheelStatusHistory({ 
-    wheelId, 
-    statusHistory = [], 
+export default function WheelStatusHistory({
+    wheelId,
+    statusHistory = [],
     isLoading = false,
-    onRefresh = () => {},
-    compact = false 
+    onRefresh = () => { },
+    compact = false
 }) {
     const [expandedEntries, setExpandedEntries] = useState(new Set());
     const [filter, setFilter] = useState('all'); // 'all', 'manual', 'automatic'
@@ -136,8 +136,8 @@ export default function WheelStatusHistory({
                         Status History
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                        <select 
-                            value={filter} 
+                        <select
+                            value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                             className="text-sm border rounded px-2 py-1"
                         >
@@ -145,9 +145,9 @@ export default function WheelStatusHistory({
                             <option value="manual">Manual Only</option>
                             <option value="automatic">Automatic Only</option>
                         </select>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
                         >
                             <Calendar className="h-4 w-4" />
@@ -187,22 +187,22 @@ export default function WheelStatusHistory({
                                                 <div className="flex items-center gap-2">
                                                     {entry.previous_status && (
                                                         <>
-                                                            <WheelStatusBadge 
-                                                                status={entry.previous_status} 
-                                                                size="sm" 
+                                                            <WheelStatusBadge
+                                                                status={entry.previous_status}
+                                                                size="sm"
                                                                 showTooltip={false}
                                                             />
                                                             <ArrowRight className="h-3 w-3 text-slate-400" />
                                                         </>
                                                     )}
-                                                    <WheelStatusBadge 
-                                                        status={entry.new_status} 
-                                                        size="sm" 
+                                                    <WheelStatusBadge
+                                                        status={entry.new_status}
+                                                        size="sm"
                                                         showTooltip={false}
                                                     />
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex items-center gap-2">
                                                 {entry.automated ? (
                                                     <Badge variant="outline" className="text-xs">
@@ -215,7 +215,7 @@ export default function WheelStatusHistory({
                                                         Manual
                                                     </Badge>
                                                 )}
-                                                
+
                                                 {entry.impact_level && (
                                                     <Badge className={`text-xs ${getImpactColor(entry.impact_level)}`}>
                                                         {entry.impact_level}
@@ -223,15 +223,15 @@ export default function WheelStatusHistory({
                                                 )}
                                             </div>
                                         </div>
-                                        
+
                                         <div className="flex items-center gap-2">
                                             <div className="text-right">
                                                 <div className="text-sm font-medium">{timestamp.relative}</div>
                                                 <div className="text-xs text-slate-500">{timestamp.date} {timestamp.time}</div>
                                             </div>
-                                            
-                                            <Button 
-                                                variant="ghost" 
+
+                                            <Button
+                                                variant="ghost"
                                                 size="sm"
                                                 onClick={() => toggleExpanded(entry.id)}
                                             >
@@ -243,7 +243,7 @@ export default function WheelStatusHistory({
                                             </Button>
                                         </div>
                                     </div>
-                                    
+
                                     {isExpanded && (
                                         <div className="mt-3 pt-3 border-t space-y-2">
                                             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -251,21 +251,21 @@ export default function WheelStatusHistory({
                                                     <span className="font-medium text-slate-600">Trigger Event:</span>
                                                     <span className="ml-2 capitalize">{entry.trigger_event.replace('_', ' ')}</span>
                                                 </div>
-                                                
+
                                                 {entry.updated_by && (
                                                     <div>
                                                         <span className="font-medium text-slate-600">Updated By:</span>
                                                         <span className="ml-2">{entry.updated_by}</span>
                                                     </div>
                                                 )}
-                                                
+
                                                 {entry.transition_type && (
                                                     <div>
                                                         <span className="font-medium text-slate-600">Transition Type:</span>
                                                         <span className="ml-2 capitalize">{entry.transition_type}</span>
                                                     </div>
                                                 )}
-                                                
+
                                                 {entry.duration_since && (
                                                     <div>
                                                         <span className="font-medium text-slate-600">Duration:</span>
@@ -273,7 +273,7 @@ export default function WheelStatusHistory({
                                                     </div>
                                                 )}
                                             </div>
-                                            
+
                                             {entry.metadata && entry.metadata !== '{}' && (
                                                 <div>
                                                     <span className="font-medium text-slate-600 text-sm">Additional Details:</span>

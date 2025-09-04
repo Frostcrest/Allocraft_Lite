@@ -30,7 +30,7 @@ export default function WheelDetailsModal({
 
   // React Query hooks for status tracking
   const { data: statusHistory, refetch: refetchStatusHistory } = useWheelStatusHistory(
-    wheel?.id, 
+    wheel?.id,
     { enabled: isOpen && !!wheel?.id }
   );
   const statusUpdateMutation = useWheelStatusUpdate();
@@ -154,8 +154,8 @@ export default function WheelDetailsModal({
                             <Activity className="h-4 w-4 text-green-600" />
                             <span className="text-sm font-medium text-slate-600">Status</span>
                           </div>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => setIsStatusModalOpen(true)}
                             className="text-xs"
@@ -266,8 +266,8 @@ export default function WheelDetailsModal({
                             <Activity className="h-4 w-4 text-blue-600" />
                             <span className="text-sm font-medium text-slate-700">Current Status</span>
                           </div>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => setIsStatusModalOpen(true)}
                             className="text-xs"
@@ -278,8 +278,8 @@ export default function WheelDetailsModal({
                         </div>
                         <WheelStatusBadge status={wheel.status} size="lg" showTooltip={true} />
                         <div className="mt-2 text-xs text-slate-600">
-                          Last updated: {wheel.last_status_update ? 
-                            new Date(wheel.last_status_update).toLocaleString() : 
+                          Last updated: {wheel.last_status_update ?
+                            new Date(wheel.last_status_update).toLocaleString() :
                             'Unknown'
                           }
                         </div>
@@ -290,8 +290,8 @@ export default function WheelDetailsModal({
                           <Bot className="h-4 w-4 text-green-600" />
                           <span className="text-sm font-medium text-slate-700">Auto-Detection</span>
                         </div>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           className="w-full text-xs"
                           onClick={async () => {
@@ -324,8 +324,8 @@ export default function WheelDetailsModal({
                         <History className="h-5 w-5" />
                         Status History
                       </h3>
-                      <WheelStatusHistory 
-                        wheelId={wheel.id} 
+                      <WheelStatusHistory
+                        wheelId={wheel.id}
                         statusHistory={statusHistory}
                         loading={!statusHistory}
                       />

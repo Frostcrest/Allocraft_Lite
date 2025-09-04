@@ -25,7 +25,7 @@ export default function WheelCreationModal({
   prefilledData = null, // For quick creation from opportunities
   quickMode = false // Skip some steps for quick creation
 }) {
-  console.log('🎭 WheelCreationModal rendering:', { isOpen, quickMode, prefilledData });
+  // console.log('🎭 WheelCreationModal rendering:', { isOpen, quickMode, prefilledData });
 
   // Modal state management
   const [currentStep, setCurrentStep] = useState(1);

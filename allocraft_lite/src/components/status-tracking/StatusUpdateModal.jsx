@@ -3,12 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-    Settings, 
-    User, 
-    Bot, 
-    AlertTriangle, 
-    CheckCircle2, 
+import {
+    Settings,
+    User,
+    Bot,
+    AlertTriangle,
+    CheckCircle2,
     Clock,
     Activity,
     Lightbulb
@@ -22,11 +22,11 @@ import { WheelManagementService } from '../../services/WheelManagementService';
  * Provides manual status override functionality with intelligent recommendations,
  * validation, and automatic detection integration.
  */
-export default function StatusUpdateModal({ 
-    isOpen, 
-    onClose, 
-    wheel, 
-    onStatusUpdate = () => {} 
+export default function StatusUpdateModal({
+    isOpen,
+    onClose,
+    wheel,
+    onStatusUpdate = () => { }
 }) {
     const [selectedStatus, setSelectedStatus] = useState(wheel?.status || '');
     const [isUpdating, setIsUpdating] = useState(false);
@@ -54,7 +54,7 @@ export default function StatusUpdateModal({
         try {
             const detection = await WheelManagementService.detectWheelStatus(wheel.id);
             setAutoDetection(detection);
-            
+
             if (detection.confidence > 0.8) {
                 setSelectedStatus(detection.recommended_status);
                 await validateTransition(detection.recommended_status);
@@ -76,7 +76,7 @@ export default function StatusUpdateModal({
         try {
             // Use the advanced validation from the service
             const validation = WheelManagementService.validateStatusTransitionAdvanced(
-                wheel.status, 
+                wheel.status,
                 newStatus,
                 { manual: true, reason: updateReason }
             );
@@ -108,7 +108,7 @@ export default function StatusUpdateModal({
                 updated_by: 'user',
                 auto_detection: autoDetection
             });
-            
+
             onStatusUpdate(selectedStatus);
             onClose();
         } catch (error) {
@@ -145,8 +145,8 @@ export default function StatusUpdateModal({
                             <div className="flex items-center gap-3">
                                 <WheelStatusBadge status={wheel?.status} size="lg" />
                                 <div className="text-sm text-slate-600">
-                                    Last updated: {wheel?.last_status_update ? 
-                                        new Date(wheel.last_status_update).toLocaleString() : 
+                                    Last updated: {wheel?.last_status_update ?
+                                        new Date(wheel.last_status_update).toLocaleString() :
                                         'Unknown'
                                     }
                                 </div>
@@ -164,8 +164,8 @@ export default function StatusUpdateModal({
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     onClick={handleAutoDetect}
                                     disabled={isDetecting}
                                     className="w-full"
@@ -194,7 +194,7 @@ export default function StatusUpdateModal({
                                                 {Math.round(autoDetection.confidence * 100)}% confident
                                             </Badge>
                                         </div>
-                                        
+
                                         {autoDetection.trigger_events.length > 0 && (
                                             <div className="text-sm text-slate-600 mb-2">
                                                 <span className="font-medium">Trigger events:</span>
@@ -236,21 +236,21 @@ export default function StatusUpdateModal({
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {statusOptions.map((option) => (
-                                        <div 
+                                        <div
                                             key={option.value}
                                             className={`
                                                 p-3 border rounded-lg cursor-pointer transition-colors
-                                                ${selectedStatus === option.value ? 
-                                                    'border-blue-500 bg-blue-50' : 
+                                                ${selectedStatus === option.value ?
+                                                    'border-blue-500 bg-blue-50' :
                                                     'border-slate-200 hover:border-slate-300'
                                                 }
                                             `}
                                             onClick={() => handleStatusChange(option.value)}
                                         >
                                             <div className="flex items-center gap-2 mb-1">
-                                                <WheelStatusBadge 
-                                                    status={option.value} 
-                                                    size="sm" 
+                                                <WheelStatusBadge
+                                                    status={option.value}
+                                                    size="sm"
                                                     showTooltip={false}
                                                 />
                                                 <span className="font-medium text-sm">{option.label}</span>
@@ -336,11 +336,11 @@ export default function StatusUpdateModal({
                         <Button variant="outline" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button 
+                        <Button
                             onClick={handleUpdate}
                             disabled={
-                                isUpdating || 
-                                !selectedStatus || 
+                                isUpdating ||
+                                !selectedStatus ||
                                 selectedStatus === wheel?.status ||
                                 (validationResult && !validationResult.valid)
                             }

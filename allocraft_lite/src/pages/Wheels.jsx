@@ -293,22 +293,22 @@ export default function Wheels() {
           setSelectedWheel(wheel);
           setShowWheelDetails(true);
           break;
-          
+
         case 'edit_parameters':
           setSelectedWheel(wheel);
           setShowWheelEdit(true);
           break;
-          
+
         case 'roll_options':
           setSelectedWheel(wheel);
           setShowWheelRoll(true);
           break;
-          
+
         case 'close_wheel':
           setSelectedWheel(wheel);
           setShowWheelClose(true);
           break;
-          
+
         case 'add_notes':
           const notes = prompt(`Add notes for ${wheel.ticker} wheel strategy:`);
           if (notes) {
@@ -321,7 +321,7 @@ export default function Wheels() {
             wheelsLog(`✅ Notes added for ${wheel.ticker}:`, notes);
           }
           break;
-          
+
         case 'update_status':
           // Example of status update through service
           const newStatus = prompt(`Enter new status for ${wheel.ticker} wheel:`, wheel.status);
@@ -333,7 +333,7 @@ export default function Wheels() {
             wheelsLog(`✅ Status updated for ${wheel.ticker}: ${wheel.status} → ${newStatus}`);
           }
           break;
-          
+
         default:
           wheelsLog('Unknown wheel action:', action);
       }
@@ -347,17 +347,17 @@ export default function Wheels() {
   const handleWheelSave = async (updatedWheel) => {
     try {
       wheelsLog('💾 Saving wheel updates:', updatedWheel);
-      
+
       const result = await WheelManagementService.updateWheel(selectedWheel.id, updatedWheel);
-      
+
       wheelsLog('✅ Wheel updated successfully:', result);
-      
+
       // Close modal and refresh data
       setShowWheelEdit(false);
       setSelectedWheel(null);
-      
+
       // React Query will automatically update cache through service
-      
+
     } catch (error) {
       wheelsLog('❌ Wheel update failed:', error);
       alert(`Update failed: ${error.message}`);
@@ -367,15 +367,15 @@ export default function Wheels() {
   const handleWheelRoll = async (rollData) => {
     try {
       wheelsLog('🔄 Rolling wheel options:', rollData);
-      
+
       const result = await WheelManagementService.rollWheel(selectedWheel.id, rollData);
-      
+
       wheelsLog('✅ Wheel roll completed:', result);
-      
+
       // Close modal and refresh data
       setShowWheelRoll(false);
       setSelectedWheel(null);
-      
+
     } catch (error) {
       wheelsLog('❌ Wheel roll failed:', error);
       alert(`Roll failed: ${error.message}`);
@@ -385,15 +385,15 @@ export default function Wheels() {
   const handleWheelClose = async (closeData) => {
     try {
       wheelsLog('❌ Closing wheel strategy:', closeData);
-      
+
       const result = await WheelManagementService.closeWheel(selectedWheel.id, closeData);
-      
+
       wheelsLog('✅ Wheel closed successfully:', result);
-      
+
       // Close modal and refresh data
       setShowWheelClose(false);
       setSelectedWheel(null);
-      
+
     } catch (error) {
       wheelsLog('❌ Wheel closure failed:', error);
       alert(`Closure failed: ${error.message}`);
@@ -691,7 +691,15 @@ export default function Wheels() {
               </p>
               <div className="flex gap-3 justify-center">
                 <Button
-                  onClick={() => setShowWheelCreationModal(true)}
+                  onClick={async () => {
+                    wheelsLog('🎯 ANALYZE: Starting position analysis...');
+                    try {
+                      const result = await runWheelDetection(false);
+                      wheelsLog('🎯 ANALYZE: Analysis completed', result);
+                    } catch (error) {
+                      wheelsLog('🎯 ANALYZE: Analysis failed', error);
+                    }
+                  }}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <Target className="w-5 h-5 mr-2" />

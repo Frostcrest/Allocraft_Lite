@@ -35,7 +35,7 @@ export function useWheelStatusUpdate() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ wheelId, status, metadata }) => 
+        mutationFn: ({ wheelId, status, metadata }) =>
             WheelManagementService.updateWheelStatus(wheelId, status, metadata),
         onSuccess: (data, variables) => {
             // Invalidate and refetch related queries
@@ -54,7 +54,7 @@ export function useBulkStatusUpdate() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (updates) => 
+        mutationFn: (updates) =>
             Promise.all(
                 updates.map(({ wheelId, status, metadata }) =>
                     WheelManagementService.updateWheelStatus(wheelId, status, metadata)
@@ -96,8 +96,8 @@ export function useStatusTransitionValidation(currentStatus, newStatus, metadata
     return useQuery({
         queryKey: ['status-transition-validation', currentStatus, newStatus, metadata],
         queryFn: () => WheelManagementService.validateStatusTransitionAdvanced(
-            currentStatus, 
-            newStatus, 
+            currentStatus,
+            newStatus,
             metadata
         ),
         enabled: !!(currentStatus && newStatus && currentStatus !== newStatus),

@@ -14,9 +14,9 @@
 
 // Silent logging function for FastAPI client
 const fastApiLog = (...args: any[]) => {
-  // Logging disabled for cleaner console
-  // fastApiLog('[FastAPI]', ...args);
-  void args; // Suppress unused parameter warning
+    // Logging disabled for cleaner console
+    // fastApiLog('[FastAPI]', ...args);
+    void args; // Suppress unused parameter warning
 };
 
 import { getCachedApiBaseUrl } from '../utils/apiConfig';
@@ -43,7 +43,7 @@ async function resolveApiBase(): Promise<string> {
     } catch (error) {
         console.warn('⚠️ Error during API base resolution:', error);
     }
-    
+
     // Otherwise use configured API base or fallback to local
     const fallbackUrl = (import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:8000";
     resolvedApiBase = fallbackUrl;
@@ -85,17 +85,17 @@ export async function isDevBackend(): Promise<boolean> {
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
     // Get the dynamically resolved API base URL
     const apiBaseUrl = await resolveApiBase();
-    
+
     const token = sessionStorage.getItem("allocraft_token");
     const headers = {
         ...(options.headers || {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         "Content-Type": "application/json",
     };
-    
+
     const fullUrl = `${apiBaseUrl}${path}`;
     fastApiLog(`📡 Making API request to: ${fullUrl}`);
-    
+
     return fetch(fullUrl, { ...options, headers });
 }
 
@@ -150,7 +150,7 @@ export async function fetchFromAPI(endpoint: string, options: RequestInit = {}):
         const apiBaseUrl = await resolveApiBase();
         url = `${apiBaseUrl}${endpoint}`;
     }
-    
+
     const opts: RequestInit = {
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
         credentials: "include" as RequestCredentials,
@@ -160,7 +160,7 @@ export async function fetchFromAPI(endpoint: string, options: RequestInit = {}):
     if (opts.body instanceof FormData && opts.headers && typeof opts.headers === 'object' && !Array.isArray(opts.headers)) {
         delete (opts.headers as Record<string, string>)["Content-Type"];
     }
-    
+
     fastApiLog(`📡 Making API request via fetchFromAPI to: ${url}`);
     const res = await fetch(url, opts);
     if (!res.ok) throw new Error(await res.text());

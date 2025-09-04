@@ -10,7 +10,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
         <QueryClientProvider client={queryClient}>
             <App />
-            <ReactQueryDevtools initialIsOpen={false} />
+            {/* ReactQueryDevtools disabled to reduce console noise */}
+            {/* <ReactQueryDevtools initialIsOpen={false} /> */}
         </QueryClientProvider>
     </React.StrictMode>
 )

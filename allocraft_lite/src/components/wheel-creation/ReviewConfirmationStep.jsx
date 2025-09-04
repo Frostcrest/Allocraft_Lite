@@ -19,7 +19,7 @@ export default function ReviewConfirmationStep({
   isQuickMode = false,
   prefilledData = null
 }) {
-  console.log('👁️ ReviewConfirmationStep rendering:', { formData, isQuickMode });
+  // console.log('👁️ ReviewConfirmationStep rendering:', { formData, isQuickMode });
 
   const [acknowledgments, setAcknowledgments] = useState({
     riskUnderstood: false,

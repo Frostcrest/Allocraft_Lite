@@ -42,39 +42,39 @@ const detectApiBaseUrl = (): string => {
 
 // Function to test if a port is available/responding
 export const testApiPort = async (port: number): Promise<boolean> => {
-    try {
-        // Try the health endpoint first
-        const response = await fetch(`http://127.0.0.1:${port}/healthz`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(1500) // 1.5 second timeout for speed
-        });
-        if (response.ok) return true;
-    } catch {
-        // Ignore and try next endpoint
-    }
-    
-    try {
-        // Try alternative health endpoint
-        const response = await fetch(`http://127.0.0.1:${port}/docs`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(1500)
-        });
-        if (response.ok) return true;
-    } catch {
-        // Ignore and try next endpoint
-    }
-    
-    try {
-        // Try basic API endpoint
-        const response = await fetch(`http://127.0.0.1:${port}/portfolio/positions`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(1500)
-        });
-        // Even if we get 401/403, the server is running
-        return response.status !== 0 && response.status < 500;
-    } catch {
-        return false;
-    }
+  try {
+    // Try the health endpoint first
+    const response = await fetch(`http://127.0.0.1:${port}/healthz`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(1500) // 1.5 second timeout for speed
+    });
+    if (response.ok) return true;
+  } catch {
+    // Ignore and try next endpoint
+  }
+
+  try {
+    // Try alternative health endpoint
+    const response = await fetch(`http://127.0.0.1:${port}/docs`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(1500)
+    });
+    if (response.ok) return true;
+  } catch {
+    // Ignore and try next endpoint
+  }
+
+  try {
+    // Try basic API endpoint
+    const response = await fetch(`http://127.0.0.1:${port}/portfolio/positions`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(1500)
+    });
+    // Even if we get 401/403, the server is running
+    return response.status !== 0 && response.status < 500;
+  } catch {
+    return false;
+  }
 };
 
 // Auto-detect working backend port from common development ports  
@@ -89,7 +89,7 @@ export const autoDetectBackendPort = async (): Promise<string> => {
 
   try {
     const results = await Promise.all(portPromises);
-    
+
     for (const { port, isWorking } of results) {
       if (isWorking) {
         configLog(`✅ Found working backend on port ${port}`);

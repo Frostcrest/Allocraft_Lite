@@ -18,7 +18,7 @@ export default function ActiveWheelCard({
   onAction = () => { },
   className = ''
 }) {
-  console.log('🎯 ActiveWheelCard rendering:', { wheel: wheel.ticker, viewMode });
+  // console.log('🎯 ActiveWheelCard rendering:', { wheel: wheel.ticker, viewMode });
 
   const [showActions, setShowActions] = useState(false);
 

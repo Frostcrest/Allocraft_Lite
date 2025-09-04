@@ -1,15 +1,15 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { 
-    Activity, 
-    Clock, 
-    AlertTriangle, 
-    CheckCircle2, 
-    Pause, 
-    Eye, 
-    RotateCcw, 
+import {
+    Activity,
+    Clock,
+    AlertTriangle,
+    CheckCircle2,
+    Pause,
+    Eye,
+    RotateCcw,
     Shield,
-    XCircle 
+    XCircle
 } from 'lucide-react';
 
 /**
@@ -18,8 +18,8 @@ import {
  * Provides visual status indicators with contextual colors, icons, and tooltips
  * for comprehensive wheel strategy status tracking.
  */
-export default function WheelStatusBadge({ 
-    status, 
+export default function WheelStatusBadge({
+    status,
     size = 'default',
     showIcon = true,
     showTooltip = true,
@@ -108,7 +108,7 @@ export default function WheelStatusBadge({
     };
 
     const badgeContent = (
-        <Badge 
+        <Badge
             className={`
                 ${config.color} 
                 ${sizeClasses[size]} 
@@ -179,8 +179,8 @@ export function StatusProgressIndicator({ currentStatus, completedStatuses = [] 
                         <div className={`
                             w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
                             ${isCurrent ? 'bg-blue-500 text-white' :
-                              isCompleted ? 'bg-green-500 text-white' :
-                              'bg-slate-200 text-slate-500'}
+                                isCompleted ? 'bg-green-500 text-white' :
+                                    'bg-slate-200 text-slate-500'}
                         `}>
                             {isCompleted ? '✓' : index + 1}
                         </div>

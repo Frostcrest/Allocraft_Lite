@@ -4,9 +4,9 @@
 
 // Silent logging function for API client
 const apiLog = (...args: any[]) => {
-  // Logging disabled for cleaner console
-  // apiLog('[API]', ...args);
-  void args; // Suppress unused parameter warning
+    // Logging disabled for cleaner console
+    // apiLog('[API]', ...args);
+    void args; // Suppress unused parameter warning
 };
 
 import { QueryClient, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
