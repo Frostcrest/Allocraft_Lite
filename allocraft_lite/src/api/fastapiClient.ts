@@ -2,18 +2,7 @@
  * Allocraft Frontend API Client
  *
  * What this file does (explained like you're 10):
- * - Figuexport async function fetchFromAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
-    const opts: RequestInit = {
-        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-        credentials: "include" as RequestCredentials,
-        ...options,
-    };
-    // Remove Content-Type for FormData
-    if (opts.body instanceof FormData && opts.headers && typeof opts.headers === 'object' && !Array.isArray(opts.headers)) {
-        delete (opts.headers as Record<string, string>)["Content-Type"];
-    }
-    const res = await fetch(url, opts);e our backend API is running (local computer for development, or on the internet for production)
+ * - Figure out where our backend API is running (local computer for development, or on the internet for production)
  * - Sends HTTP requests to the backend (like asking a waiter for food)
  * - Adds a secret token to requests when you're logged in (so the server knows it's you)
  *
@@ -23,25 +12,51 @@
  * - Clear names and comments so future you (or a new teammate) can fix things easily
  */
 
-function resolveApiBase(): string {
+import { getCachedApiBaseUrl } from '../utils/apiConfig';
+
+// Dynamic API base that will be resolved at runtime
+let resolvedApiBase: string | null = null;
+
+async function resolveApiBase(): Promise<string> {
+    if (resolvedApiBase) {
+        return resolvedApiBase;
+    }
+
     try {
         if (typeof window !== "undefined") {
-            const { protocol, hostname } = window.location;
-            // If we're on localhost (any port), target the local backend.
+            const { hostname } = window.location;
+            // If we're on localhost (any port), use auto-detection for backend ports
             if (hostname === "localhost" || hostname === "127.0.0.1") {
-                return `http://127.0.0.1:8000`;
+                console.log('🔍 Local development detected, auto-detecting backend port...');
+                resolvedApiBase = await getCachedApiBaseUrl();
+                console.log('✅ Resolved API base to:', resolvedApiBase);
+                return resolvedApiBase;
             }
         }
-    } catch { }
+    } catch (error) {
+        console.warn('⚠️ Error during API base resolution:', error);
+    }
+    
     // Otherwise use configured API base or fallback to local
-    return (import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+    const fallbackUrl = (import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+    resolvedApiBase = fallbackUrl;
+    return fallbackUrl;
 }
 
-export const API_BASE: string = resolveApiBase();
+// For backwards compatibility, expose a synchronous version that starts with default
+export const API_BASE: string = "http://127.0.0.1:8000"; // Initial default, will be updated
 
-export function isDevBackend(): boolean {
+// Initialize the dynamic API base
+resolveApiBase().then(url => {
+    console.log('🚀 API Base initialized:', url);
+}).catch(error => {
+    console.error('❌ Failed to initialize API base:', error);
+});
+
+export async function isDevBackend(): Promise<boolean> {
     try {
-        const u = new URL(API_BASE);
+        const apiBaseUrl = await resolveApiBase();
+        const u = new URL(apiBaseUrl);
         return u.hostname === 'localhost' || u.hostname === '127.0.0.1';
     } catch {
         return false;
@@ -52,7 +67,7 @@ export function isDevBackend(): boolean {
  * apiFetch
  *
  * A tiny wrapper around fetch() that always
- * - Pre-pends the API base URL
+ * - Pre-pends the API base URL (auto-detected for local development)
  * - Adds your login token (if you have one)
  * - Ensures JSON Content-Type by default
  *
@@ -61,13 +76,20 @@ export function isDevBackend(): boolean {
  *   const data = await res.json();
  */
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+    // Get the dynamically resolved API base URL
+    const apiBaseUrl = await resolveApiBase();
+    
     const token = sessionStorage.getItem("allocraft_token");
     const headers = {
         ...(options.headers || {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         "Content-Type": "application/json",
     };
-    return fetch(`${API_BASE}${path}`, { ...options, headers });
+    
+    const fullUrl = `${apiBaseUrl}${path}`;
+    console.log(`📡 Making API request to: ${fullUrl}`);
+    
+    return fetch(fullUrl, { ...options, headers });
 }
 
 /**
@@ -114,7 +136,14 @@ export async function fetchJson(path: string, options: RequestInit = {}): Promis
  * to pass an absolute URL; otherwise prefer apiFetch for internal API calls.
  */
 export async function fetchFromAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
+    let url: string;
+    if (endpoint.startsWith("http")) {
+        url = endpoint;
+    } else {
+        const apiBaseUrl = await resolveApiBase();
+        url = `${apiBaseUrl}${endpoint}`;
+    }
+    
     const opts: RequestInit = {
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
         credentials: "include" as RequestCredentials,
@@ -124,6 +153,8 @@ export async function fetchFromAPI(endpoint: string, options: RequestInit = {}):
     if (opts.body instanceof FormData && opts.headers && typeof opts.headers === 'object' && !Array.isArray(opts.headers)) {
         delete (opts.headers as Record<string, string>)["Content-Type"];
     }
+    
+    console.log(`📡 Making API request via fetchFromAPI to: ${url}`);
     const res = await fetch(url, opts);
     if (!res.ok) throw new Error(await res.text());
     return await res.json();

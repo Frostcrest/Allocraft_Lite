@@ -35,40 +35,66 @@ const detectApiBaseUrl = (): string => {
 
 // Function to test if a port is available/responding
 export const testApiPort = async (port: number): Promise<boolean> => {
-  try {
-    const response = await fetch(`http://127.0.0.1:${port}/healthz`, {
-      method: 'GET',
-      signal: AbortSignal.timeout(2000) // 2 second timeout
-    });
-    return response.ok;
-  } catch (error) {
-    // Try alternative health endpoint
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/docs`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(2000)
-      });
-      return response.ok;
+        // Try the health endpoint first
+        const response = await fetch(`http://127.0.0.1:${port}/healthz`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(1500) // 1.5 second timeout for speed
+        });
+        if (response.ok) return true;
     } catch {
-      return false;
+        // Ignore and try next endpoint
     }
-  }
+    
+    try {
+        // Try alternative health endpoint
+        const response = await fetch(`http://127.0.0.1:${port}/docs`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(1500)
+        });
+        if (response.ok) return true;
+    } catch {
+        // Ignore and try next endpoint
+    }
+    
+    try {
+        // Try basic API endpoint
+        const response = await fetch(`http://127.0.0.1:${port}/portfolio/positions`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(1500)
+        });
+        // Even if we get 401/403, the server is running
+        return response.status !== 0 && response.status < 500;
+    } catch {
+        return false;
+    }
 };
 
-// Auto-detect working backend port from common development ports
+// Auto-detect working backend port from common development ports  
 export const autoDetectBackendPort = async (): Promise<string> => {
-  console.log('Auto-detecting backend port...');
+  console.log('🔍 Auto-detecting backend port across 8000, 8001, 8002...');
 
-  for (const port of DEFAULT_PORTS) {
-    console.log(`Testing port ${port}...`);
+  // Test ports in parallel for speed
+  const portPromises = DEFAULT_PORTS.map(async (port) => {
     const isWorking = await testApiPort(port);
-    if (isWorking) {
-      console.log(`✅ Found working backend on port ${port}`);
-      return `http://127.0.0.1:${port}`;
+    return { port, isWorking };
+  });
+
+  try {
+    const results = await Promise.all(portPromises);
+    
+    for (const { port, isWorking } of results) {
+      if (isWorking) {
+        console.log(`✅ Found working backend on port ${port}`);
+        return `http://127.0.0.1:${port}`;
+      }
     }
+  } catch (error) {
+    console.warn('⚠️ Error during port detection:', error);
   }
 
-  console.warn('⚠️ No working backend detected, falling back to default');
+  console.warn('⚠️ No working backend detected on ports 8000-8004, falling back to 8000');
+  console.warn('💡 Make sure your backend is running on one of these ports: 8000, 8001, 8002');
   return 'http://127.0.0.1:8000'; // Default fallback
 };
 
@@ -89,14 +115,21 @@ export const getCachedApiBaseUrl = async (): Promise<string> => {
   }
 
   // Auto-detect and cache
-  const detectedUrl = await autoDetectBackendPort();
-  cachedApiBaseUrl = detectedUrl;
-  return detectedUrl;
+  try {
+    const detectedUrl = await autoDetectBackendPort();
+    cachedApiBaseUrl = detectedUrl;
+    return detectedUrl;
+  } catch (error) {
+    console.error('❌ Failed to detect backend port:', error);
+    cachedApiBaseUrl = 'http://127.0.0.1:8000'; // Final fallback
+    return cachedApiBaseUrl;
+  }
 };
 
-// Clear cache (useful for testing or when backend restarts)
+// Clear cache and retry detection (useful when backend restarts)
 export const clearApiUrlCache = (): void => {
   cachedApiBaseUrl = null;
+  console.log('🔄 API URL cache cleared - next request will re-detect backend port');
 };
 
 export default {

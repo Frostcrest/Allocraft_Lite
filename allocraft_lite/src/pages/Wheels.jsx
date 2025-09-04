@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCcw, Target, CheckCircle2, Zap, TrendingUp } from "lucide-react";
+import { Plus, RotateCcw, Target, CheckCircle2, Zap, TrendingUp, Search } from "lucide-react";
 import { useWheelCycles, useWheelDetection, useWheelDetectionResults, usePositionsData } from "@/api/enhancedClient";
+import { getCachedApiBaseUrl, clearApiUrlCache } from "../utils/apiConfig";
 import WheelBuilder from "@/components/WheelBuilder";
 import WheelCreationModal from "@/components/WheelCreationModal";
 import StrategyDetectionPanel from "@/components/StrategyDetectionPanel";
@@ -49,6 +50,7 @@ export default function Wheels() {
   const [showWheelCreationModal, setShowWheelCreationModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [detectedOpportunities, setDetectedOpportunities] = useState([]);
+  const [detectedBackendUrl, setDetectedBackendUrl] = useState('Detecting...');
 
   // Wheel management modals
   const [showWheelDetails, setShowWheelDetails] = useState(false);
@@ -68,44 +70,53 @@ export default function Wheels() {
   // Real wheel detection using unified position data
   const runWheelDetection = async (isAutoRefresh = false) => {
     console.log(`🔍 Starting ${isAutoRefresh ? 'automatic' : 'manual'} wheel detection with unified data...`);
+    console.log(`🌐 Current window location: ${window.location.href}`);
+    console.log(`🔗 Expected backend URL: http://127.0.0.1:8000`);
 
     try {
-      // Prepare unified position data for detection
+      // Prepare correct request format for backend WheelDetectionRequest
       const detectionData = {
-        positions: allPositions,
-        stocks: stockPositions,
-        options: optionPositions,
-        include_confidence_details: true,
-        include_market_context: true,
-        min_confidence_score: 50, // Minimum 50% confidence
-        strategy_filters: [] // Include all strategies
+        account_id: 1, // Default account ID - should match your positions
+        specific_tickers: [], // Empty to analyze all tickers
+        options: {
+          risk_tolerance: "moderate",
+          include_historical: false,
+          cash_balance: null // Will be calculated by backend
+        }
       };
 
       console.log('📊 Detection input data:', {
-        positionsCount: allPositions.length,
-        stocksCount: stockPositions.length,
-        optionsCount: optionPositions.length,
+        accountId: detectionData.account_id,
+        specificTickers: detectionData.specific_tickers,
+        options: detectionData.options,
+        positionsAvailable: allPositions.length,
+        stocksAvailable: stockPositions.length,
+        optionsAvailable: optionPositions.length,
         isAutoRefresh
       });
 
+      console.log('🚀 About to call wheelDetectionMutation.mutateAsync...');
       const result = await wheelDetectionMutation.mutateAsync(detectionData);
 
       console.log('✅ Real detection complete:', result);
 
-      // Update with real detection results
-      setDetectedOpportunities(result.opportunities || []);
+      // Backend returns List[WheelDetectionResult] directly
+      setDetectedOpportunities(result || []);
       setLastUpdateTime(new Date());
 
-      return result;
+      return { opportunities: result || [] };
     } catch (error) {
       console.error('❌ Real wheel detection failed:', error);
+      console.error('❌ Error details:', error.message, error.stack);
 
-      // Fall back to demo data if detection fails (only for manual runs)
-      if (!isAutoRefresh) {
-        console.log('🔄 Falling back to demo opportunities...');
-        loadDemoOpportunities();
-      }
+      // TEMPORARILY DISABLED: Fall back to demo data if detection fails
+      // if (!isAutoRefresh) {
+      //   console.log('🔄 Falling back to demo opportunities...');
+      //   loadDemoOpportunities();
+      // }
 
+      // Show empty opportunities so we can see the real issue
+      setDetectedOpportunities([]);
       throw error;
     }
   };
@@ -215,6 +226,21 @@ export default function Wheels() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [autoRefreshEnabled, allPositions.length]);
+
+  // Effect to detect and display current backend URL
+  useEffect(() => {
+    const detectBackend = async () => {
+      try {
+        const backendUrl = await getCachedApiBaseUrl();
+        setDetectedBackendUrl(backendUrl);
+        console.log('🔗 Backend auto-detected:', backendUrl);
+      } catch (error) {
+        console.error('❌ Backend detection failed:', error);
+        setDetectedBackendUrl('Detection failed');
+      }
+    };
+    detectBackend();
+  }, []);
 
   // Handle detection results from Strategy Detection Panel (enhanced with real data)
   const handleDetectionComplete = (detectionResult) => {
@@ -542,6 +568,24 @@ export default function Wheels() {
               <Target className="w-5 h-5 mr-2" />
               Create Wheel Strategy
             </Button>
+            {/* TEMPORARY: Manual wheel detection button for debugging */}
+            <Button
+              onClick={() => {
+                console.log('🔧 MANUAL: Triggering wheel detection...');
+                runWheelDetection(false).then(result => {
+                  console.log('🔧 MANUAL: Detection completed', result);
+                }).catch(error => {
+                  console.error('🔧 MANUAL: Detection failed', error);
+                });
+              }}
+              className="bg-yellow-600 hover:bg-yellow-700 shadow-lg transition-all duration-200"
+              variant="outline"
+            >
+              <Search className="w-5 h-5 mr-2" />
+              🔧 TEST Detection
+            </Button>
+            {/* TEMPORARILY DISABLED DEMO BUTTON */}
+            {/*
             <Button
               onClick={loadDemoOpportunities}
               variant="outline"
@@ -550,6 +594,7 @@ export default function Wheels() {
               <Zap className="w-5 h-5 mr-2" />
               Demo Data
             </Button>
+            */}
             <Button
               onClick={() => setShowWheelCreationModal(true)}
               variant="outline"
@@ -558,6 +603,35 @@ export default function Wheels() {
               <Plus className="w-5 h-5 mr-2" />
               Manual Creation
             </Button>
+          </div>
+        </div>
+
+        {/* DEBUG: Backend Connection Status */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${detectedBackendUrl.includes('8000') || detectedBackendUrl.includes('8001') || detectedBackendUrl.includes('8002') ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm font-medium text-gray-700">Backend Status:</span>
+                <span className="text-sm text-gray-600 font-mono">{detectedBackendUrl}</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={async () => {
+                  setDetectedBackendUrl('Re-detecting...');
+                  clearApiUrlCache();
+                  const newUrl = await getCachedApiBaseUrl();
+                  setDetectedBackendUrl(newUrl);
+                }}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                🔄 Re-detect
+              </Button>
+              <span className="text-xs text-gray-500">Auto-detects ports: 8000, 8001, 8002</span>
+            </div>
           </div>
         </div>
 

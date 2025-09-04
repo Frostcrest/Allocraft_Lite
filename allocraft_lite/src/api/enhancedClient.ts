@@ -320,31 +320,35 @@ export const useWheelDetection = () => {
         mutationFn: async (detectionParams = {}) => {
             console.log('🔍 useWheelDetection: Starting position analysis...', detectionParams);
 
+            // Format request data according to WheelDetectionRequest model
             const requestData = {
-                include_confidence_details: true,
-                include_market_context: true,
-                min_confidence_score: detectionParams.minConfidence || 0,
-                strategy_filters: detectionParams.strategies || [],
-                ...detectionParams
+                account_id: detectionParams.account_id || null,
+                specific_tickers: detectionParams.specific_tickers || [],
+                options: {
+                    risk_tolerance: detectionParams.risk_tolerance || "moderate",
+                    include_historical: detectionParams.include_historical || false,
+                    cash_balance: detectionParams.cash_balance || null,
+                    ...detectionParams.options
+                }
             };
 
-            const result = await enhancedFetch('/api/wheels/detect', {
+            const result = await enhancedFetch('/wheels/detect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestData)
             });
 
             console.log('✅ useWheelDetection: Analysis complete', {
-                opportunitiesFound: result.opportunities?.length || 0,
-                analysisDate: result.analysis_date
+                opportunitiesFound: result?.length || 0,
+                result: result
             });
 
             return result;
         },
         onSuccess: (data) => {
             console.log('🎯 useWheelDetection: Detection successful', {
-                opportunities: data.opportunities?.length || 0,
-                marketContext: data.market_context
+                resultsCount: data?.length || 0,
+                results: data
             });
 
             // Optionally invalidate related queries
