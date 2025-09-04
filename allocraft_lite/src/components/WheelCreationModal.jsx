@@ -10,9 +10,11 @@ import {
 } from "lucide-react";
 
 // Step Components
+import PositionOpportunityStep from './wheel-creation/PositionOpportunityStep';
 import StrategySelectionStep from './wheel-creation/StrategySelectionStep';
 import ParameterConfigurationStep from './wheel-creation/ParameterConfigurationStep';
 import ReviewConfirmationStep from './wheel-creation/ReviewConfirmationStep';
+import { createWheel } from '../services/WheelManagementService';
 
 /**
  * WheelCreationModal - Multi-step wizard for creating wheel strategies
@@ -59,20 +61,27 @@ export default function WheelCreationModal({
   const steps = [
     {
       id: 1,
+      title: "Position Opportunity",
+      description: "Select from existing positions or create manually",
+      icon: Target,
+      component: PositionOpportunityStep
+    },
+    {
+      id: 2,
       title: "Strategy Selection",
       description: "Choose strategy type and target ticker",
       icon: Target,
       component: StrategySelectionStep
     },
     {
-      id: 2,
+      id: 3,
       title: "Parameter Configuration",
       description: "Set strike prices, expiration, and position sizing",
       icon: Settings,
       component: ParameterConfigurationStep
     },
     {
-      id: 3,
+      id: 4,
       title: "Review & Confirmation",
       description: "Review settings and confirm wheel creation",
       icon: Eye,
@@ -80,18 +89,26 @@ export default function WheelCreationModal({
     }
   ];
 
-  // Skip to step 2 for quick mode
+  // Skip to step 3 for quick mode (skip position selection and strategy selection)
   useEffect(() => {
-    if (quickMode && isOpen) {
-      setCurrentStep(2);
+    if (quickMode && isOpen && prefilledData) {
+      // Only use quick mode if we have complete essential data
+      const hasEssentialData = prefilledData.ticker && prefilledData.strategy;
+      if (hasEssentialData) {
+        setCurrentStep(3);
+      } else {
+        // Incomplete data - start from step 1
+        console.warn('🚨 Quick mode requested but prefilledData is incomplete:', prefilledData);
+        setCurrentStep(1);
+      }
     }
-  }, [quickMode, isOpen]);
+  }, [quickMode, isOpen, prefilledData]);
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen && !prefilledData) {
       // Reset to default state only if no prefilled data
-      setCurrentStep(quickMode ? 2 : 1);
+      setCurrentStep(quickMode ? 3 : 1);
       setValidationErrors({});
       setIsSubmitting(false);
     }
@@ -100,14 +117,25 @@ export default function WheelCreationModal({
   // Step validation logic
   const validateStep = (stepNumber) => {
     const errors = {};
+    console.log('🔍 Validating step', stepNumber, 'with form data:', formData);
 
     switch (stepNumber) {
       case 1:
+        // Position selection step - minimal validation
+        if (!formData.fromPosition && (!formData.ticker || !formData.strategyType)) {
+          errors.general = "Please select a position opportunity or enter ticker and strategy manually";
+        }
+        break;
+
+      case 2:
+        // Strategy selection step (may be skipped if coming from position)
+        console.log('🔍 Step 2 validation - strategyType:', formData.strategyType, 'ticker:', formData.ticker);
         if (!formData.strategyType) errors.strategyType = "Strategy type is required";
         if (!formData.ticker) errors.ticker = "Ticker symbol is required";
         break;
 
-      case 2:
+      case 3:
+        // Parameter configuration
         if (!formData.strikePrice) errors.strikePrice = "Strike price is required";
         if (!formData.expirationDate) errors.expirationDate = "Expiration date is required";
         if (!formData.contractCount || formData.contractCount < 1) {
@@ -116,7 +144,7 @@ export default function WheelCreationModal({
         if (!formData.positionSize) errors.positionSize = "Position size is required";
         break;
 
-      case 3:
+      case 4:
         // Final validation before submission
         if (!formData.strategyType || !formData.ticker || !formData.strikePrice) {
           errors.general = "Please complete all required fields";
@@ -130,8 +158,15 @@ export default function WheelCreationModal({
 
   // Navigation handlers
   const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(Math.min(currentStep + 1, steps.length));
+    console.log('🚀 handleNext called for step', currentStep);
+    const isValid = validateStep(currentStep);
+    console.log('✅ Step validation result:', isValid);
+    if (isValid) {
+      const nextStep = Math.min(currentStep + 1, steps.length);
+      console.log('➡️ Moving to step', nextStep);
+      setCurrentStep(nextStep);
+    } else {
+      console.log('❌ Validation failed, staying on step', currentStep);
     }
   };
 
@@ -170,43 +205,47 @@ export default function WheelCreationModal({
     setIsSubmitting(true);
 
     try {
-      // Prepare wheel data for backend
+      // Validate required fields before submission
+      if (!formData.ticker || !formData.strategyType) {
+        setValidationErrors({
+          general: 'Ticker and strategy type are required fields'
+        });
+        return;
+      }
+
+      // Prepare wheel data for backend (matching WheelCycleCreate schema and WheelManagementService validation)
       const wheelData = {
-        strategy_type: formData.strategyType,
+        cycle_key: `${formData.ticker.toUpperCase()}-${Date.now()}`, // Unique key
         ticker: formData.ticker.toUpperCase(),
-        strike_price: parseFloat(formData.strikePrice),
-        expiration_date: formData.expirationDate,
-        contract_count: parseInt(formData.contractCount),
-        premium: parseFloat(formData.premium) || null,
-        position_size: parseFloat(formData.positionSize),
-
-        // Risk management
-        stop_loss: parseFloat(formData.stopLoss) || null,
-        profit_target: parseFloat(formData.profitTarget) || null,
-        max_days: parseInt(formData.maxDays) || null,
-
-        // Settings
-        auto_roll: formData.autoRoll,
-        notifications_enabled: formData.notifications,
-        notes: formData.notes || null,
-
-        // Metadata
-        created_via: quickMode ? 'quick_creation' : 'full_wizard',
-        creation_timestamp: new Date().toISOString()
+        started_at: new Date().toISOString().split('T')[0], // Today's date
+        status: "Open",
+        strategy_type: formData.strategyType,
+        // Direct fields required by WheelManagementService validation
+        strike_price: parseFloat(formData.strikePrice) || null,
+        shares_quantity: parseInt(formData.contractCount) * 100 || null, // For covered calls
+        expiration_date: formData.expirationDate || null,
+        quantity: parseInt(formData.contractCount) || 1,
+        notes: `Created via ${quickMode ? 'quick creation' : 'full wizard'}. Strategy: ${formData.strategyType}`,
+        detection_metadata: {
+          strike_price: parseFloat(formData.strikePrice) || null,
+          expiration_date: formData.expirationDate || null,
+          contract_count: parseInt(formData.contractCount) || 1,
+          premium: parseFloat(formData.premium) || null,
+          position_size: parseFloat(formData.positionSize) || null,
+          created_via: quickMode ? 'quick_creation' : 'full_wizard',
+          creation_timestamp: new Date().toISOString()
+        }
       };
 
-      // console.log('📊 Prepared wheel data for submission:', wheelData);
+      console.log('📊 Prepared wheel data for submission:', wheelData);
 
-      // TODO: Call actual backend API
-      // const response = await createWheelCycle(wheelData);
+      // Call actual backend API
+      const response = await createWheel(wheelData);
 
-      // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // console.log('✅ Wheel creation successful');
+      console.log('✅ Wheel creation successful:', response);
 
       // Notify parent component
-      onWheelCreated(wheelData);
+      onWheelCreated(response);
 
     } catch (error) {
       console.error('❌ Wheel creation failed:', error);
@@ -218,8 +257,8 @@ export default function WheelCreationModal({
     }
   };
 
-  // Quick creation helper
-  const isQuickCreation = quickMode && prefilledData;
+  // Quick creation helper - only true if we have complete essential data
+  const isQuickCreation = quickMode && prefilledData && prefilledData.ticker && prefilledData.strategy;
 
   // Current step component
   const CurrentStepComponent = steps[currentStep - 1]?.component;
@@ -228,7 +267,7 @@ export default function WheelCreationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden p-0 flex flex-col">
         {/* Modal Header */}
         <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-purple-50">
           <div className="flex items-center justify-between">
@@ -241,7 +280,7 @@ export default function WheelCreationModal({
                   {isQuickCreation ? 'Quick Wheel Creation' : 'Create New Wheel Strategy'}
                 </DialogTitle>
                 <p className="text-sm text-slate-600 mt-1">
-                  {isQuickCreation
+                  {isQuickCreation && prefilledData?.ticker && prefilledData?.strategy
                     ? `Fast-track creation for ${prefilledData.ticker} ${prefilledData.strategy}`
                     : 'Set up a new wheel strategy with guided configuration'
                   }
@@ -313,7 +352,7 @@ export default function WheelCreationModal({
         </DialogHeader>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <div className="p-6">
             {/* Quick Creation Badge */}
             {isQuickCreation && (
@@ -356,7 +395,7 @@ export default function WheelCreationModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+        <div className="flex-shrink-0 px-6 py-4 border-t border-slate-200 bg-slate-50">
           <div className="flex items-center justify-between">
             {/* Step Info */}
             <div className="flex items-center gap-2 text-sm text-slate-500">

@@ -30,7 +30,8 @@ export default function Wheels() {
   const {
     data: cycles = [],
     isLoading: cyclesLoading,
-    error: cyclesError
+    error: cyclesError,
+    refetch: refetchWheelCycles
   } = useWheelCycles();
 
   // Positions data for wheel detection
@@ -585,7 +586,10 @@ export default function Wheels() {
               )}
             </Button>
             <Button
-              onClick={() => setShowWheelCreationModal(true)}
+              onClick={() => {
+                setQuickCreationData(null); // Clear any existing quick creation data
+                setShowWheelCreationModal(true);
+              }}
               className="bg-blue-600 hover:bg-blue-700 shadow-lg transition-all duration-200"
             >
               <Target className="w-5 h-5 mr-2" />
@@ -619,7 +623,10 @@ export default function Wheels() {
             </Button>
             */}
             <Button
-              onClick={() => setShowWheelCreationModal(true)}
+              onClick={() => {
+                setQuickCreationData(null); // Clear any existing quick creation data
+                setShowWheelCreationModal(true);
+              }}
               variant="outline"
               className="border-slate-300 hover:bg-slate-50 shadow-sm"
             >
@@ -679,7 +686,10 @@ export default function Wheels() {
                   Analyze My Positions
                 </Button>
                 <Button
-                  onClick={() => setShowWheelCreationModal(true)}
+                  onClick={() => {
+                    setQuickCreationData(null); // Clear any existing quick creation data
+                    setShowWheelCreationModal(true);
+                  }}
                   variant="outline"
                 >
                   <Plus className="w-5 h-5 mr-2" />
@@ -747,7 +757,9 @@ export default function Wheels() {
             setShowWheelCreationModal(false);
             setQuickCreationData(null);
 
-            // TODO: Refresh wheel cycles data
+            // Refresh wheel cycles data
+            wheelsLog('🔄 Refreshing wheel cycles data...');
+            await refetchWheelCycles();
             wheelsLog('✅ Wheel successfully created with new modal system');
           }}
           prefilledData={quickCreationData}
