@@ -12,6 +12,13 @@
  * - Clear names and comments so future you (or a new teammate) can fix things easily
  */
 
+// Silent logging function for FastAPI client
+const fastApiLog = (...args: any[]) => {
+  // Logging disabled for cleaner console
+  // fastApiLog('[FastAPI]', ...args);
+  void args; // Suppress unused parameter warning
+};
+
 import { getCachedApiBaseUrl } from '../utils/apiConfig';
 
 // Dynamic API base that will be resolved at runtime
@@ -27,9 +34,9 @@ async function resolveApiBase(): Promise<string> {
             const { hostname } = window.location;
             // If we're on localhost (any port), use auto-detection for backend ports
             if (hostname === "localhost" || hostname === "127.0.0.1") {
-                console.log('🔍 Local development detected, auto-detecting backend port...');
+                fastApiLog('🔍 Local development detected, auto-detecting backend port...');
                 resolvedApiBase = await getCachedApiBaseUrl();
-                console.log('✅ Resolved API base to:', resolvedApiBase);
+                fastApiLog('✅ Resolved API base to:', resolvedApiBase);
                 return resolvedApiBase;
             }
         }
@@ -48,9 +55,9 @@ export const API_BASE: string = "http://127.0.0.1:8000"; // Initial default, wil
 
 // Initialize the dynamic API base
 resolveApiBase().then(url => {
-    console.log('🚀 API Base initialized:', url);
+    fastApiLog('🚀 API Base initialized:', url);
 }).catch(error => {
-    console.error('❌ Failed to initialize API base:', error);
+    fastApiLog('❌ Failed to initialize API base:', error);
 });
 
 export async function isDevBackend(): Promise<boolean> {
@@ -87,7 +94,7 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     };
     
     const fullUrl = `${apiBaseUrl}${path}`;
-    console.log(`📡 Making API request to: ${fullUrl}`);
+    fastApiLog(`📡 Making API request to: ${fullUrl}`);
     
     return fetch(fullUrl, { ...options, headers });
 }
@@ -154,7 +161,7 @@ export async function fetchFromAPI(endpoint: string, options: RequestInit = {}):
         delete (opts.headers as Record<string, string>)["Content-Type"];
     }
     
-    console.log(`📡 Making API request via fetchFromAPI to: ${url}`);
+    fastApiLog(`📡 Making API request via fetchFromAPI to: ${url}`);
     const res = await fetch(url, opts);
     if (!res.ok) throw new Error(await res.text());
     return await res.json();

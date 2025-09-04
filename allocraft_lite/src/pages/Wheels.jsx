@@ -16,9 +16,16 @@ import WheelRollModal from '../components/wheel-management/WheelRollModal';
 import WheelCloseModal from '../components/wheel-management/WheelCloseModal';
 import { WheelManagementService } from '../services/WheelManagementService';
 
+// Silent logging function for Wheels page
+const wheelsLog = (...args) => {
+  // Logging disabled for cleaner console
+  // wheelsLog('[Wheels]', ...args);
+  void args; // Suppress unused parameter warning
+};
+
 // Enhanced Wheels page with improved structure for wheel detection and management
 export default function Wheels() {
-  console.log('Wheels component rendering...');
+  wheelsLog('Wheels component rendering...');
 
   // React Query data fetching
   const {
@@ -69,9 +76,9 @@ export default function Wheels() {
 
   // Real wheel detection using unified position data
   const runWheelDetection = async (isAutoRefresh = false) => {
-    console.log(`🔍 Starting ${isAutoRefresh ? 'automatic' : 'manual'} wheel detection with unified data...`);
-    console.log(`🌐 Current window location: ${window.location.href}`);
-    console.log(`🔗 Expected backend URL: http://127.0.0.1:8000`);
+    wheelsLog(`🔍 Starting ${isAutoRefresh ? 'automatic' : 'manual'} wheel detection with unified data...`);
+    wheelsLog(`🌐 Current window location: ${window.location.href}`);
+    wheelsLog(`🔗 Expected backend URL: http://127.0.0.1:8000`);
 
     try {
       // Prepare correct request format for backend WheelDetectionRequest
@@ -85,7 +92,7 @@ export default function Wheels() {
         }
       };
 
-      console.log('📊 Detection input data:', {
+      wheelsLog('📊 Detection input data:', {
         accountId: detectionData.account_id,
         specificTickers: detectionData.specific_tickers,
         options: detectionData.options,
@@ -95,10 +102,10 @@ export default function Wheels() {
         isAutoRefresh
       });
 
-      console.log('🚀 About to call wheelDetectionMutation.mutateAsync...');
+      wheelsLog('🚀 About to call wheelDetectionMutation.mutateAsync...');
       const result = await wheelDetectionMutation.mutateAsync(detectionData);
 
-      console.log('✅ Real detection complete:', result);
+      wheelsLog('✅ Real detection complete:', result);
 
       // Backend returns List[WheelDetectionResult] directly
       setDetectedOpportunities(result || []);
@@ -106,12 +113,12 @@ export default function Wheels() {
 
       return { opportunities: result || [] };
     } catch (error) {
-      console.error('❌ Real wheel detection failed:', error);
-      console.error('❌ Error details:', error.message, error.stack);
+      wheelsLog('❌ Real wheel detection failed:', error);
+      wheelsLog('❌ Error details:', error.message, error.stack);
 
       // TEMPORARILY DISABLED: Fall back to demo data if detection fails
       // if (!isAutoRefresh) {
-      //   console.log('🔄 Falling back to demo opportunities...');
+      //   wheelsLog('🔄 Falling back to demo opportunities...');
       //   loadDemoOpportunities();
       // }
 
@@ -135,13 +142,13 @@ export default function Wheels() {
   const startAutoRefresh = () => {
     if (refreshInterval) return; // Already running
 
-    console.log('🔄 Starting auto-refresh for real-time monitoring...');
+    wheelsLog('🔄 Starting auto-refresh for real-time monitoring...');
 
     const interval = setInterval(() => {
       if (autoRefreshEnabled && isMarketHours() && allPositions.length > 0) {
-        console.log('🕐 Auto-refresh triggered during market hours');
+        wheelsLog('🕐 Auto-refresh triggered during market hours');
         runWheelDetection(true).catch(error => {
-          console.log('📝 Auto-refresh detection failed, continuing...');
+          wheelsLog('📝 Auto-refresh detection failed, continuing...');
         });
 
         // Also refresh position data
@@ -154,7 +161,7 @@ export default function Wheels() {
 
   const stopAutoRefresh = () => {
     if (refreshInterval) {
-      console.log('⏹️ Stopping auto-refresh...');
+      wheelsLog('⏹️ Stopping auto-refresh...');
       clearInterval(refreshInterval);
       setRefreshInterval(null);
     }
@@ -162,20 +169,20 @@ export default function Wheels() {
 
   // Manual refresh function
   const handleManualRefresh = async () => {
-    console.log('🔄 Manual refresh triggered...');
+    wheelsLog('🔄 Manual refresh triggered...');
     try {
       await refetchPositions(); // Refresh positions first
       await runWheelDetection(false); // Then run detection
     } catch (error) {
-      console.error('❌ Manual refresh failed:', error);
+      wheelsLog('❌ Manual refresh failed:', error);
     }
   };
 
   // Effect to run detection when positions data is available
   useEffect(() => {
     if (!positionsLoading && !positionsError && allPositions.length > 0) {
-      console.log('🎯 Positions loaded, running automatic wheel detection...');
-      console.log('📊 Position data summary:', {
+      wheelsLog('🎯 Positions loaded, running automatic wheel detection...');
+      wheelsLog('📊 Position data summary:', {
         allPositionsCount: allPositions.length,
         stockPositionsCount: stockPositions.length,
         optionPositionsCount: optionPositions.length,
@@ -183,10 +190,10 @@ export default function Wheels() {
       });
 
       runWheelDetection(false).catch(error => {
-        console.log('📝 Auto-detection failed, user can manually trigger detection');
+        wheelsLog('📝 Auto-detection failed, user can manually trigger detection');
       });
     } else if (!positionsLoading) {
-      console.log('ℹ️ Positions status:', {
+      wheelsLog('ℹ️ Positions status:', {
         loading: positionsLoading,
         error: positionsError,
         positionsCount: allPositions.length,
@@ -213,10 +220,10 @@ export default function Wheels() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        console.log('🔇 Tab hidden, pausing auto-refresh...');
+        wheelsLog('🔇 Tab hidden, pausing auto-refresh...');
         stopAutoRefresh();
       } else if (autoRefreshEnabled && allPositions.length > 0) {
-        console.log('👁️ Tab visible, resuming auto-refresh...');
+        wheelsLog('👁️ Tab visible, resuming auto-refresh...');
         startAutoRefresh();
       }
     };
@@ -233,9 +240,9 @@ export default function Wheels() {
       try {
         const backendUrl = await getCachedApiBaseUrl();
         setDetectedBackendUrl(backendUrl);
-        console.log('🔗 Backend auto-detected:', backendUrl);
+        wheelsLog('🔗 Backend auto-detected:', backendUrl);
       } catch (error) {
-        console.error('❌ Backend detection failed:', error);
+        wheelsLog('❌ Backend detection failed:', error);
         setDetectedBackendUrl('Detection failed');
       }
     };
@@ -244,20 +251,20 @@ export default function Wheels() {
 
   // Handle detection results from Strategy Detection Panel (enhanced with real data)
   const handleDetectionComplete = (detectionResult) => {
-    console.log('🎯 Wheels page: Detection complete', detectionResult);
+    wheelsLog('🎯 Wheels page: Detection complete', detectionResult);
 
     if (detectionResult.opportunities && detectionResult.opportunities.length > 0) {
       setDetectedOpportunities(detectionResult.opportunities);
     } else {
       // If no real opportunities found, provide helpful feedback
-      console.log('ℹ️ No wheel opportunities detected from current positions');
+      wheelsLog('ℹ️ No wheel opportunities detected from current positions');
       setDetectedOpportunities([]);
     }
   };
 
   // Handle wheel creation from opportunity card
   const handleCreateWheelFromOpportunity = (opportunity) => {
-    console.log('🚀 Creating wheel from opportunity:', opportunity);
+    wheelsLog('🚀 Creating wheel from opportunity:', opportunity);
 
     // Prepare quick creation data
     const quickData = {
@@ -277,7 +284,7 @@ export default function Wheels() {
 
   // Handle wheel management actions using WheelManagementService
   const handleWheelAction = async (action, wheel) => {
-    console.log('🎯 Wheel management action:', action, wheel);
+    wheelsLog('🎯 Wheel management action:', action, wheel);
 
     try {
       switch (action) {
@@ -311,7 +318,7 @@ export default function Wheels() {
               description: 'Notes added to wheel strategy',
               metadata: { notes: notes }
             });
-            console.log(`✅ Notes added for ${wheel.ticker}:`, notes);
+            wheelsLog(`✅ Notes added for ${wheel.ticker}:`, notes);
           }
           break;
           
@@ -323,15 +330,15 @@ export default function Wheels() {
               reason: 'Manual status update',
               updated_by: 'user'
             });
-            console.log(`✅ Status updated for ${wheel.ticker}: ${wheel.status} → ${newStatus}`);
+            wheelsLog(`✅ Status updated for ${wheel.ticker}: ${wheel.status} → ${newStatus}`);
           }
           break;
           
         default:
-          console.log('Unknown wheel action:', action);
+          wheelsLog('Unknown wheel action:', action);
       }
     } catch (error) {
-      console.error('❌ Wheel action failed:', error);
+      wheelsLog('❌ Wheel action failed:', error);
       alert(`Action failed: ${error.message}`);
     }
   };
@@ -339,11 +346,11 @@ export default function Wheels() {
   // Modal callback functions using WheelManagementService
   const handleWheelSave = async (updatedWheel) => {
     try {
-      console.log('💾 Saving wheel updates:', updatedWheel);
+      wheelsLog('💾 Saving wheel updates:', updatedWheel);
       
       const result = await WheelManagementService.updateWheel(selectedWheel.id, updatedWheel);
       
-      console.log('✅ Wheel updated successfully:', result);
+      wheelsLog('✅ Wheel updated successfully:', result);
       
       // Close modal and refresh data
       setShowWheelEdit(false);
@@ -352,43 +359,43 @@ export default function Wheels() {
       // React Query will automatically update cache through service
       
     } catch (error) {
-      console.error('❌ Wheel update failed:', error);
+      wheelsLog('❌ Wheel update failed:', error);
       alert(`Update failed: ${error.message}`);
     }
   };
 
   const handleWheelRoll = async (rollData) => {
     try {
-      console.log('🔄 Rolling wheel options:', rollData);
+      wheelsLog('🔄 Rolling wheel options:', rollData);
       
       const result = await WheelManagementService.rollWheel(selectedWheel.id, rollData);
       
-      console.log('✅ Wheel roll completed:', result);
+      wheelsLog('✅ Wheel roll completed:', result);
       
       // Close modal and refresh data
       setShowWheelRoll(false);
       setSelectedWheel(null);
       
     } catch (error) {
-      console.error('❌ Wheel roll failed:', error);
+      wheelsLog('❌ Wheel roll failed:', error);
       alert(`Roll failed: ${error.message}`);
     }
   };
 
   const handleWheelClose = async (closeData) => {
     try {
-      console.log('❌ Closing wheel strategy:', closeData);
+      wheelsLog('❌ Closing wheel strategy:', closeData);
       
       const result = await WheelManagementService.closeWheel(selectedWheel.id, closeData);
       
-      console.log('✅ Wheel closed successfully:', result);
+      wheelsLog('✅ Wheel closed successfully:', result);
       
       // Close modal and refresh data
       setShowWheelClose(false);
       setSelectedWheel(null);
       
     } catch (error) {
-      console.error('❌ Wheel closure failed:', error);
+      wheelsLog('❌ Wheel closure failed:', error);
       alert(`Closure failed: ${error.message}`);
     }
   };
@@ -403,7 +410,7 @@ export default function Wheels() {
 
   // Handle view details for opportunity
   const handleViewOpportunityDetails = (opportunity) => {
-    console.log('👁️ View opportunity details:', opportunity);
+    wheelsLog('👁️ View opportunity details:', opportunity);
     // TODO: Implement details modal or expand card view
     alert(`Viewing details for ${opportunity.ticker} ${opportunity.strategy} opportunity`);
   };
@@ -457,7 +464,7 @@ export default function Wheels() {
       }
     ];
 
-    console.log('📊 Loading demo opportunities:', demoOpportunities);
+    wheelsLog('📊 Loading demo opportunities:', demoOpportunities);
     setDetectedOpportunities(demoOpportunities);
   };
 
@@ -571,11 +578,11 @@ export default function Wheels() {
             {/* TEMPORARY: Manual wheel detection button for debugging */}
             <Button
               onClick={() => {
-                console.log('🔧 MANUAL: Triggering wheel detection...');
+                wheelsLog('🔧 MANUAL: Triggering wheel detection...');
                 runWheelDetection(false).then(result => {
-                  console.log('🔧 MANUAL: Detection completed', result);
+                  wheelsLog('🔧 MANUAL: Detection completed', result);
                 }).catch(error => {
-                  console.error('🔧 MANUAL: Detection failed', error);
+                  wheelsLog('🔧 MANUAL: Detection failed', error);
                 });
               }}
               className="bg-yellow-600 hover:bg-yellow-700 shadow-lg transition-all duration-200"
@@ -726,7 +733,7 @@ export default function Wheels() {
           isOpen={showWheelBuilder}
           onClose={() => setShowWheelBuilder(false)}
           onWheelCreated={async (wheelData) => {
-            console.log('🎯 Wheel creation completed:', wheelData);
+            wheelsLog('🎯 Wheel creation completed:', wheelData);
 
             // Show success message
             setShowSuccess(true);
@@ -735,7 +742,7 @@ export default function Wheels() {
             // Close the modal
             setShowWheelBuilder(false);
 
-            console.log('✅ Wheel successfully created and stored in backend');
+            wheelsLog('✅ Wheel successfully created and stored in backend');
           }}
         />
       )}
@@ -749,7 +756,7 @@ export default function Wheels() {
             setQuickCreationData(null);
           }}
           onWheelCreated={async (wheelData) => {
-            console.log('🎯 New wheel creation completed:', wheelData);
+            wheelsLog('🎯 New wheel creation completed:', wheelData);
 
             // Show success message
             setShowSuccess(true);
@@ -760,7 +767,7 @@ export default function Wheels() {
             setQuickCreationData(null);
 
             // TODO: Refresh wheel cycles data
-            console.log('✅ Wheel successfully created with new modal system');
+            wheelsLog('✅ Wheel successfully created with new modal system');
           }}
           prefilledData={quickCreationData}
           quickMode={!!quickCreationData}

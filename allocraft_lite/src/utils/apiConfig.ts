@@ -3,6 +3,13 @@
  * Provides dynamic port detection and flexible API base URL configuration
  */
 
+// Silent logging function for API config
+const configLog = (...args: any[]) => {
+  // Logging disabled for cleaner console
+  // configLog('[Config]', ...args);
+  void args; // Suppress unused parameter warning
+};
+
 // Default port range for backend development
 const DEFAULT_PORTS = [8000, 8001, 8002, 8003, 8004];
 
@@ -11,14 +18,14 @@ export const getApiBaseUrl = (): string => {
   // First, check environment variable
   const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
   if (envUrl) {
-    console.log('Using API base URL from environment:', envUrl);
+    configLog('Using API base URL from environment:', envUrl);
     return envUrl;
   }
 
   // If no environment variable, try to detect from current setup
   // This is useful during development when ports might change
   const detectedUrl = detectApiBaseUrl();
-  console.log('Detected API base URL:', detectedUrl);
+  configLog('Detected API base URL:', detectedUrl);
   return detectedUrl;
 };
 
@@ -72,7 +79,7 @@ export const testApiPort = async (port: number): Promise<boolean> => {
 
 // Auto-detect working backend port from common development ports  
 export const autoDetectBackendPort = async (): Promise<string> => {
-  console.log('🔍 Auto-detecting backend port across 8000, 8001, 8002...');
+  configLog('🔍 Auto-detecting backend port across 8000, 8001, 8002...');
 
   // Test ports in parallel for speed
   const portPromises = DEFAULT_PORTS.map(async (port) => {
@@ -85,7 +92,7 @@ export const autoDetectBackendPort = async (): Promise<string> => {
     
     for (const { port, isWorking } of results) {
       if (isWorking) {
-        console.log(`✅ Found working backend on port ${port}`);
+        configLog(`✅ Found working backend on port ${port}`);
         return `http://127.0.0.1:${port}`;
       }
     }
@@ -120,7 +127,7 @@ export const getCachedApiBaseUrl = async (): Promise<string> => {
     cachedApiBaseUrl = detectedUrl;
     return detectedUrl;
   } catch (error) {
-    console.error('❌ Failed to detect backend port:', error);
+    configLog('❌ Failed to detect backend port:', error);
     cachedApiBaseUrl = 'http://127.0.0.1:8000'; // Final fallback
     return cachedApiBaseUrl;
   }
@@ -129,7 +136,7 @@ export const getCachedApiBaseUrl = async (): Promise<string> => {
 // Clear cache and retry detection (useful when backend restarts)
 export const clearApiUrlCache = (): void => {
   cachedApiBaseUrl = null;
-  console.log('🔄 API URL cache cleared - next request will re-detect backend port');
+  configLog('🔄 API URL cache cleared - next request will re-detect backend port');
 };
 
 export default {

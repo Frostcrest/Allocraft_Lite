@@ -5,9 +5,16 @@
 
 import { schwabApi } from '@/services/schwabApi';
 
+// Simple logging function to replace console.log
+const schwabTestLog = (...args: any[]) => {
+  // Logging disabled for SchwabTestRunner
+  // console.log('[SchwabTestRunner]', ...args);
+  void args; // Suppress unused parameter warning
+};
+
 export async function runSchwabIntegrationTests() {
-    console.log('🧪 SCHWAB API INTEGRATION TESTS');
-    console.log('================================');
+    schwabTestLog('🧪 SCHWAB API INTEGRATION TESTS');
+    schwabTestLog('================================');
 
     const results = {
         configTest: false,
@@ -18,7 +25,7 @@ export async function runSchwabIntegrationTests() {
     };
 
     // Test 1: Configuration Validation
-    console.log('\n1️⃣ Testing Configuration...');
+    schwabTestLog('\n1️⃣ Testing Configuration...');
     try {
         const config = (schwabApi as any).getConfig?.() || {
             clientId: '',
@@ -26,40 +33,40 @@ export async function runSchwabIntegrationTests() {
             redirectUri: 'http://localhost:5173/auth/callback'
         };
 
-        console.log('✅ Client ID configured:', config.clientId?.substring(0, 8) + '...');
-        console.log('✅ Client Secret configured:', config.clientSecret ? 'YES' : 'NO');
-        console.log('✅ Redirect URI:', config.redirectUri);
+        schwabTestLog('✅ Client ID configured:', config.clientId?.substring(0, 8) + '...');
+        schwabTestLog('✅ Client Secret configured:', config.clientSecret ? 'YES' : 'NO');
+        schwabTestLog('✅ Redirect URI:', config.redirectUri);
         results.configTest = true;
     } catch (error) {
-        console.log('❌ Configuration test failed:', error);
+        schwabTestLog('❌ Configuration test failed:', error);
     }
 
     // Test 2: Service Initialization
-    console.log('\n2️⃣ Testing Service Initialization...');
+    schwabTestLog('\n2️⃣ Testing Service Initialization...');
     try {
         if (schwabApi) {
-            console.log('✅ Schwab API service loaded successfully');
+            schwabTestLog('✅ Schwab API service loaded successfully');
             results.serviceTest = true;
         } else {
-            console.log('❌ Schwab API service not available');
+            schwabTestLog('❌ Schwab API service not available');
         }
     } catch (error) {
-        console.log('❌ Service initialization failed:', error);
+        schwabTestLog('❌ Service initialization failed:', error);
     }
 
     // Test 3: OAuth URL Generation
-    console.log('\n3️⃣ Testing OAuth URL Generation...');
+    schwabTestLog('\n3️⃣ Testing OAuth URL Generation...');
     try {
         // This should generate a valid Schwab OAuth URL
-        console.log('✅ OAuth flow can be initiated');
-        console.log('   Click "Connect to Schwab" button to test OAuth flow');
+        schwabTestLog('✅ OAuth flow can be initiated');
+        schwabTestLog('   Click "Connect to Schwab" button to test OAuth flow');
         results.authUrlTest = true;
     } catch (error) {
-        console.log('❌ OAuth URL generation failed:', error);
+        schwabTestLog('❌ OAuth URL generation failed:', error);
     }
 
     // Test 4: API Endpoint Accessibility
-    console.log('\n4️⃣ Testing API Endpoint Configuration...');
+    schwabTestLog('\n4️⃣ Testing API Endpoint Configuration...');
     try {
         const endpoints = {
             auth: 'https://api.schwabapi.com/v1/oauth/authorize',
@@ -68,44 +75,44 @@ export async function runSchwabIntegrationTests() {
             marketData: 'https://api.schwabapi.com/marketdata/v1'
         };
 
-        console.log('✅ Auth endpoint:', endpoints.auth);
-        console.log('✅ Token endpoint:', endpoints.token);
-        console.log('✅ Accounts endpoint:', endpoints.accounts);
-        console.log('✅ Market data endpoint:', endpoints.marketData);
+        schwabTestLog('✅ Auth endpoint:', endpoints.auth);
+        schwabTestLog('✅ Token endpoint:', endpoints.token);
+        schwabTestLog('✅ Accounts endpoint:', endpoints.accounts);
+        schwabTestLog('✅ Market data endpoint:', endpoints.marketData);
         results.tokenEndpointTest = true;
     } catch (error) {
-        console.log('❌ Endpoint configuration failed:', error);
+        schwabTestLog('❌ Endpoint configuration failed:', error);
     }
 
     // Overall Assessment
     results.overall = results.configTest && results.serviceTest && results.authUrlTest && results.tokenEndpointTest;
 
-    console.log('\n🎯 OVERALL RESULTS');
-    console.log('==================');
-    console.log('Configuration:', results.configTest ? '✅ PASS' : '❌ FAIL');
-    console.log('Service Init:', results.serviceTest ? '✅ PASS' : '❌ FAIL');
-    console.log('OAuth Ready:', results.authUrlTest ? '✅ PASS' : '❌ FAIL');
-    console.log('Endpoints:', results.tokenEndpointTest ? '✅ PASS' : '❌ FAIL');
-    console.log('Overall Status:', results.overall ? '🎉 READY FOR TESTING' : '⚠️ NEEDS ATTENTION');
+    schwabTestLog('\n🎯 OVERALL RESULTS');
+    schwabTestLog('==================');
+    schwabTestLog('Configuration:', results.configTest ? '✅ PASS' : '❌ FAIL');
+    schwabTestLog('Service Init:', results.serviceTest ? '✅ PASS' : '❌ FAIL');
+    schwabTestLog('OAuth Ready:', results.authUrlTest ? '✅ PASS' : '❌ FAIL');
+    schwabTestLog('Endpoints:', results.tokenEndpointTest ? '✅ PASS' : '❌ FAIL');
+    schwabTestLog('Overall Status:', results.overall ? '🎉 READY FOR TESTING' : '⚠️ NEEDS ATTENTION');
 
     if (results.overall) {
-        console.log('\n🚀 NEXT STEPS:');
-        console.log('1. Look for "Connect to Schwab" button on the page');
-        console.log('2. Click it to start OAuth flow');
-        console.log('3. Login with your Schwab credentials');
-        console.log('4. Grant permissions to your app');
-        console.log('5. You\'ll be redirected back with account data');
+        schwabTestLog('\n🚀 NEXT STEPS:');
+        schwabTestLog('1. Look for "Connect to Schwab" button on the page');
+        schwabTestLog('2. Click it to start OAuth flow');
+        schwabTestLog('3. Login with your Schwab credentials');
+        schwabTestLog('4. Grant permissions to your app');
+        schwabTestLog('5. You\'ll be redirected back with account data');
     }
 
     return results;
 }
 
-// Auto-run tests when this module loads
-if (typeof window !== 'undefined') {
-    setTimeout(() => {
-        runSchwabIntegrationTests();
-    }, 2000);
-}
+// Auto-run tests when this module loads (DISABLED - uncomment to re-enable)
+// if (typeof window !== 'undefined') {
+//     setTimeout(() => {
+//         runSchwabIntegrationTests();
+//     }, 2000);
+// }
 
 export default function SchwabTestRunner() {
     return (

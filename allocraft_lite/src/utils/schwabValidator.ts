@@ -3,6 +3,13 @@
  * This script helps validate your API configuration
  */
 
+// Simple logging function to replace console.log
+const schwabValidatorLog = (...args: any[]) => {
+  // Logging disabled for SchwabValidator
+  // console.log('[SchwabValidator]', ...args);
+  void args; // Suppress unused parameter warning
+};
+
 export function validateSchwabCredentials() {
   const config = {
     clientId: (import.meta as any).env?.VITE_SCHWAB_CLIENT_ID,
@@ -65,33 +72,33 @@ function getConfigurationIssues(validation: any, config: any): string[] {
 export function testSchwabApiConnection() {
   const { isReady, issues, config } = validateSchwabCredentials();
 
-  console.log('🔍 Schwab API Configuration Check');
-  console.log('================================');
+  schwabValidatorLog('🔍 Schwab API Configuration Check');
+  schwabValidatorLog('================================');
 
   if (isReady) {
-    console.log('✅ Configuration looks good!');
-    console.log('🚀 Ready to test OAuth flow');
+    schwabValidatorLog('✅ Configuration looks good!');
+    schwabValidatorLog('🚀 Ready to test OAuth flow');
   } else {
-    console.log('❌ Configuration issues found:');
-    issues.forEach(issue => console.log(`   ${issue}`));
-    console.log('\n📝 Next steps:');
-    console.log('   1. Update .env.local with your actual Schwab API credentials');
-    console.log('   2. Restart the development server');
-    console.log('   3. Run this test again');
+    schwabValidatorLog('❌ Configuration issues found:');
+    issues.forEach(issue => schwabValidatorLog(`   ${issue}`));
+    schwabValidatorLog('\n📝 Next steps:');
+    schwabValidatorLog('   1. Update .env.local with your actual Schwab API credentials');
+    schwabValidatorLog('   2. Restart the development server');
+    schwabValidatorLog('   3. Run this test again');
   }
 
-  console.log('\n🔧 Current Configuration:');
-  console.log(`   Client ID: ${config.clientId ? (config.clientId.substring(0, 8) + '...') : 'Not set'}`);
-  console.log(`   Client Secret: ${config.clientSecret ? '***SET***' : 'Not set'}`);
-  console.log(`   Redirect URI: ${config.redirectUri || 'Not set'}`);
+  schwabValidatorLog('\n🔧 Current Configuration:');
+  schwabValidatorLog(`   Client ID: ${config.clientId ? (config.clientId.substring(0, 8) + '...') : 'Not set'}`);
+  schwabValidatorLog(`   Client Secret: ${config.clientSecret ? '***SET***' : 'Not set'}`);
+  schwabValidatorLog(`   Redirect URI: ${config.redirectUri || 'Not set'}`);
 
   return { isReady, issues };
 }
 
-// Auto-run validation when this module is imported
-if (typeof window !== 'undefined') {
-  // Run in browser
-  setTimeout(() => {
-    testSchwabApiConnection();
-  }, 1000);
-}
+// Auto-run validation when this module is imported (DISABLED - uncomment to re-enable)
+// if (typeof window !== 'undefined') {
+//   // Run in browser
+//   setTimeout(() => {
+//     testSchwabApiConnection();
+//   }, 1000);
+// }

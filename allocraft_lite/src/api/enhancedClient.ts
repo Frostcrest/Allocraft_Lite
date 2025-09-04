@@ -2,6 +2,13 @@
  * Enhanced API client with React Query integration and TypeScript support.
  */
 
+// Silent logging function for API client
+const apiLog = (...args: any[]) => {
+  // Logging disabled for cleaner console
+  // apiLog('[API]', ...args);
+  void args; // Suppress unused parameter warning
+};
+
 import { QueryClient, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './fastapiClient';
 import { getCachedApiBaseUrl } from '../utils/apiConfig';
@@ -81,7 +88,7 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
     const startTime = performance.now();
 
     console.group(`🔄 [${requestId}] API Request: ${path}`);
-    console.log('📊 Request Details:', {
+    apiLog('📊 Request Details:', {
         path,
         method: options.method || 'GET',
         headers: options.headers,
@@ -90,11 +97,11 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
     });
 
     try {
-        console.log('📡 Calling apiFetch...');
+        apiLog('📡 Calling apiFetch...');
         const response = await apiFetch(path, options);
         const responseTime = performance.now() - startTime;
 
-        console.log('📨 Response received:', {
+        apiLog('📨 Response received:', {
             status: response.status,
             statusText: response.statusText,
             ok: response.ok,
@@ -103,13 +110,13 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
         });
 
         if (!response.ok) {
-            console.error('❌ Response not OK, parsing error data...');
+            apiLog('❌ Response not OK, parsing error data...');
             let errorData;
             try {
                 errorData = await response.json();
-                console.error('📋 Error data:', errorData);
+                apiLog('📋 Error data:', errorData);
             } catch (parseError) {
-                console.error('⚠️ Failed to parse error response:', parseError);
+                apiLog('⚠️ Failed to parse error response:', parseError);
                 errorData = { message: response.statusText };
             }
 
@@ -120,14 +127,14 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
                 { path, responseTime, errorData }
             );
 
-            console.error('🚨 Throwing ApiError:', apiError);
+            apiLog('🚨 Throwing ApiError:', apiError);
             console.groupEnd();
             throw apiError;
         }
 
-        console.log('✅ Parsing successful response...');
+        apiLog('✅ Parsing successful response...');
         const data = await response.json();
-        console.log('📦 Response data preview:', {
+        apiLog('📦 Response data preview:', {
             type: Array.isArray(data) ? 'Array' : typeof data,
             keys: typeof data === 'object' ? Object.keys(data) : 'N/A',
             length: Array.isArray(data) ? data.length :
@@ -138,7 +145,7 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
         return data;
     } catch (error) {
         const responseTime = performance.now() - startTime;
-        console.error('💥 Request failed:', {
+        apiLog('💥 Request failed:', {
             error: error instanceof Error ? error.message : 'Unknown error',
             responseTime: `${responseTime.toFixed(2)}ms`,
             path
@@ -318,7 +325,7 @@ export const useWheelDetection = () => {
 
     return useMutation<any, ApiError, any>({
         mutationFn: async (detectionParams = {}) => {
-            console.log('🔍 useWheelDetection: Starting position analysis...', detectionParams);
+            apiLog('🔍 useWheelDetection: Starting position analysis...', detectionParams);
 
             // Format request data according to WheelDetectionRequest model
             const requestData = {
@@ -338,7 +345,7 @@ export const useWheelDetection = () => {
                 body: JSON.stringify(requestData)
             });
 
-            console.log('✅ useWheelDetection: Analysis complete', {
+            apiLog('✅ useWheelDetection: Analysis complete', {
                 opportunitiesFound: result?.length || 0,
                 result: result
             });
@@ -346,7 +353,7 @@ export const useWheelDetection = () => {
             return result;
         },
         onSuccess: (data) => {
-            console.log('🎯 useWheelDetection: Detection successful', {
+            apiLog('🎯 useWheelDetection: Detection successful', {
                 resultsCount: data?.length || 0,
                 results: data
             });
@@ -355,7 +362,7 @@ export const useWheelDetection = () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.positions });
         },
         onError: (error) => {
-            console.error('❌ useWheelDetection: Detection failed', error);
+            apiLog('❌ useWheelDetection: Detection failed', error);
         }
     });
 };
@@ -373,7 +380,7 @@ export const useWheelDetectionResults = (options: {
     return useQuery<any>({
         queryKey: queryKeys.wheelDetectionResults,
         queryFn: async () => {
-            console.log('🔄 useWheelDetectionResults: Fetching cached results...');
+            apiLog('🔄 useWheelDetectionResults: Fetching cached results...');
 
             // This could fetch cached results from backend if available
             // For now, return empty results to indicate no cached data
@@ -725,19 +732,19 @@ export const useStockPositions = () => {
     return useQuery<UnifiedPosition[]>({
         queryKey: queryKeys.stockPositions,
         queryFn: async () => {
-            console.log('🔍 useStockPositions: Starting fetch...');
+            apiLog('🔍 useStockPositions: Starting fetch...');
             const response = await enhancedFetch<{ value: UnifiedPosition[]; Count: number }>('/portfolio/positions/stocks');
-            console.log('📊 useStockPositions: Raw response:', response);
+            apiLog('📊 useStockPositions: Raw response:', response);
 
             // Backend returns { "value": [...], "Count": 7 } - extract the array
             if (response.value && Array.isArray(response.value)) {
-                console.log(`✅ useStockPositions: Extracted ${response.value.length} positions`);
+                apiLog(`✅ useStockPositions: Extracted ${response.value.length} positions`);
                 return response.value;
             }
 
             // Fallback if response is already an array
             if (Array.isArray(response)) {
-                console.log(`✅ useStockPositions: Direct array with ${response.length} positions`);
+                apiLog(`✅ useStockPositions: Direct array with ${response.length} positions`);
                 return response;
             }
 
@@ -755,19 +762,19 @@ export const useOptionPositions = () => {
     return useQuery<UnifiedPosition[]>({
         queryKey: queryKeys.optionPositions,
         queryFn: async () => {
-            console.log('🔍 useOptionPositions: Starting fetch...');
+            apiLog('🔍 useOptionPositions: Starting fetch...');
             const response = await enhancedFetch<{ value: UnifiedPosition[]; Count: number }>('/portfolio/positions/options');
-            console.log('📊 useOptionPositions: Raw response:', response);
+            apiLog('📊 useOptionPositions: Raw response:', response);
 
             // Backend returns { "value": [...], "Count": 16 } - extract the array
             if (response.value && Array.isArray(response.value)) {
-                console.log(`✅ useOptionPositions: Extracted ${response.value.length} positions`);
+                apiLog(`✅ useOptionPositions: Extracted ${response.value.length} positions`);
                 return response.value;
             }
 
             // Fallback if response is already an array
             if (Array.isArray(response)) {
-                console.log(`✅ useOptionPositions: Direct array with ${response.length} positions`);
+                apiLog(`✅ useOptionPositions: Direct array with ${response.length} positions`);
                 return response;
             }
 
@@ -830,14 +837,14 @@ export const useBackendHealth = () => {
  * Combined positions hook with comprehensive diagnostics
  */
 export const usePositionsData = () => {
-    console.log('🎯 usePositionsData: Initializing data hooks...');
+    apiLog('🎯 usePositionsData: Initializing data hooks...');
 
     const allPositions = useAllPositions();
     const stockPositions = useStockPositions();
     const optionPositions = useOptionPositions();
     const portfolioSummary = usePortfolioSummary();
 
-    console.log('📊 usePositionsData: Hook states:', {
+    apiLog('📊 usePositionsData: Hook states:', {
         allPositions: {
             isLoading: allPositions.isLoading,
             isError: allPositions.isError,
@@ -860,13 +867,13 @@ export const usePositionsData = () => {
 
     // Log any errors in detail
     if (allPositions.isError) {
-        console.error('🚨 allPositions error:', allPositions.error);
+        apiLog('🚨 allPositions error:', allPositions.error);
     }
     if (stockPositions.isError) {
-        console.error('🚨 stockPositions error:', stockPositions.error);
+        apiLog('🚨 stockPositions error:', stockPositions.error);
     }
     if (optionPositions.isError) {
-        console.error('🚨 optionPositions error:', optionPositions.error);
+        apiLog('🚨 optionPositions error:', optionPositions.error);
     }
 
     const result = {
@@ -878,7 +885,7 @@ export const usePositionsData = () => {
         isError: allPositions.isError || stockPositions.isError || optionPositions.isError, // Exclude portfolioSummary.isError
         error: allPositions.error || stockPositions.error || optionPositions.error, // Exclude portfolioSummary.error
         refetch: () => {
-            console.log('🔄 usePositionsData: Refetching all data...');
+            apiLog('🔄 usePositionsData: Refetching all data...');
             allPositions.refetch();
             stockPositions.refetch();
             optionPositions.refetch();
@@ -886,7 +893,7 @@ export const usePositionsData = () => {
         }
     };
 
-    console.log('✅ usePositionsData: Final result:', {
+    apiLog('✅ usePositionsData: Final result:', {
         allPositionsCount: result.allPositions.length,
         stockPositionsCount: result.stockPositions.length,
         optionPositionsCount: result.optionPositions.length,
