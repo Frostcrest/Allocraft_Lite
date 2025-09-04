@@ -12,6 +12,7 @@ import WheelDetailsModal from '../components/wheel-management/WheelDetailsModal'
 import WheelEditModal from '../components/wheel-management/WheelEditModal';
 import WheelRollModal from '../components/wheel-management/WheelRollModal';
 import WheelCloseModal from '../components/wheel-management/WheelCloseModal';
+import WheelDeleteModal from '../components/wheel-management/WheelDeleteModal';
 import { WheelManagementService } from '../services/WheelManagementService';
 
 // Silent logging function for Wheels page
@@ -61,11 +62,13 @@ export default function Wheels() {
   const [showWheelEdit, setShowWheelEdit] = useState(false);
   const [showWheelRoll, setShowWheelRoll] = useState(false);
   const [showWheelClose, setShowWheelClose] = useState(false);
+  const [showWheelDelete, setShowWheelDelete] = useState(false);
   const [selectedWheel, setSelectedWheel] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false); // Disabled by default to reduce API calls
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [quickCreationData, setQuickCreationData] = useState(null);
+  const [isDeletingWheel, setIsDeletingWheel] = useState(false);
 
   // Computed values
   const tickers = Array.from(new Set(cycles.map(c => c.ticker))).sort();
@@ -151,7 +154,7 @@ export default function Wheels() {
         // Also refresh position data
         refetchPositions();
       }
-    }, 30000); // 30 seconds
+    }, 5 * 60 * 1000); // 5 minutes instead of 30 seconds
 
     setRefreshInterval(interval);
   };
@@ -291,6 +294,11 @@ export default function Wheels() {
           setShowWheelClose(true);
           break;
 
+        case 'delete_wheel':
+          setSelectedWheel(wheel);
+          setShowWheelDelete(true);
+          break;
+
         case 'add_notes':
           const notes = prompt(`Add notes for ${wheel.ticker} wheel strategy:`);
           if (notes) {
@@ -382,12 +390,38 @@ export default function Wheels() {
     }
   };
 
+  const handleWheelDelete = async (wheelId) => {
+    try {
+      setIsDeletingWheel(true);
+      wheelsLog('🗑️ Deleting wheel strategy:', wheelId);
+
+      const result = await WheelManagementService.deleteWheel(wheelId);
+
+      wheelsLog('✅ Wheel deleted successfully:', result);
+
+      // Close modal and refresh data
+      setShowWheelDelete(false);
+      setSelectedWheel(null);
+      setIsDeletingWheel(false);
+
+      // Show success message
+      alert('Wheel strategy deleted successfully!');
+
+    } catch (error) {
+      wheelsLog('❌ Wheel deletion failed:', error);
+      setIsDeletingWheel(false);
+      alert(`Deletion failed: ${error.message}`);
+    }
+  };
+
   const closeAllModals = () => {
     setShowWheelDetails(false);
     setShowWheelEdit(false);
     setShowWheelRoll(false);
     setShowWheelClose(false);
+    setShowWheelDelete(false);
     setSelectedWheel(null);
+    setIsDeletingWheel(false);
   };
 
   // Handle view details for opportunity
@@ -748,6 +782,14 @@ export default function Wheels() {
         onClose={closeAllModals}
         wheel={selectedWheel}
         onCloseWheel={handleWheelClose}
+      />
+
+      <WheelDeleteModal
+        isOpen={showWheelDelete}
+        onClose={closeAllModals}
+        wheel={selectedWheel}
+        onDelete={handleWheelDelete}
+        isDeleting={isDeletingWheel}
       />
     </div>
   );

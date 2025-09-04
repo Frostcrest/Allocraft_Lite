@@ -32,26 +32,26 @@ interface StockPosition extends UnifiedPosition {
 }
 
 const Stocks: React.FC = () => {
-  console.log('🎯 Stocks Component: Initializing...');
+  // console.log('🎯 Stocks Component: Initializing...');
 
   // Add debug function to test API directly
   const testApiDirectly = async () => {
-    console.log('🧪 Testing API endpoints directly...');
+    // console.log('🧪 Testing API endpoints directly...');
     try {
       // Test stocks endpoint
       const stocksResponse = await fetch('http://127.0.0.1:8000/portfolio/positions/stocks');
       const stocksData = await stocksResponse.json();
-      console.log('📊 Direct stocks API response:', stocksData);
+      // console.log('📊 Direct stocks API response:', stocksData);
 
       // Test options endpoint
       const optionsResponse = await fetch('http://127.0.0.1:8000/portfolio/positions/options');
       const optionsData = await optionsResponse.json();
-      console.log('📊 Direct options API response:', optionsData);
+      // console.log('📊 Direct options API response:', optionsData);
 
       // Test all positions endpoint
       const allResponse = await fetch('http://127.0.0.1:8000/portfolio/positions');
       const allData = await allResponse.json();
-      console.log('📊 Direct all positions API response:', allData);
+      // console.log('📊 Direct all positions API response:', allData);
     } catch (error) {
       console.error('❌ Direct API test failed:', error);
     }

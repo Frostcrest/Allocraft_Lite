@@ -294,6 +294,59 @@ export class WheelManagementService {
     }
 
     /**
+     * Delete wheel strategy
+     * Permanently removes wheel cycle and all related data from the system
+     */
+    static async deleteWheel(wheelId: string | number): Promise<any> {
+        try {
+            console.log('🔄 WheelManagementService: Deleting wheel:', wheelId);
+
+            // First, get wheel details for logging before deletion
+            const wheelDetails = await this.safeApiCall(
+                () => enhancedFetch(`/wheels/wheel-cycles/${wheelId}`),
+                { ticker: 'UNKNOWN', strategy_type: 'UNKNOWN' }
+            );
+
+            // Delete wheel via API (backend handles cascade deletion)
+            const response = await enhancedFetch(`/wheels/wheel-cycles/${wheelId}`, {
+                method: 'DELETE'
+            });
+
+            // Log deletion event (if logging is still available)
+            try {
+                await this.logWheelEvent(wheelId, {
+                    event_type: 'strategy_deleted',
+                    description: `Wheel strategy permanently deleted`,
+                    metadata: {
+                        ticker: wheelDetails.ticker,
+                        strategy_type: wheelDetails.strategy_type,
+                        deletion_timestamp: new Date().toISOString()
+                    }
+                });
+            } catch (logError) {
+                // Logging might fail if wheel is already deleted, but that's okay
+                console.warn('⚠️ WheelManagementService: Could not log deletion event (expected):', logError);
+            }
+
+            // Remove from cache immediately
+            queryClient.setQueryData(['wheel-cycles'], (oldData: any) => {
+                if (!oldData) return oldData;
+                return oldData.filter((wheel: any) => wheel.id != wheelId);
+            });
+
+            // Invalidate related caches
+            await this.invalidateWheelCaches();
+
+            console.log('✅ WheelManagementService: Wheel deleted successfully:', response);
+            return response;
+
+        } catch (error: any) {
+            console.error('❌ WheelManagementService: Wheel deletion failed:', error);
+            throw this.enhanceError(error, 'deleteWheel', { wheelId });
+        }
+    }
+
+    /**
      * Get comprehensive wheel details
      */
     static async getWheelDetails(wheelId: string | number): Promise<any> {

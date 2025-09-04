@@ -6,7 +6,7 @@
 import { validateSchwabCredentials } from '@/utils/schwabValidator';
 
 // Test environment variable loading
-console.log('🔧 Schwab API Configuration Check:');
+// console.log('🔧 Schwab API Configuration Check:');
 console.log('=====================================');
 
 const { config, isReady, issues } = validateSchwabCredentials();
@@ -25,9 +25,9 @@ if (!isReady) {
 async function testSchwabApiService() {
   try {
     const { schwabApi } = await import('@/services/schwabApi');
-    console.log('\n📡 Schwab API Service:', schwabApi ? '✅ Loaded' : '❌ Failed to load');
+    // console.log('\n📡 Schwab API Service:', schwabApi ? '✅ Loaded' : '❌ Failed to load');
   } catch (error) {
-    console.log('\n📡 Schwab API Service: ❌ Error loading service');
+    // console.log('\n📡 Schwab API Service: ❌ Error loading service');
     console.error('Error:', error);
   }
 }

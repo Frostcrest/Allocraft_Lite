@@ -136,10 +136,10 @@ const config = {
   redirectUri: import.meta.env?.VITE_SCHWAB_REDIRECT_URI
 };
 
-console.log("✅ Environment Variables:");
-console.log("  API Base:", config.apiBase);
-console.log("  Client ID:", config.clientId ? "Set" : "Missing");
-console.log("  Redirect URI:", config.redirectUri);
+// console.log("✅ Environment Variables:");
+// console.log("  API Base:", config.apiBase);
+// console.log("  Client ID:", config.clientId ? "Set" : "Missing");
+// console.log("  Redirect URI:", config.redirectUri);
 
 fetch(\`\${config.apiBase}/schwab/health\`)
   .then(res => res.json())

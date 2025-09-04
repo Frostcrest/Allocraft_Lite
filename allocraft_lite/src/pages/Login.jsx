@@ -11,7 +11,7 @@ export default function Login() {
 
     // Force API URL cache clear on component mount
     useEffect(() => {
-        console.log('🔄 Login component: Clearing API URL cache...');
+        // console.log('🔄 Login component: Clearing API URL cache...');
         clearApiUrlCache();
     }, []);
 

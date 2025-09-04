@@ -633,7 +633,7 @@ export const importPositions = async (importData: any) => {
       throw new Error('Invalid import data: missing accounts array');
     }
 
-    console.log('📡 Sending import request...');
+    // console.log('📡 Sending import request...');
     const response = await fetch(`${API_BASE_URL}/schwab/import/positions`, {
       method: 'POST',
       headers: {

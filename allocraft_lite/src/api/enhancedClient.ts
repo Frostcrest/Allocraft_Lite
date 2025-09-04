@@ -375,7 +375,7 @@ export const useWheelDetectionResults = (options: {
     enabled?: boolean;
     refetchInterval?: number;
 } = {}) => {
-    const { enabled = true, refetchInterval = 30000 } = options;
+    const { enabled = true, refetchInterval = 5 * 60 * 1000 } = options; // 5 minutes instead of 30 seconds
 
     return useQuery<any>({
         queryKey: queryKeys.wheelDetectionResults,

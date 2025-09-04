@@ -5,7 +5,7 @@ import {
   MoreHorizontal, Eye, Edit, X, RotateCcw, Calendar,
   DollarSign, TrendingUp, TrendingDown, Target, Clock,
   AlertCircle, CheckCircle2, Play, Pause, ArrowUp, ArrowDown,
-  Settings, FileText, Bell, Activity
+  Settings, FileText, Bell, Activity, Trash2
 } from "lucide-react";
 
 /**
@@ -167,7 +167,8 @@ export default function ActiveWheelCard({
     { id: 'edit_parameters', label: 'Edit Parameters', icon: Edit, description: 'Modify risk management settings' },
     { id: 'roll_options', label: 'Roll Options', icon: RotateCcw, description: 'Roll to next expiration' },
     { id: 'close_wheel', label: 'Close Strategy', icon: X, description: 'Close wheel strategy early' },
-    { id: 'add_notes', label: 'Add Notes', icon: FileText, description: 'Add strategy notes or observations' }
+    { id: 'add_notes', label: 'Add Notes', icon: FileText, description: 'Add strategy notes or observations' },
+    { id: 'delete_wheel', label: 'Delete Wheel', icon: Trash2, description: 'Permanently delete this wheel strategy' }
   ];
 
   // Performance indicator
