@@ -199,7 +199,7 @@ export default function ActiveWheelsSection({
 
   // Handle wheel actions
   const handleWheelAction = (action, wheel) => {
-    console.log(`🎯 Wheel action: ${action}`, wheel);
+    // console.log(`🎯 Wheel action: ${action}`, wheel);
     onWheelAction(action, wheel);
   };
 

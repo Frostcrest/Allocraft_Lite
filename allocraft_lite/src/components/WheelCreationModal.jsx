@@ -160,10 +160,10 @@ export default function WheelCreationModal({
 
   // Wheel creation submission
   const handleSubmit = async () => {
-    console.log('🚀 Starting wheel creation submission...');
+    // console.log('🚀 Starting wheel creation submission...');
 
     if (!validateStep(3)) {
-      console.log('❌ Final validation failed');
+      // console.log('❌ Final validation failed');
       return;
     }
 
@@ -195,7 +195,7 @@ export default function WheelCreationModal({
         creation_timestamp: new Date().toISOString()
       };
 
-      console.log('📊 Prepared wheel data for submission:', wheelData);
+      // console.log('📊 Prepared wheel data for submission:', wheelData);
 
       // TODO: Call actual backend API
       // const response = await createWheelCycle(wheelData);
@@ -203,7 +203,7 @@ export default function WheelCreationModal({
       // Simulate API call for now
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      console.log('✅ Wheel creation successful');
+      // console.log('✅ Wheel creation successful');
 
       // Notify parent component
       onWheelCreated(wheelData);

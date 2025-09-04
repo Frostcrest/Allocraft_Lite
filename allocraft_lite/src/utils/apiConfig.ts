@@ -97,11 +97,11 @@ export const autoDetectBackendPort = async (): Promise<string> => {
       }
     }
   } catch (error) {
-    console.warn('⚠️ Error during port detection:', error);
+    // console.warn('⚠️ Error during port detection:', error);
   }
 
-  console.warn('⚠️ No working backend detected on ports 8000-8004, falling back to 8000');
-  console.warn('💡 Make sure your backend is running on one of these ports: 8000, 8001, 8002');
+  // console.warn('⚠️ No working backend detected on ports 8000-8004, falling back to 8000');
+  // console.warn('💡 Make sure your backend is running on one of these ports: 8000, 8001, 8002');
   return 'http://127.0.0.1:8000'; // Default fallback
 };
 

@@ -748,7 +748,7 @@ export const useStockPositions = () => {
                 return response;
             }
 
-            console.warn('⚠️ useStockPositions: Unexpected response format, returning empty array');
+            // console.warn('⚠️ useStockPositions: Unexpected response format, returning empty array');
             return [];
         },
         staleTime: 3 * 60 * 1000,
@@ -778,7 +778,7 @@ export const useOptionPositions = () => {
                 return response;
             }
 
-            console.warn('⚠️ useOptionPositions: Unexpected response format, returning empty array');
+            // console.warn('⚠️ useOptionPositions: Unexpected response format, returning empty array');
             return [];
         },
         staleTime: 3 * 60 * 1000,

@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Plus, RotateCcw, Target, CheckCircle2, Zap, TrendingUp, Search } from "lucide-react";
 import { useWheelCycles, useWheelDetection, useWheelDetectionResults, usePositionsData } from "@/api/enhancedClient";
-import { getCachedApiBaseUrl, clearApiUrlCache } from "../utils/apiConfig";
 import WheelBuilder from "@/components/WheelBuilder";
 import WheelCreationModal from "@/components/WheelCreationModal";
-import StrategyDetectionPanel from "@/components/StrategyDetectionPanel";
 import WheelOpportunityCard from "@/components/WheelOpportunityCard";
 import WheelOpportunityGrid from "@/components/WheelOpportunityGrid";
 import WheelPerformanceSummary from "@/components/WheelPerformanceSummary";
@@ -57,7 +55,6 @@ export default function Wheels() {
   const [showWheelCreationModal, setShowWheelCreationModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [detectedOpportunities, setDetectedOpportunities] = useState([]);
-  const [detectedBackendUrl, setDetectedBackendUrl] = useState('Detecting...');
 
   // Wheel management modals
   const [showWheelDetails, setShowWheelDetails] = useState(false);
@@ -233,21 +230,6 @@ export default function Wheels() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [autoRefreshEnabled, allPositions.length]);
-
-  // Effect to detect and display current backend URL
-  useEffect(() => {
-    const detectBackend = async () => {
-      try {
-        const backendUrl = await getCachedApiBaseUrl();
-        setDetectedBackendUrl(backendUrl);
-        wheelsLog('🔗 Backend auto-detected:', backendUrl);
-      } catch (error) {
-        wheelsLog('❌ Backend detection failed:', error);
-        setDetectedBackendUrl('Detection failed');
-      }
-    };
-    detectBackend();
-  }, []);
 
   // Handle detection results from Strategy Detection Panel (enhanced with real data)
   const handleDetectionComplete = (detectionResult) => {
@@ -613,51 +595,6 @@ export default function Wheels() {
           </div>
         </div>
 
-        {/* DEBUG: Backend Connection Status */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${detectedBackendUrl.includes('8000') || detectedBackendUrl.includes('8001') || detectedBackendUrl.includes('8002') ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm font-medium text-gray-700">Backend Status:</span>
-                <span className="text-sm text-gray-600 font-mono">{detectedBackendUrl}</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={async () => {
-                  setDetectedBackendUrl('Re-detecting...');
-                  clearApiUrlCache();
-                  const newUrl = await getCachedApiBaseUrl();
-                  setDetectedBackendUrl(newUrl);
-                }}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                🔄 Re-detect
-              </Button>
-              <span className="text-xs text-gray-500">Auto-detects ports: 8000, 8001, 8002</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Strategy Detection Panel */}
-        <StrategyDetectionPanel
-          onDetectionComplete={handleDetectionComplete}
-          positionsData={{
-            allPositions,
-            stockPositions,
-            optionPositions,
-            isLoading: positionsLoading,
-            isError: positionsError,
-            error: positionsErrorDetails
-          }}
-          onManualDetection={runWheelDetection}
-          autoRefresh={true}
-          className="shadow-lg"
-        />
-
         {/* Performance Summary Widget */}
         <WheelPerformanceSummary
           opportunities={detectedOpportunities}
@@ -673,6 +610,8 @@ export default function Wheels() {
           isLoading={wheelDetectionMutation.isPending}
           onCreateWheel={handleCreateWheelFromOpportunity}
           onViewDetails={handleViewOpportunityDetails}
+          onManualDetection={runWheelDetection}
+          isDetectionLoading={wheelDetectionMutation.isPending}
           className="shadow-lg"
         />
 

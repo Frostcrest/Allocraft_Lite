@@ -13,7 +13,9 @@ import {
   DollarSign,
   Target,
   Filter,
-  Loader2
+  Loader2,
+  Zap,
+  RefreshCw
 } from "lucide-react";
 import WheelOpportunityCard from "@/components/WheelOpportunityCard";
 
@@ -26,6 +28,8 @@ const WheelOpportunityGrid = ({
   isLoading = false,
   onCreateWheel = null,
   onViewDetails = null,
+  onManualDetection = null,
+  isDetectionLoading = false,
   className = ""
 }) => {
   // State for filtering and sorting
@@ -148,6 +152,27 @@ const WheelOpportunityGrid = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Analyze Positions Button */}
+          {onManualDetection && (
+            <Button
+              onClick={() => onManualDetection(false)}
+              disabled={isDetectionLoading}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              {isDetectionLoading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 mr-2" />
+                  Analyze Positions
+                </>
+              )}
+            </Button>
+          )}
+
           {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />

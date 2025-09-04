@@ -41,7 +41,7 @@ async function resolveApiBase(): Promise<string> {
             }
         }
     } catch (error) {
-        console.warn('⚠️ Error during API base resolution:', error);
+        // console.warn('⚠️ Error during API base resolution:', error);
     }
 
     // Otherwise use configured API base or fallback to local
