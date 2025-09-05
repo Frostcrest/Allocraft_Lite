@@ -7,6 +7,7 @@ import Stocks from "./Stocks.tsx";
 import Options from "./Options";
 
 import Wheels from "./Wheels";
+import WheelsPhaseView from "./WheelsPhaseView.jsx";
 import WheelsLotsMock from "./WheelsLotsMock.jsx";
 import LotTimelinePage from "@/features/wheels/LotTimelinePage";
 import Profile from "./Profile";
@@ -80,6 +81,7 @@ function PagesContent() {
                                 <Route path="/Stocks" element={<Stocks />} />
                                 <Route path="/Options" element={<Options />} />
                                 <Route path="/Wheels" element={<Wheels />} />
+                                <Route path="/WheelsPhaseView" element={<WheelsPhaseView />} />
                                 <Route path="/Profile" element={<Profile />} />
                                 <Route path="/Settings" element={<Settings />} />
                             </Routes>

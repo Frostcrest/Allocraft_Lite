@@ -47,6 +47,11 @@ const navigationItems = [
     url: createPageUrl("Wheels"),
     icon: RotateCcw,
   },
+  {
+    title: "Wheels Phase",
+    url: "/WheelsPhaseView",
+    icon: RotateCcw,
+  },
 ];
 
 const settingsItems = [
