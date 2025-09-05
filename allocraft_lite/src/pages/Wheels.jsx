@@ -53,6 +53,21 @@ export default function Wheels() {
       const contractCount = metadata.contract_count || cycle.contract_count || 1;
       const totalPremiumCollected = perSharePremium * 100 * contractCount;
       
+      // Calculate total P&L 
+      // For cash-secured puts: P&L = premium collected (since we sold the put and collected premium)
+      // For covered calls: P&L = premium collected + any stock appreciation
+      // For now, use premium collected as initial P&L (simplified calculation)
+      const totalPnL = totalPremiumCollected || 0;
+      
+      // Debug logging for P&L calculation
+      console.log(`🧮 P&L Calculation for ${cycle.ticker}:`, {
+        perSharePremium,
+        contractCount,
+        totalPremiumCollected,
+        totalPnL,
+        strategy: cycle.strategy_type
+      });
+      
       return {
         ...cycle,
         // Flatten detection_metadata fields to top level for component compatibility
@@ -60,6 +75,7 @@ export default function Wheels() {
         expiration_date: metadata.expiration_date || cycle.expiration_date || null,
         contract_count: contractCount,
         premium_collected: cycle.premium_collected || totalPremiumCollected || null,
+        total_pnl: cycle.total_pnl || totalPnL || 0,  // Add total_pnl field
         position_size: metadata.position_size || cycle.position_size || null,
         // Keep original metadata for reference
         original_metadata: metadata
