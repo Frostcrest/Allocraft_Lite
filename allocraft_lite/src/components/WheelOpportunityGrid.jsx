@@ -298,7 +298,7 @@ const WheelOpportunityGrid = ({
             <p className="text-slate-600 mb-4">
               Run position analysis to detect potential wheel strategies from your current holdings.
             </p>
-            <Button 
+            <Button
               onClick={onAnalyzePositions}
               disabled={!onAnalyzePositions}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"

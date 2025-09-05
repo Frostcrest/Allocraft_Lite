@@ -361,8 +361,8 @@ export default function StrategySelectionStep({
                   <Badge
                     variant="secondary"
                     className={`text-xs ${ticker.suitability >= 90 ? 'bg-green-100 text-green-700' :
-                        ticker.suitability >= 85 ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-slate-100 text-slate-700'
+                      ticker.suitability >= 85 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-slate-100 text-slate-700'
                       }`}
                   >
                     {ticker.suitability}%

@@ -101,12 +101,12 @@ export default function Wheels() {
 
   // Auto-detect wheels when positions are loaded
   useEffect(() => {
-    console.log("🔍 Position data changed:", { 
-      allPositionsExist: !!allPositions, 
-      allPositionsLength: allPositions?.length || 0, 
-      positionsLoading 
+    console.log("🔍 Position data changed:", {
+      allPositionsExist: !!allPositions,
+      allPositionsLength: allPositions?.length || 0,
+      positionsLoading
     });
-    
+
     if (allPositions && allPositions.length > 0 && !positionsLoading) {
       console.log("✅ Triggering auto-detection with", allPositions.length, "positions");
       autoDetectWheels();
@@ -119,37 +119,37 @@ export default function Wheels() {
     try {
       setDetectionLoading(true);
       console.log("Auto-detecting wheel strategies...");
-      
+
       const detections = await WheelManagementService.detectWheelStrategies(allPositions);
-      
+
       if (detections && detections.length > 0) {
         // Check for new detections that aren't already active wheels
         const existingTickers = new Set(transformedCycles.map(c => c.ticker));
         const newDetections = detections.filter(d => !existingTickers.has(d.ticker));
-        
+
         if (newDetections.length > 0) {
           console.log(`Found ${newDetections.length} new wheel strategies`);
           setDetectedWheels(newDetections);
-          
+
           // Check which detections need price data
           const needingPrices = newDetections.filter(detection => {
             const needsStockPrice = !detection.stock_purchase_price || detection.stock_purchase_price <= 0;
             const needsPutPrice = detection.put_sold_price === null || detection.put_sold_price <= 0;
             return needsStockPrice || needsPutPrice;
           });
-          
+
           if (needingPrices.length > 0) {
             setWheelsNeedingPrices(needingPrices);
             setShowPricePrompt(true);
           }
-          
+
           // Auto-create wheels that have complete data
           const completeWheels = newDetections.filter(detection => {
             const hasStockPrice = detection.stock_purchase_price && detection.stock_purchase_price > 0;
             const hasPutPrice = detection.put_sold_price !== null && detection.put_sold_price > 0;
             return hasStockPrice && hasPutPrice;
           });
-          
+
           for (const wheel of completeWheels) {
             await createWheelFromDetection(wheel);
           }
@@ -415,16 +415,16 @@ export default function Wheels() {
             `• Cannot be undone\n\n` +
             `To confirm, type exactly: ${confirmationText}`
           );
-          
+
           if (userConfirmation === confirmationText) {
             try {
               wheelsLog(`🗑️ Deleting wheel ${wheel.ticker} (ID: ${wheel.id})`);
               await WheelManagementService.deleteWheel(wheel.id);
               wheelsLog(`✅ Wheel ${wheel.ticker} deleted successfully`);
-              
+
               // Refresh wheel cycles data
               refetchWheelCycles();
-              
+
               // Show success message
               alert(`✅ ${wheel.ticker} wheel strategy has been permanently deleted.`);
             } catch (error) {
@@ -899,7 +899,7 @@ export default function Wheels() {
             <p className="text-gray-600 mb-4">
               I found {wheelsNeedingPrices.length} potential wheel strategy{wheelsNeedingPrices.length > 1 ? 'ies' : 'y'} that need price information to be created automatically.
             </p>
-            
+
             <div className="space-y-3 mb-6">
               {wheelsNeedingPrices.map((wheel, index) => (
                 <div key={index} className="p-3 border rounded bg-gray-50">
@@ -908,7 +908,7 @@ export default function Wheels() {
                     {wheel.strategy_type} • {wheel.shares} shares
                   </div>
                   <div className="text-xs text-yellow-600 mt-1">
-                    Missing: {!wheel.stock_purchase_price ? 'Stock Price' : ''} 
+                    Missing: {!wheel.stock_purchase_price ? 'Stock Price' : ''}
                     {(!wheel.stock_purchase_price && !wheel.put_sold_price) ? ', ' : ''}
                     {!wheel.put_sold_price ? 'Put Price' : ''}
                   </div>

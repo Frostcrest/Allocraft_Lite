@@ -350,7 +350,7 @@ const StrategyDetectionPanel = ({
                 {new Date(lastAnalysis.analysis_date || Date.now()).toLocaleString()}
               </div>
             </div>
-            
+
             {/* Show results summary */}
             <div className="mt-2 text-sm text-slate-600">
               {lastAnalysis.opportunities?.length > 0 ? (
@@ -363,7 +363,7 @@ const StrategyDetectionPanel = ({
                 </span>
               )}
             </div>
-            
+
             {lastAnalysis.market_context && (
               <div className="mt-2 text-xs text-slate-600">
                 Market Context: {lastAnalysis.market_context.session_type || 'Regular Hours'}
@@ -397,18 +397,18 @@ const StrategyDetectionPanel = ({
         )}
 
         {/* No Data State */}
-        {!isLoading && !wheelDetectionMutation.isError && positionsData && 
-         (!positionsData.allPositions?.length && !positionsData.stockPositions?.length && !positionsData.optionPositions?.length) && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-amber-600" />
-              <span className="text-sm font-medium text-amber-900">No Positions Found</span>
+        {!isLoading && !wheelDetectionMutation.isError && positionsData &&
+          (!positionsData.allPositions?.length && !positionsData.stockPositions?.length && !positionsData.optionPositions?.length) && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <span className="text-sm font-medium text-amber-900">No Positions Found</span>
+              </div>
+              <p className="text-xs text-amber-700 mt-1">
+                No active positions available for analysis. Add some stock or option positions to detect wheel opportunities.
+              </p>
             </div>
-            <p className="text-xs text-amber-700 mt-1">
-              No active positions available for analysis. Add some stock or option positions to detect wheel opportunities.
-            </p>
-          </div>
-        )}
+          )}
 
         {/* Auto-refresh indicator */}
         {autoRefresh && isMarketHours() && (

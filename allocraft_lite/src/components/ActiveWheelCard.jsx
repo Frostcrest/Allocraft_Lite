@@ -218,9 +218,8 @@ export default function ActiveWheelCard({
                     <button
                       key={action.id}
                       onClick={() => handleAction(action.id)}
-                      className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm ${
-                        action.danger ? 'text-red-600 hover:bg-red-50' : ''
-                      }`}
+                      className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm ${action.danger ? 'text-red-600 hover:bg-red-50' : ''
+                        }`}
                     >
                       <action.icon className={`w-4 h-4 ${action.danger ? 'text-red-600' : 'text-slate-600'}`} />
                       {action.label}
@@ -390,9 +389,8 @@ export default function ActiveWheelCard({
                     <button
                       key={action.id}
                       onClick={() => handleAction(action.id)}
-                      className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm ${
-                        action.danger ? 'text-red-600 hover:bg-red-50' : ''
-                      }`}
+                      className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm ${action.danger ? 'text-red-600 hover:bg-red-50' : ''
+                        }`}
                     >
                       <action.icon className={`w-4 h-4 ${action.danger ? 'text-red-600' : 'text-slate-600'}`} />
                       {action.label}
