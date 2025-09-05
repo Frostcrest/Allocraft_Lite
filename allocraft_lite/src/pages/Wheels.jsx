@@ -48,13 +48,18 @@ export default function Wheels() {
   const transformWheelCycles = (cycles) => {
     return cycles.map(cycle => {
       const metadata = cycle.detection_metadata || {};
+      // Calculate total premium collected (per-share premium * 100 shares * contract count)
+      const perSharePremium = metadata.premium || 0;
+      const contractCount = metadata.contract_count || cycle.contract_count || 1;
+      const totalPremiumCollected = perSharePremium * 100 * contractCount;
+      
       return {
         ...cycle,
         // Flatten detection_metadata fields to top level for component compatibility
         strike_price: metadata.strike_price || cycle.strike_price || null,
         expiration_date: metadata.expiration_date || cycle.expiration_date || null,
-        contract_count: metadata.contract_count || cycle.contract_count || null,
-        premium_collected: metadata.premium || cycle.premium_collected || null,
+        contract_count: contractCount,
+        premium_collected: cycle.premium_collected || totalPremiumCollected || null,
         position_size: metadata.position_size || cycle.position_size || null,
         // Keep original metadata for reference
         original_metadata: metadata
