@@ -20,8 +20,12 @@ export default function StrategySelectionStep({
   isQuickMode = false,
   prefilledData = null
 }) {
-  const [tickerSearch, setTickerSearch] = useState(formData.ticker || '');
+  const [tickerSearch, setTickerSearch] = useState(formData.ticker || formData.selectedTicker || '');
   const [selectedStrategy, setSelectedStrategy] = useState(formData.strategyType || '');
+
+  // Use selectedTicker from position step if available
+  const isTickerFromPosition = !!formData.selectedTicker;
+  const displayTicker = formData.selectedTicker || formData.ticker;
 
   // Available wheel strategies with detailed information
   const strategies = [
@@ -99,9 +103,16 @@ export default function StrategySelectionStep({
   useEffect(() => {
     updateFormData({
       strategyType: selectedStrategy,
-      ticker: tickerSearch.toUpperCase()
+      ticker: (displayTicker || tickerSearch).toUpperCase()
     });
-  }, [selectedStrategy, tickerSearch, updateFormData]);
+  }, [selectedStrategy, tickerSearch, displayTicker, updateFormData]);
+
+  // Sync ticker search with position-selected ticker
+  useEffect(() => {
+    if (formData.selectedTicker && formData.selectedTicker !== tickerSearch) {
+      setTickerSearch(formData.selectedTicker);
+    }
+  }, [formData.selectedTicker, tickerSearch]);
 
   // Handle strategy selection
   const handleStrategySelect = (strategyId) => {
@@ -327,59 +338,78 @@ export default function StrategySelectionStep({
           )}
         </div>
 
-        {/* Ticker Search Input */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Enter ticker symbol (e.g., AAPL, MSFT, TSLA)"
-            value={tickerSearch}
-            onChange={(e) => setTickerSearch(e.target.value.toUpperCase())}
-            className="pl-10 text-lg font-mono"
-            maxLength={6}
-          />
-        </div>
-
-        {/* Popular Tickers */}
-        <div>
-          <h4 className="font-medium text-slate-700 mb-3">Popular Wheel Tickers</h4>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {popularTickers.map((ticker) => (
-              <button
-                key={ticker.symbol}
-                onClick={() => handleTickerSelect(ticker.symbol)}
-                className={`
-                  p-3 border rounded-lg text-left transition-all duration-200
-                  hover:shadow-md hover:border-blue-300
-                  ${tickerSearch === ticker.symbol
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-slate-200 bg-white'
-                  }
-                `}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-slate-900">{ticker.symbol}</span>
-                  <Badge
-                    variant="secondary"
-                    className={`text-xs ${ticker.suitability >= 90 ? 'bg-green-100 text-green-700' :
-                      ticker.suitability >= 85 ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-slate-100 text-slate-700'
-                      }`}
-                  >
-                    {ticker.suitability}%
-                  </Badge>
+        {/* Position-Selected Ticker Display or Manual Input */}
+        {isTickerFromPosition ? (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Target className="w-5 h-5 text-blue-600" />
+                <div>
+                  <span className="font-bold text-lg text-blue-900">{displayTicker}</span>
+                  <p className="text-sm text-blue-700">Selected from your positions</p>
                 </div>
-
-                <p className="text-xs text-slate-600 mb-2">{ticker.name}</p>
-
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>{ticker.liquidity}</span>
-                  <span>•</span>
-                  <span>{ticker.volatility} Vol</span>
-                </div>
-              </button>
-            ))}
+              </div>
+              <Badge className="bg-blue-600 text-white">
+                From Portfolio
+              </Badge>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Enter ticker symbol (e.g., AAPL, MSFT, TSLA)"
+              value={tickerSearch}
+              onChange={(e) => setTickerSearch(e.target.value.toUpperCase())}
+              className="pl-10 text-lg font-mono"
+              maxLength={6}
+            />
+          </div>
+        )}
+
+        {/* Popular Tickers (only show for manual entry) */}
+        {!isTickerFromPosition && (
+          <div>
+            <h4 className="font-medium text-slate-700 mb-3">Popular Wheel Tickers</h4>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {popularTickers.map((ticker) => (
+                <button
+                  key={ticker.symbol}
+                  onClick={() => handleTickerSelect(ticker.symbol)}
+                  className={`
+                    p-3 border rounded-lg text-left transition-all duration-200
+                    hover:shadow-md hover:border-blue-300
+                    ${tickerSearch === ticker.symbol
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-200 bg-white'
+                    }
+                  `}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-slate-900">{ticker.symbol}</span>
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs ${ticker.suitability >= 90 ? 'bg-green-100 text-green-700' :
+                        ticker.suitability >= 85 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-slate-100 text-slate-700'
+                        }`}
+                    >
+                      {ticker.suitability}%
+                    </Badge>
+                  </div>
+
+                  <p className="text-xs text-slate-600 mb-2">{ticker.name}</p>
+
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span>{ticker.liquidity}</span>
+                    <span>•</span>
+                    <span>{ticker.volatility} Vol</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Ticker Validation Info */}
         {tickerSearch && tickerSearch.length >= 2 && (

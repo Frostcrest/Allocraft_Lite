@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 // Step Components
+import PositionTickerStep from './wheel-creation/PositionTickerStep';
 import StrategySelectionStep from './wheel-creation/StrategySelectionStep';
 import ParameterConfigurationStep from './wheel-creation/ParameterConfigurationStep';
 import ReviewConfirmationStep from './wheel-creation/ReviewConfirmationStep';
@@ -28,6 +29,10 @@ export default function WheelCreationModal({
   // Modal state management
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
+    // Position Selection (NEW)
+    selectedTicker: prefilledData?.ticker || '',
+    isManualEntry: false,
+    
     // Strategy Selection
     strategyType: prefilledData?.strategy || '',
     ticker: prefilledData?.ticker || '',
@@ -57,20 +62,27 @@ export default function WheelCreationModal({
   const steps = [
     {
       id: 1,
+      title: "Position Selection",
+      description: "Choose ticker from your current positions",
+      icon: Target,
+      component: PositionTickerStep
+    },
+    {
+      id: 2,
       title: "Strategy Selection",
-      description: "Choose strategy type and target ticker",
+      description: "Choose strategy type and review opportunities",
       icon: Target,
       component: StrategySelectionStep
     },
     {
-      id: 2,
+      id: 3,
       title: "Parameter Configuration",
       description: "Set strike prices, expiration, and position sizing",
       icon: Settings,
       component: ParameterConfigurationStep
     },
     {
-      id: 3,
+      id: 4,
       title: "Review & Confirmation",
       description: "Review settings and confirm wheel creation",
       icon: Eye,
@@ -78,7 +90,7 @@ export default function WheelCreationModal({
     }
   ];
 
-  // Skip to step 2 for quick mode
+  // Skip to step 2 for quick mode (skip position selection)
   useEffect(() => {
     if (quickMode && isOpen) {
       setCurrentStep(2);
@@ -101,11 +113,18 @@ export default function WheelCreationModal({
 
     switch (stepNumber) {
       case 1:
+        // Position Selection validation
+        if (!formData.selectedTicker) errors.selectedTicker = "Please select a ticker from your positions or enter manually";
+        break;
+
+      case 2:
+        // Strategy Selection validation
         if (!formData.strategyType) errors.strategyType = "Strategy type is required";
         if (!formData.ticker) errors.ticker = "Ticker symbol is required";
         break;
 
-      case 2:
+      case 3:
+        // Parameter Configuration validation
         if (!formData.strikePrice) errors.strikePrice = "Strike price is required";
         if (!formData.expirationDate) errors.expirationDate = "Expiration date is required";
         if (!formData.contractCount || formData.contractCount < 1) {
@@ -114,7 +133,7 @@ export default function WheelCreationModal({
         if (!formData.positionSize) errors.positionSize = "Position size is required";
         break;
 
-      case 3:
+      case 4:
         // Final validation before submission
         if (!formData.strategyType || !formData.ticker || !formData.strikePrice) {
           errors.general = "Please complete all required fields";
@@ -158,7 +177,7 @@ export default function WheelCreationModal({
 
   // Wheel creation submission
   const handleSubmit = async () => {
-    if (!validateStep(3)) {
+    if (!validateStep(4)) {
       return;
     }
 
