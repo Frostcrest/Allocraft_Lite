@@ -215,6 +215,20 @@ export default function ParameterConfigurationStep({
         </p>
       </div>
 
+      {/* Pre-selected Strategy Banner */}
+      {prefilledData?.strategy && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 className="w-5 h-5 text-blue-600" />
+            <h4 className="font-semibold text-blue-800">Pre-selected from Opportunity</h4>
+          </div>
+          <p className="text-sm text-blue-700">
+            Strategy and ticker pre-filled from detected {prefilledData.strategy.replace('_', ' ')} opportunity for {prefilledData.ticker}.
+            You can modify the parameters below as needed.
+          </p>
+        </div>
+      )}
+
       {/* Core Parameters */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left Column - Basic Parameters */}

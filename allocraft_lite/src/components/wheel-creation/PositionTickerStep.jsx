@@ -5,10 +5,71 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Search, TrendingUp, TrendingDown, Target, AlertCircle,
-  DollarSign, Percent, ArrowUpRight, ArrowDownRight
+  DollarSign, Percent, ArrowUpRight, ArrowDownRight, Calendar, 
+  Clock, Activity
 } from "lucide-react";
 import { usePositionsData } from '@/api/enhancedClient';
 import { PositionDataService } from '@/services/positionDataService';
+
+/**
+ * Parse option symbol to extract expiration date and strike price
+ * Example: JBLU 251017P00005000 -> { ticker: 'JBLU', expiration: '2025-10-17', strike: 5.00, type: 'Put' }
+ */
+const parseOptionSymbol = (symbol) => {
+  if (!symbol) return null;
+  
+  // Pattern: TICKER YYMMDDX########
+  // X = C (Call) or P (Put)
+  // ######## = Strike price * 1000
+  const match = symbol.match(/^([A-Z]+)\s+(\d{6})([CP])(\d{8})$/);
+  
+  if (!match) return null;
+  
+  const [, ticker, dateStr, typeChar, strikeStr] = match;
+  
+  // Parse date: YYMMDD
+  const year = 2000 + parseInt(dateStr.substring(0, 2));
+  const month = parseInt(dateStr.substring(2, 4));
+  const day = parseInt(dateStr.substring(4, 6));
+  
+  // Parse strike: divide by 1000
+  const strike = parseInt(strikeStr) / 1000;
+  
+  // Format expiration date
+  const expiration = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  const expirationDisplay = `${month}/${day}/${year.toString().substring(2)}`;
+  
+  const type = typeChar === 'C' ? 'Call' : 'Put';
+  
+  return {
+    ticker,
+    expiration,
+    expirationDisplay,
+    strike,
+    type,
+    typeShort: typeChar
+  };
+};
+
+/**
+ * Format currency for display
+ */
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value || 0);
+};
+
+/**
+ * Format percentage for display
+ */
+const formatPercent = (value) => {
+  if (!value) return '0.00%';
+  return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+};
 
 /**
  * PositionTickerStep - First step in enhanced wheel creation wizard
@@ -36,8 +97,16 @@ export default function PositionTickerStep({
       console.log('🔄 PositionTickerStep: Grouping positions by ticker...', allPositions.length, 'positions');
       
       const grouped = allPositions.reduce((groups, position) => {
-        // Use underlying symbol for options, regular symbol for stocks
-        const ticker = position.isOption ? position.underlyingSymbol : position.symbol;
+        // Extract clean ticker symbol
+        let ticker;
+        
+        if (position.isOption) {
+          // Parse option symbol to get underlying ticker
+          const parsed = parseOptionSymbol(position.symbol);
+          ticker = parsed ? parsed.ticker : (position.underlyingSymbol || position.symbol.split(' ')[0]);
+        } else {
+          ticker = position.symbol;
+        }
         
         if (!ticker) return groups;
 
@@ -47,12 +116,23 @@ export default function PositionTickerStep({
             stocks: [],
             options: [],
             totalValue: 0,
-            totalShares: 0
+            totalShares: 0,
+            totalContracts: 0
           };
         }
 
         if (position.isOption) {
-          groups[ticker].options.push(position);
+          // Add parsed option info
+          const parsed = parseOptionSymbol(position.symbol);
+          const enhancedOption = {
+            ...position,
+            parsed: parsed,
+            displayName: parsed ? 
+              `${parsed.expirationDisplay} ${parsed.type} $${parsed.strike}` : 
+              position.symbol
+          };
+          groups[ticker].options.push(enhancedOption);
+          groups[ticker].totalContracts += Math.abs(position.contracts || 0);
         } else {
           groups[ticker].stocks.push(position);
           groups[ticker].totalShares += Math.abs(position.shares || 0);
@@ -95,20 +175,6 @@ export default function PositionTickerStep({
       setShowManualEntry(false);
       setManualTicker('');
     }
-  };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  };
-
-  const formatPercent = (value) => {
-    if (!value) return '0.00%';
-    return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
   };
 
   if (isLoading) {
@@ -238,9 +304,18 @@ export default function PositionTickerStep({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-lg text-slate-900">{group.ticker}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {group.stocks.length} stocks, {group.options.length} options
-                  </Badge>
+                  <div className="flex gap-2">
+                    {group.stocks.length > 0 && (
+                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                        {group.totalShares} shares
+                      </Badge>
+                    )}
+                    {group.options.length > 0 && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                        {group.options.length} options
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 
                 {isSelected && (
@@ -250,45 +325,86 @@ export default function PositionTickerStep({
                 )}
               </div>
 
-              {/* Position Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <p className="text-slate-600 mb-1">Shares</p>
-                  <p className="font-semibold">{group.totalShares.toLocaleString()}</p>
+              {/* Stock Position Summary */}
+              {group.stocks.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
+                  <div>
+                    <p className="text-slate-600 mb-1">Shares</p>
+                    <p className="font-semibold">{group.totalShares.toLocaleString()}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-slate-600 mb-1">Market Value</p>
+                    <p className="font-semibold">{formatCurrency(group.totalValue)}</p>
+                  </div>
+                  
+                  {stockPosition && (
+                    <>
+                      <div>
+                        <p className="text-slate-600 mb-1">P&L</p>
+                        <p className={`font-semibold flex items-center gap-1 ${
+                          profitLoss >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {profitLoss >= 0 ? (
+                            <ArrowUpRight className="w-3 h-3" />
+                          ) : (
+                            <ArrowDownRight className="w-3 h-3" />
+                          )}
+                          {formatCurrency(Math.abs(profitLoss))}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-slate-600 mb-1">Return</p>
+                        <p className={`font-semibold ${
+                          profitLossPercent >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {formatPercent(profitLossPercent)}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
-                
-                <div>
-                  <p className="text-slate-600 mb-1">Market Value</p>
-                  <p className="font-semibold">{formatCurrency(group.totalValue)}</p>
+              )}
+
+              {/* Options Detail */}
+              {group.options.length > 0 && (
+                <div className="pt-2 border-t border-slate-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-slate-700">Options Positions</span>
+                  </div>
+                  <div className="space-y-1">
+                    {group.options.slice(0, 3).map((option, index) => (
+                      <div key={index} className="text-xs text-slate-600 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                            option.parsed?.type === 'Call' 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {option.parsed?.typeShort || 'OPT'}
+                          </span>
+                          <span className="font-medium">
+                            {option.parsed ? 
+                              `$${option.parsed.strike} ${option.parsed.expirationDisplay}` : 
+                              option.symbol
+                            }
+                          </span>
+                        </div>
+                        <span className="text-slate-500">
+                          {Math.abs(option.contracts || 0)} contracts
+                        </span>
+                      </div>
+                    ))}
+                    {group.options.length > 3 && (
+                      <div className="text-xs text-slate-500">
+                        +{group.options.length - 3} more options
+                      </div>
+                    )}
+                  </div>
                 </div>
-                
-                {stockPosition && (
-                  <>
-                    <div>
-                      <p className="text-slate-600 mb-1">P&L</p>
-                      <p className={`font-semibold flex items-center gap-1 ${
-                        profitLoss >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {profitLoss >= 0 ? (
-                          <ArrowUpRight className="w-3 h-3" />
-                        ) : (
-                          <ArrowDownRight className="w-3 h-3" />
-                        )}
-                        {formatCurrency(Math.abs(profitLoss))}
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-slate-600 mb-1">Return</p>
-                      <p className={`font-semibold ${
-                        profitLossPercent >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {formatPercent(profitLossPercent)}
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
+              )}
 
               {/* Wheel Potential Indicator */}
               {group.totalShares >= 100 && (

@@ -858,8 +858,8 @@ export default function Wheels() {
             setShowWheelCreationModal(false);
             setQuickCreationData(null);
           }}
-          onWheelCreated={async (wheelData) => {
-            wheelsLog('🎯 New wheel creation completed:', wheelData);
+          onWheelCreated={async (createdWheelCycle) => {
+            wheelsLog('🎯 New wheel cycle creation completed:', createdWheelCycle);
 
             // Show success message
             setShowSuccess(true);
@@ -869,8 +869,9 @@ export default function Wheels() {
             setShowWheelCreationModal(false);
             setQuickCreationData(null);
 
-            // TODO: Refresh wheel cycles data
-            wheelsLog('✅ Wheel successfully created with new modal system');
+            // The useCreateWheelCycle hook automatically invalidates the cache,
+            // so the wheels list will refresh automatically
+            wheelsLog('✅ Wheel cycle successfully created and cache invalidated');
           }}
           prefilledData={quickCreationData}
           quickMode={!!quickCreationData}

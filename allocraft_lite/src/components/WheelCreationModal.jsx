@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertCircle, TrendingUp, DollarSign, Calendar,
   RotateCcw, Zap, Shield, Info
 } from "lucide-react";
+import { useCreateWheelCycle } from "@/api/enhancedClient";
 
 // Step Components
 import PositionTickerStep from './wheel-creation/PositionTickerStep';
@@ -58,6 +59,9 @@ export default function WheelCreationModal({
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // API mutation for creating wheel cycles
+  const createWheelCycle = useCreateWheelCycle();
+
   // Step configuration
   const steps = [
     {
@@ -90,18 +94,26 @@ export default function WheelCreationModal({
     }
   ];
 
-  // Skip to step 2 for quick mode (skip position selection)
+  // Smart step navigation based on prefilled data
   useEffect(() => {
     if (quickMode && isOpen) {
-      setCurrentStep(2);
+      // If strategy is pre-filled from suggestion, skip to Parameter Configuration (Step 3)
+      if (prefilledData?.strategy) {
+        setCurrentStep(3);
+        console.log('🚀 Quick mode with pre-filled strategy detected, skipping to Parameter Configuration');
+      } else {
+        // Otherwise skip to Strategy Selection (Step 2)
+        setCurrentStep(2);
+      }
     }
-  }, [quickMode, isOpen]);
+  }, [quickMode, isOpen, prefilledData]);
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen && !prefilledData) {
       // Reset to default state only if no prefilled data
-      setCurrentStep(quickMode ? 2 : 1);
+      const initialStep = quickMode ? (prefilledData?.strategy ? 3 : 2) : 1;
+      setCurrentStep(initialStep);
       setValidationErrors({});
       setIsSubmitting(false);
     }
@@ -113,14 +125,20 @@ export default function WheelCreationModal({
 
     switch (stepNumber) {
       case 1:
-        // Position Selection validation
-        if (!formData.selectedTicker) errors.selectedTicker = "Please select a ticker from your positions or enter manually";
+        // Position Selection validation - skip if we have prefilled ticker
+        if (!formData.selectedTicker && !prefilledData?.ticker) {
+          errors.selectedTicker = "Please select a ticker from your positions or enter manually";
+        }
         break;
 
       case 2:
-        // Strategy Selection validation
-        if (!formData.strategyType) errors.strategyType = "Strategy type is required";
-        if (!formData.ticker) errors.ticker = "Ticker symbol is required";
+        // Strategy Selection validation - skip if we have prefilled strategy
+        if (!formData.strategyType && !prefilledData?.strategy) {
+          errors.strategyType = "Strategy type is required";
+        }
+        if (!formData.ticker && !prefilledData?.ticker) {
+          errors.ticker = "Ticker symbol is required";
+        }
         break;
 
       case 3:
@@ -134,8 +152,12 @@ export default function WheelCreationModal({
         break;
 
       case 4:
-        // Final validation before submission
-        if (!formData.strategyType || !formData.ticker || !formData.strikePrice) {
+        // Final validation before submission - use prefilled data if available
+        const strategy = formData.strategyType || prefilledData?.strategy;
+        const ticker = formData.ticker || prefilledData?.ticker;
+        const strikePrice = formData.strikePrice || prefilledData?.strikePrice;
+        
+        if (!strategy || !ticker || !strikePrice) {
           errors.general = "Please complete all required fields";
         }
         break;
@@ -184,44 +206,65 @@ export default function WheelCreationModal({
     setIsSubmitting(true);
 
     try {
-      // Prepare wheel data for backend
-      const wheelData = {
-        strategy_type: formData.strategyType,
-        ticker: formData.ticker.toUpperCase(),
-        strike_price: parseFloat(formData.strikePrice),
-        expiration_date: formData.expirationDate,
-        contract_count: parseInt(formData.contractCount),
-        premium: parseFloat(formData.premium) || null,
-        position_size: parseFloat(formData.positionSize),
+      // Get the ticker for the wheel cycle
+      const ticker = (formData.ticker || prefilledData?.ticker).toUpperCase();
+      const strategy = formData.strategyType || prefilledData?.strategy;
+      
+      // Generate a unique cycle key
+      const timestamp = Date.now();
+      const cycleKey = `${ticker}-${strategy}-${timestamp}`;
 
-        // Risk management
-        stop_loss: parseFloat(formData.stopLoss) || null,
-        profit_target: parseFloat(formData.profitTarget) || null,
-        max_days: parseInt(formData.maxDays) || null,
-
-        // Settings
-        auto_roll: formData.autoRoll,
-        notifications_enabled: formData.notifications,
-        notes: formData.notes || null,
-
-        // Metadata
-        created_via: quickMode ? 'quick_creation' : 'full_wizard',
-        creation_timestamp: new Date().toISOString()
+      // Prepare wheel cycle data for backend API
+      const wheelCycleData = {
+        cycle_key: cycleKey,
+        ticker: ticker,
+        started_at: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+        status: 'Open',
+        strategy_type: strategy,
+        notes: formData.notes || prefilledData?.notes || `${strategy.replace('_', ' ')} wheel created via ${quickMode ? 'quick creation' : 'full wizard'}`,
+        detection_metadata: {
+          // Store the original form data as metadata
+          strike_price: parseFloat(formData.strikePrice || prefilledData?.strikePrice),
+          expiration_date: formData.expirationDate || prefilledData?.expirationDate,
+          contract_count: parseInt(formData.contractCount || prefilledData?.contractCount || 1),
+          premium: parseFloat(formData.premium || prefilledData?.premium) || null,
+          position_size: parseFloat(formData.positionSize || prefilledData?.positionSize),
+          stop_loss: parseFloat(formData.stopLoss || prefilledData?.stopLoss) || null,
+          profit_target: parseFloat(formData.profitTarget || prefilledData?.profitTarget) || null,
+          max_days: parseInt(formData.maxDays || prefilledData?.maxDays) || null,
+          auto_roll: formData.autoRoll || prefilledData?.autoRoll || false,
+          notifications_enabled: formData.notifications ?? prefilledData?.notifications ?? true,
+          created_via: quickMode ? 'quick_creation' : 'full_wizard',
+          source_opportunity: prefilledData ? 'detected_opportunity' : 'manual_entry',
+          creation_timestamp: new Date().toISOString()
+        }
       };
 
-      // TODO: Call actual backend API
-      // const response = await createWheelCycle(wheelData);
+      console.log('🚀 Creating wheel cycle:', wheelCycleData);
 
-      // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the actual backend API
+      const createdWheelCycle = await createWheelCycle.mutateAsync(wheelCycleData);
+      
+      console.log('✅ Wheel cycle created successfully:', createdWheelCycle);
 
-      // Notify parent component
-      onWheelCreated(wheelData);
+      // Notify parent component with the created wheel cycle
+      onWheelCreated(createdWheelCycle);
 
     } catch (error) {
-      console.error('❌ Wheel creation failed:', error);
+      console.error('❌ Wheel cycle creation failed:', error);
+      
+      // Handle specific API errors
+      let errorMessage = 'Failed to create wheel cycle. Please try again.';
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.status === 400) {
+        errorMessage = 'Invalid wheel data. Please check your inputs.';
+      } else if (error?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      
       setValidationErrors({
-        general: 'Failed to create wheel. Please try again.'
+        general: errorMessage
       });
     } finally {
       setIsSubmitting(false);
@@ -288,7 +331,14 @@ export default function WheelCreationModal({
             {steps.map((step, index) => {
               const StepIcon = step.icon;
               const isActive = currentStep === step.id;
-              const isCompleted = currentStep > step.id;
+              
+              // Mark steps as completed if they were skipped due to prefilled data
+              const isSkippedWithData = (
+                (step.id === 1 && prefilledData?.ticker && quickMode) ||
+                (step.id === 2 && prefilledData?.strategy && quickMode)
+              );
+              
+              const isCompleted = currentStep > step.id || isSkippedWithData;
               const isAccessible = step.id <= currentStep || isCompleted;
 
               return (
