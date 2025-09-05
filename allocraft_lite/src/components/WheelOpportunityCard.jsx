@@ -101,20 +101,78 @@ const WheelOpportunityCard = ({
 
   const confidenceStyle = getConfidenceStyle(confidence_level, confidence_score);
 
+  // Helper function to detect if a position is actually an option based on symbol pattern
+  const isOptionBySymbol = (symbol) => {
+    // Option symbols contain expiration dates and strike prices
+    // Examples: 'GOOG 260618C00250000', 'AAPL 230120P00150000'
+    return /\s+\d{6}[CP]\d{8}/.test(symbol);
+  };
+
   // Format position summary
   const getPositionSummary = (positions) => {
+    console.log(`🔍 WheelOpportunityCard Debug - ${ticker}:`, {
+      positionsReceived: positions,
+      positionsType: typeof positions,
+      positionsLength: Array.isArray(positions) ? positions.length : 'not array',
+      positionsStructure: Array.isArray(positions) && positions.length > 0 ? positions[0] : 'empty'
+    });
+
     if (!Array.isArray(positions) || positions.length === 0) {
+      console.log(`❌ ${ticker}: No positions data available`);
       return { shares: 0, options: 0, totalValue: 0 };
     }
 
-    const stockPositions = positions.filter(p => p.type === 'stock' || p.instrument_type === 'stock');
-    const optionPositions = positions.filter(p => p.type === 'option' || p.instrument_type === 'option');
+    // Enhanced position filtering - detect options by symbol pattern even if type is wrong
+    const stockPositions = positions.filter(p => {
+      const isStockByType = (p.type === 'stock' || p.instrument_type === 'stock' || p.asset_type === 'EQUITY');
+      const isNotOptionBySymbol = !isOptionBySymbol(p.symbol || '');
+      return isStockByType && isNotOptionBySymbol;
+    });
+    
+    const optionPositions = positions.filter(p => {
+      const isOptionByType = (p.type === 'option' || p.type === 'call' || p.type === 'put' || 
+                              p.instrument_type === 'option' || p.asset_type === 'OPTION');
+      const hasOptionSymbolPattern = isOptionBySymbol(p.symbol || '');
+      return isOptionByType || hasOptionSymbolPattern; // Include if either type says option OR symbol pattern matches
+    });
+
+    console.log(`📊 ${ticker}: Enhanced position filtering:`, {
+      totalPositions: positions.length,
+      stockPositions: stockPositions.length,
+      optionPositions: optionPositions.length,
+      stockSymbols: stockPositions.map(p => p.symbol),
+      optionSymbols: optionPositions.map(p => p.symbol),
+      optionPositionTypes: optionPositions.map(p => p.type || p.instrument_type || p.asset_type)
+    });
 
     const shares = stockPositions.reduce((sum, p) => sum + (p.quantity || p.shares || 0), 0);
-    const options = optionPositions.length;
+    
+    // Count actual option contracts, handling multiple data structures
+    const options = optionPositions.reduce((sum, p) => {
+      let contracts = 0;
+      if (p.long_quantity !== undefined && p.short_quantity !== undefined) {
+        // Backend unified position structure: use absolute difference
+        contracts = Math.abs(p.long_quantity - p.short_quantity);
+        console.log(`📈 ${ticker}: Using long/short quantities: ${p.long_quantity} - ${p.short_quantity} = ${contracts}`);
+      } else if (p.quantity !== undefined) {
+        // Backend EnhancedPosition structure: quantity is already absolute
+        contracts = Math.abs(p.quantity);
+        console.log(`📈 ${ticker}: Using quantity field: ${p.quantity} = ${contracts} (symbol: ${p.symbol})`);
+      } else if (p.contracts !== undefined) {
+        // Frontend/alternative structure: contracts field
+        contracts = Math.abs(p.contracts);
+        console.log(`📈 ${ticker}: Using contracts field: ${p.contracts} = ${contracts}`);
+      } else {
+        console.log(`⚠️ ${ticker}: No quantity field found in position:`, p);
+      }
+      return sum + contracts;
+    }, 0);
+    
     const totalValue = positions.reduce((sum, p) => sum + (p.market_value || p.value || 0), 0);
 
-    return { shares, options, totalValue };
+    const summary = { shares, options, totalValue };
+    console.log(`✅ ${ticker}: Final position summary:`, summary);
+    return summary;
   };
 
   const positionSummary = getPositionSummary(positions);

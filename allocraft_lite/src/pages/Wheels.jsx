@@ -131,6 +131,22 @@ export default function Wheels() {
       console.log("🎯 Backend detection results:", detections);
       console.log("📈 Number of detections returned:", detections?.length || 0);
 
+      // Debug: Log the structure of detected opportunities
+      if (detections && detections.length > 0) {
+        console.log("🔍 Detailed opportunity structures:");
+        detections.forEach((detection, index) => {
+          console.log(`Opportunity ${index + 1}: ${detection.ticker} (${detection.strategy})`);
+          console.log("  - Positions:", detection.positions);
+          console.log("  - Positions length:", detection.positions?.length || 0);
+          if (detection.positions && detection.positions.length > 0) {
+            console.log("  - First position structure:", detection.positions[0]);
+            detection.positions.forEach((pos, posIndex) => {
+              console.log(`    Position ${posIndex + 1}: type=${pos.type}, quantity=${pos.quantity}, symbol=${pos.symbol}`);
+            });
+          }
+        });
+      }
+
       if (detections && detections.length > 0) {
         // Check for new detections that aren't already active wheels
         const existingTickers = new Set(transformedCycles.map(c => c.ticker));
