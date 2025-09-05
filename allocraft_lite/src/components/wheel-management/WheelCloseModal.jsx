@@ -118,8 +118,8 @@ export default function WheelCloseModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
           <DialogTitle className="flex items-center gap-3">
             <XCircle className="h-5 w-5 text-red-600" />
             Close {wheel.ticker} Wheel Strategy
@@ -129,7 +129,7 @@ export default function WheelCloseModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col h-full">
+        <div className="space-y-6">
           {calculating ? (
             <div className="flex items-center justify-center h-48">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
@@ -331,7 +331,7 @@ export default function WheelCloseModal({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-between pt-6 border-t">
+              <div className="flex justify-between pt-6 border-t sticky bottom-0 bg-white">
                 <Button variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
