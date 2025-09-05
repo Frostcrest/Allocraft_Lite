@@ -53,19 +53,19 @@ export default function Wheels() {
       const contractCount = metadata.contract_count || cycle.contract_count || 1;
       const totalPremiumCollected = perSharePremium * 100 * contractCount;
       
-      // Calculate total P&L 
-      // For cash-secured puts: P&L = premium collected (since we sold the put and collected premium)
-      // For covered calls: P&L = premium collected + any stock appreciation
-      // For now, use premium collected as initial P&L (simplified calculation)
-      const totalPnL = totalPremiumCollected || 0;
+      // Use real-time P&L from backend if available, otherwise fallback to premium calculation
+      const realTimePnL = cycle.total_pnl;
+      const totalPnL = realTimePnL !== null && realTimePnL !== undefined ? realTimePnL : totalPremiumCollected;
       
       // Debug logging for P&L calculation
-      console.log(`🧮 P&L Calculation for ${cycle.ticker}:`, {
+      console.log(`🧮 Real-Time P&L for ${cycle.ticker}:`, {
         perSharePremium,
         contractCount,
         totalPremiumCollected,
-        totalPnL,
-        strategy: cycle.strategy_type
+        realTimePnL,
+        finalPnL: totalPnL,
+        strategy: cycle.strategy_type,
+        priceLastUpdated: cycle.price_last_updated
       });
       
       return {
@@ -75,7 +75,10 @@ export default function Wheels() {
         expiration_date: metadata.expiration_date || cycle.expiration_date || null,
         contract_count: contractCount,
         premium_collected: cycle.premium_collected || totalPremiumCollected || null,
-        total_pnl: cycle.total_pnl || totalPnL || 0,  // Add total_pnl field
+        total_pnl: totalPnL,  // Use real-time P&L
+        current_option_value: cycle.current_option_value || null,  // Add current option value
+        unrealized_pnl: cycle.unrealized_pnl || null,  // Add unrealized P&L
+        price_last_updated: cycle.price_last_updated || null,  // Add price timestamp
         position_size: metadata.position_size || cycle.position_size || null,
         // Keep original metadata for reference
         original_metadata: metadata
@@ -338,6 +341,41 @@ export default function Wheels() {
       await runWheelDetection(false); // Then run detection
     } catch (error) {
       wheelsLog('❌ Manual refresh failed:', error);
+    }
+  };
+
+  // Wheel price refresh function
+  const handleWheelPriceRefresh = async () => {
+    wheelsLog('💰 Manual wheel price refresh triggered...');
+    try {
+      const response = await fetch('http://127.0.0.1:8000/wheels/refresh-prices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      wheelsLog('✅ Wheel price refresh successful:', result);
+      
+      // Refresh wheel cycles data to get updated P&L
+      await refetchWheelCycles();
+      
+      // Show success message
+      if (result.success) {
+        alert(`✅ Updated ${result.summary.updated} wheel cycles with real-time prices!`);
+      } else {
+        alert(`⚠️ Price refresh completed with some issues: ${result.message}`);
+      }
+      
+    } catch (error) {
+      wheelsLog('❌ Wheel price refresh failed:', error);
+      alert(`❌ Failed to refresh wheel prices: ${error.message}`);
     }
   };
 
@@ -733,6 +771,15 @@ export default function Wheels() {
             >
               <RotateCcw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
+            </Button>
+            <Button
+              onClick={handleWheelPriceRefresh}
+              variant="outline"
+              disabled={loading}
+              className="border-slate-300 hover:border-green-500"
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Refresh Prices
             </Button>
             <Button
               onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
