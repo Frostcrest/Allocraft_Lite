@@ -13,9 +13,7 @@ import {
   DollarSign,
   Target,
   Filter,
-  Loader2,
-  Zap,
-  RefreshCw
+  Loader2
 } from "lucide-react";
 import WheelOpportunityCard from "@/components/WheelOpportunityCard";
 
@@ -28,8 +26,7 @@ const WheelOpportunityGrid = ({
   isLoading = false,
   onCreateWheel = null,
   onViewDetails = null,
-  onManualDetection = null,
-  isDetectionLoading = false,
+  onAnalyzePositions = null,
   className = ""
 }) => {
   // State for filtering and sorting
@@ -152,27 +149,6 @@ const WheelOpportunityGrid = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Analyze Positions Button */}
-          {onManualDetection && (
-            <Button
-              onClick={() => onManualDetection(false)}
-              disabled={isDetectionLoading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              {isDetectionLoading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-4 h-4 mr-2" />
-                  Analyze Positions
-                </>
-              )}
-            </Button>
-          )}
-
           {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
@@ -322,7 +298,11 @@ const WheelOpportunityGrid = ({
             <p className="text-slate-600 mb-4">
               Run position analysis to detect potential wheel strategies from your current holdings.
             </p>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+            <Button 
+              onClick={onAnalyzePositions}
+              disabled={!onAnalyzePositions}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <Target className="w-4 h-4 mr-2" />
               Analyze Positions
             </Button>

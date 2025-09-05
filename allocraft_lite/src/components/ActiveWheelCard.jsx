@@ -18,8 +18,6 @@ export default function ActiveWheelCard({
   onAction = () => { },
   className = ''
 }) {
-  // console.log('🎯 ActiveWheelCard rendering:', { wheel: wheel.ticker, viewMode });
-
   const [showActions, setShowActions] = useState(false);
 
   // Strategy type display mapping
@@ -117,36 +115,18 @@ export default function ActiveWheelCard({
 
   // Calculate days to expiration
   const getDaysToExpiration = () => {
-    // Check multiple possible locations for expiration date
-    const expirationDate = wheel.expiration_date || 
-                          wheel.detection_metadata?.expiration_date ||
-                          wheel.detection_metadata?.expiration ||
-                          null;
-    
-    if (!expirationDate) return 0;
-    
-    const expiry = new Date(expirationDate);
+    if (!wheel.expiration_date) return 0;
+    const expiry = new Date(wheel.expiration_date);
     const today = new Date();
     const diffTime = expiry - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
   };
 
-  // Get strike price from multiple possible sources
-  const getStrikePrice = () => {
-    return wheel.strike_price || 
-           wheel.detection_metadata?.strike_price ||
-           null;
-  };
-
   // Calculate percentage return
   const getPercentageReturn = () => {
-    const strikePrice = getStrikePrice();
-    const premiumCollected = wheel.premium_collected || wheel.detection_metadata?.premium || 0;
-    const contractCount = wheel.contract_count || wheel.detection_metadata?.contract_count || 1;
-    
-    if (!premiumCollected || !strikePrice || !contractCount) return 0;
-    const totalCapital = strikePrice * contractCount * 100;
+    if (!wheel.premium_collected || !wheel.strike_price || !wheel.contract_count) return 0;
+    const totalCapital = wheel.strike_price * wheel.contract_count * 100;
     return ((wheel.total_pnl || 0) / totalCapital * 100).toFixed(1);
   };
 
@@ -182,11 +162,11 @@ export default function ActiveWheelCard({
   // Action buttons
   const actionButtons = [
     { id: 'view_details', label: 'View Details', icon: Eye, description: 'See full strategy details and history' },
-    { id: 'edit_parameters', label: 'Edit Strike & Expiry', icon: Edit, description: 'Edit strike price and expiration date' },
+    { id: 'edit_parameters', label: 'Edit Parameters', icon: Edit, description: 'Modify risk management settings' },
     { id: 'roll_options', label: 'Roll Options', icon: RotateCcw, description: 'Roll to next expiration' },
     { id: 'close_wheel', label: 'Close Strategy', icon: X, description: 'Close wheel strategy early' },
-    { id: 'add_notes', label: 'Add Notes', icon: FileText, description: 'Add strategy notes or observations' },
-    { id: 'delete_wheel', label: 'Delete Wheel', icon: Trash2, description: 'Permanently delete this wheel strategy' }
+    { id: 'delete_wheel', label: 'Delete Strategy', icon: Trash2, description: 'Permanently delete wheel strategy', danger: true },
+    { id: 'add_notes', label: 'Add Notes', icon: FileText, description: 'Add strategy notes or observations' }
   ];
 
   // Performance indicator
@@ -238,9 +218,11 @@ export default function ActiveWheelCard({
                     <button
                       key={action.id}
                       onClick={() => handleAction(action.id)}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm"
+                      className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm ${
+                        action.danger ? 'text-red-600 hover:bg-red-50' : ''
+                      }`}
                     >
-                      <action.icon className="w-4 h-4 text-slate-600" />
+                      <action.icon className={`w-4 h-4 ${action.danger ? 'text-red-600' : 'text-slate-600'}`} />
                       {action.label}
                     </button>
                   ))}
@@ -258,7 +240,7 @@ export default function ActiveWheelCard({
               <span className="text-xs font-medium text-slate-700">Strike Price</span>
             </div>
             <div className="text-lg font-bold text-slate-900">
-              ${getStrikePrice() || 0}
+              ${wheel.strike_price}
             </div>
           </div>
 
@@ -408,9 +390,11 @@ export default function ActiveWheelCard({
                     <button
                       key={action.id}
                       onClick={() => handleAction(action.id)}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm"
+                      className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm ${
+                        action.danger ? 'text-red-600 hover:bg-red-50' : ''
+                      }`}
                     >
-                      <action.icon className="w-4 h-4 text-slate-600" />
+                      <action.icon className={`w-4 h-4 ${action.danger ? 'text-red-600' : 'text-slate-600'}`} />
                       {action.label}
                     </button>
                   ))}
@@ -449,7 +433,7 @@ export default function ActiveWheelCard({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div>
             <span className="text-slate-600">Strike: </span>
-            <span className="font-semibold">${getStrikePrice() || 0}</span>
+            <span className="font-semibold">${wheel.strike_price}</span>
           </div>
           <div>
             <span className="text-slate-600">Expiry: </span>

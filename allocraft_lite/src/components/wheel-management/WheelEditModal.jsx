@@ -23,12 +23,6 @@ export default function WheelEditModal({
   onSave = () => { }
 }) {
   const [formData, setFormData] = useState({
-    // Core position parameters
-    strike_price: '',
-    expiration_date: '',
-    contract_count: '',
-    
-    // Strategy parameters
     target_premium_rate: '',
     strike_selection_method: '',
     max_dte: '',
@@ -47,12 +41,6 @@ export default function WheelEditModal({
   useEffect(() => {
     if (wheel) {
       setFormData({
-        // Core position parameters
-        strike_price: wheel.strike_price || wheel.detection_metadata?.strike_price || '',
-        expiration_date: wheel.expiration_date || wheel.detection_metadata?.expiration_date || '',
-        contract_count: wheel.contract_count || wheel.detection_metadata?.contract_count || '',
-        
-        // Strategy parameters
         target_premium_rate: wheel.target_premium_rate || '',
         strike_selection_method: wheel.strike_selection_method || 'delta',
         max_dte: wheel.max_dte || '',
@@ -78,39 +66,21 @@ export default function WheelEditModal({
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Prepare the update payload with position and strategy parameters
-      const updatePayload = {
-        ...formData,
-        // Position parameters
-        strike_price: parseFloat(formData.strike_price) || null,
-        expiration_date: formData.expiration_date || null,
-        contract_count: parseInt(formData.contract_count) || null,
-        
-        // Strategy parameters  
-        target_premium_rate: parseFloat(formData.target_premium_rate) || null,
-        max_dte: parseInt(formData.max_dte) || null,
-        min_dte: parseInt(formData.min_dte) || null,
-        profit_target_percentage: parseFloat(formData.profit_target_percentage) || null,
-        loss_limit_percentage: parseFloat(formData.loss_limit_percentage) || null,
-        max_position_size: parseFloat(formData.max_position_size) || null,
-        
-        // Update detection_metadata to preserve data integrity
-        detection_metadata: {
-          ...wheel.detection_metadata,
-          strike_price: parseFloat(formData.strike_price) || null,
-          expiration_date: formData.expiration_date || null,
-          contract_count: parseInt(formData.contract_count) || null,
-          last_updated: new Date().toISOString()
-        }
-      };
-
       // Call our backend API to update wheel parameters
-      const response = await fetch(`http://127.0.0.1:8002/wheels/wheel-cycles/${wheel.id}`, {
+      const response = await fetch(`http://127.0.0.1:8000/wheels/${wheel.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatePayload)
+        body: JSON.stringify({
+          ...formData,
+          target_premium_rate: parseFloat(formData.target_premium_rate) || null,
+          max_dte: parseInt(formData.max_dte) || null,
+          min_dte: parseInt(formData.min_dte) || null,
+          profit_target_percentage: parseFloat(formData.profit_target_percentage) || null,
+          loss_limit_percentage: parseFloat(formData.loss_limit_percentage) || null,
+          max_position_size: parseFloat(formData.max_position_size) || null
+        })
       });
 
       if (response.ok) {
@@ -144,66 +114,6 @@ export default function WheelEditModal({
 
         <div className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-
-            {/* Position Parameters */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Target className="h-5 w-5 text-blue-600" />
-                Position Parameters
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="strike_price">Strike Price ($)</Label>
-                  <div className="relative">
-                    <Input
-                      id="strike_price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.strike_price}
-                      onChange={(e) => handleInputChange('strike_price', e.target.value)}
-                      placeholder="37.00"
-                    />
-                    <DollarSign className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Current option strike price
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="expiration_date">Expiration Date</Label>
-                  <div className="relative">
-                    <Input
-                      id="expiration_date"
-                      type="date"
-                      value={formData.expiration_date}
-                      onChange={(e) => handleInputChange('expiration_date', e.target.value)}
-                    />
-                    <Calendar className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Option expiration date
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="contract_count">Contracts</Label>
-                  <Input
-                    id="contract_count"
-                    type="number"
-                    min="1"
-                    value={formData.contract_count}
-                    onChange={(e) => handleInputChange('contract_count', e.target.value)}
-                    placeholder="1"
-                  />
-                  <p className="text-xs text-slate-500">
-                    Number of option contracts
-                  </p>
-                </div>
-              </div>
-            </div>
 
             {/* Premium Strategy */}
             <div className="space-y-4">

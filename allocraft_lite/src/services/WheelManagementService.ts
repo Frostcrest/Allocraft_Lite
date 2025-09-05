@@ -17,6 +17,13 @@
 import { queryClient } from '../api/enhancedClient';
 import { apiFetch } from '../api/fastapiClient';
 
+// Silent logging function for WheelManagementService
+const serviceLog = (...args: any[]) => {
+    // Logging disabled for cleaner console
+    // serviceLog('[WheelManagementService]', ...args);
+    void args; // Suppress unused parameter warning
+};
+
 // Enhanced API wrapper for this service
 const enhancedFetch = async <T = any>(path: string, options: RequestInit = {}): Promise<T> => {
     const response = await apiFetch(path, options);
@@ -118,7 +125,7 @@ export class WheelManagementService {
      */
     static async createWheel(wheelData: WheelData): Promise<any> {
         try {
-            console.log('🔄 WheelManagementService: Creating wheel:', wheelData);
+            serviceLog('🔄 WheelManagementService: Creating wheel:', wheelData);
 
             // Validation
             this.validateWheelCreationData(wheelData);
@@ -139,7 +146,7 @@ export class WheelManagementService {
             // Invalidate relevant caches
             await this.invalidateWheelCaches();
 
-            console.log('✅ WheelManagementService: Wheel created successfully:', response);
+            serviceLog('✅ WheelManagementService: Wheel created successfully:', response);
             return response;
 
         } catch (error: any) {
@@ -153,7 +160,7 @@ export class WheelManagementService {
      */
     static async updateWheel(wheelId: string | number, updates: WheelUpdates): Promise<any> {
         try {
-            console.log('🔄 WheelManagementService: Updating wheel:', wheelId, updates);
+            serviceLog('🔄 WheelManagementService: Updating wheel:', wheelId, updates);
 
             // Validation
             this.validateWheelUpdates(updates);
@@ -188,7 +195,7 @@ export class WheelManagementService {
                 );
             });
 
-            console.log('✅ WheelManagementService: Wheel updated successfully:', response);
+            serviceLog('✅ WheelManagementService: Wheel updated successfully:', response);
             return response;
 
         } catch (error: any) {
@@ -202,7 +209,7 @@ export class WheelManagementService {
      */
     static async rollWheel(wheelId: string | number, rollData: RollData): Promise<any> {
         try {
-            console.log('🔄 WheelManagementService: Rolling wheel:', wheelId, rollData);
+            serviceLog('🔄 WheelManagementService: Rolling wheel:', wheelId, rollData);
 
             // Validation
             this.validateRollData(rollData);
@@ -233,7 +240,7 @@ export class WheelManagementService {
             // Invalidate caches
             await this.invalidateWheelCaches();
 
-            console.log('✅ WheelManagementService: Wheel rolled successfully:', response);
+            serviceLog('✅ WheelManagementService: Wheel rolled successfully:', response);
             return response;
 
         } catch (error: any) {
@@ -247,7 +254,7 @@ export class WheelManagementService {
      */
     static async closeWheel(wheelId: string | number, closeData: CloseData): Promise<any> {
         try {
-            console.log('🔄 WheelManagementService: Closing wheel:', wheelId, closeData);
+            serviceLog('🔄 WheelManagementService: Closing wheel:', wheelId, closeData);
 
             // Validation
             this.validateCloseData(closeData);
@@ -284,7 +291,7 @@ export class WheelManagementService {
                 );
             });
 
-            console.log('✅ WheelManagementService: Wheel closed successfully:', response);
+            serviceLog('✅ WheelManagementService: Wheel closed successfully:', response);
             return response;
 
         } catch (error: any) {
@@ -294,50 +301,21 @@ export class WheelManagementService {
     }
 
     /**
-     * Delete wheel strategy
-     * Permanently removes wheel cycle and all related data from the system
+     * Delete a wheel strategy completely
      */
     static async deleteWheel(wheelId: string | number): Promise<any> {
         try {
-            console.log('🔄 WheelManagementService: Deleting wheel:', wheelId);
+            serviceLog('🔄 WheelManagementService: Deleting wheel:', wheelId);
 
-            // First, get wheel details for logging before deletion
-            const wheelDetails = await this.safeApiCall(
-                () => enhancedFetch(`/wheels/wheel-cycles/${wheelId}`),
-                { ticker: 'UNKNOWN', strategy_type: 'UNKNOWN' }
-            );
-
-            // Delete wheel via API (backend handles cascade deletion)
+            // Delete wheel cycle via API (this will also remove associated events and lots)
             const response = await enhancedFetch(`/wheels/wheel-cycles/${wheelId}`, {
                 method: 'DELETE'
             });
 
-            // Log deletion event (if logging is still available)
-            try {
-                await this.logWheelEvent(wheelId, {
-                    event_type: 'strategy_deleted',
-                    description: `Wheel strategy permanently deleted`,
-                    metadata: {
-                        ticker: wheelDetails.ticker,
-                        strategy_type: wheelDetails.strategy_type,
-                        deletion_timestamp: new Date().toISOString()
-                    }
-                });
-            } catch (logError) {
-                // Logging might fail if wheel is already deleted, but that's okay
-                console.warn('⚠️ WheelManagementService: Could not log deletion event (expected):', logError);
-            }
-
-            // Remove from cache immediately
-            queryClient.setQueryData(['wheel-cycles'], (oldData: any) => {
-                if (!oldData) return oldData;
-                return oldData.filter((wheel: any) => wheel.id != wheelId);
-            });
-
-            // Invalidate related caches
+            // Invalidate relevant caches
             await this.invalidateWheelCaches();
 
-            console.log('✅ WheelManagementService: Wheel deleted successfully:', response);
+            serviceLog('✅ WheelManagementService: Wheel deleted successfully:', response);
             return response;
 
         } catch (error: any) {
@@ -351,7 +329,7 @@ export class WheelManagementService {
      */
     static async getWheelDetails(wheelId: string | number): Promise<any> {
         try {
-            console.log('🔄 WheelManagementService: Fetching wheel details:', wheelId);
+            serviceLog('🔄 WheelManagementService: Fetching wheel details:', wheelId);
 
             // Fetch wheel data with parallel requests for efficiency
             const [wheelData, events, performance, positions] = await Promise.all([
@@ -370,7 +348,7 @@ export class WheelManagementService {
                 last_updated: new Date().toISOString()
             };
 
-            console.log('✅ WheelManagementService: Wheel details fetched:', detailsData);
+            serviceLog('✅ WheelManagementService: Wheel details fetched:', detailsData);
             return detailsData;
 
         } catch (error: any) {
@@ -384,7 +362,7 @@ export class WheelManagementService {
      */
     static async getWheelEvents(wheelId: string | number): Promise<any[]> {
         try {
-            console.log('🔄 WheelManagementService: Fetching wheel events:', wheelId);
+            serviceLog('🔄 WheelManagementService: Fetching wheel events:', wheelId);
 
             const events = await enhancedFetch(`/wheels/wheel-events?cycle_id=${wheelId}`);
 
@@ -395,7 +373,7 @@ export class WheelManagementService {
                 risk_impact: this.assessEventRiskImpact(event)
             }));
 
-            console.log('✅ WheelManagementService: Wheel events fetched:', enhancedEvents);
+            serviceLog('✅ WheelManagementService: Wheel events fetched:', enhancedEvents);
             return enhancedEvents;
 
         } catch (error: any) {
@@ -409,7 +387,7 @@ export class WheelManagementService {
      */
     static async updateWheelStatus(wheelId: string | number, newStatus: string, context: any = {}): Promise<any> {
         try {
-            console.log('🔄 WheelManagementService: Updating wheel status:', wheelId, newStatus);
+            serviceLog('🔄 WheelManagementService: Updating wheel status:', wheelId, newStatus);
 
             // Validate status transition
             const currentWheel = await this.getWheelDetails(wheelId);
@@ -476,7 +454,7 @@ export class WheelManagementService {
             // Invalidate status-related queries
             await queryClient.invalidateQueries({ queryKey: ['wheel-status-history', wheelId] });
 
-            console.log('✅ WheelManagementService: Wheel status updated:', response);
+            serviceLog('✅ WheelManagementService: Wheel status updated:', response);
             return response;
 
         } catch (error: any) {
@@ -490,7 +468,7 @@ export class WheelManagementService {
      */
     static async getStatusHistory(wheelId: string | number): Promise<StatusHistoryEntry[]> {
         try {
-            console.log('🔄 WheelManagementService: Fetching status history:', wheelId);
+            serviceLog('🔄 WheelManagementService: Fetching status history:', wheelId);
 
             const history = await enhancedFetch(`/wheels/wheel-cycles/${wheelId}/status/history`);
 
@@ -502,7 +480,7 @@ export class WheelManagementService {
                 impact_level: this.assessTransitionImpact(entry)
             }));
 
-            console.log('✅ WheelManagementService: Status history fetched:', enhancedHistory);
+            serviceLog('✅ WheelManagementService: Status history fetched:', enhancedHistory);
             return enhancedHistory;
 
         } catch (error: any) {
@@ -512,11 +490,38 @@ export class WheelManagementService {
     }
 
     /**
+     * Detect potential wheel strategies from position data
+     */
+    static async detectWheelStrategies(allPositions: any[]): Promise<any> {
+        try {
+            serviceLog('🔄 WheelManagementService: Detecting wheel strategies from positions:', allPositions?.length || 0);
+
+            // Call the backend wheel detection endpoint - it uses Position table data, not request body
+            const response = await enhancedFetch('/wheels/detect', {
+                method: 'POST',
+                body: JSON.stringify({
+                    options: {
+                        include_metadata: true,
+                        cash_balance: 50000 // Default cash balance for detection
+                    }
+                })
+            });
+
+            serviceLog('✅ WheelManagementService: Wheel strategy detection completed:', response);
+            return response;
+
+        } catch (error: any) {
+            console.error('❌ WheelManagementService: Wheel strategy detection failed:', error);
+            throw this.enhanceError(error, 'detectWheelStrategies', { positionCount: allPositions?.length || 0 });
+        }
+    }
+
+    /**
      * Automatically detect wheel status based on current positions
      */
     static async detectWheelStatus(wheelId: string | number): Promise<AutoStatusDetectionResult> {
         try {
-            console.log('🔄 WheelManagementService: Auto-detecting wheel status:', wheelId);
+            serviceLog('🔄 WheelManagementService: Auto-detecting wheel status:', wheelId);
 
             const wheelDetails = await this.getWheelDetails(wheelId);
             const positions = wheelDetails.positions || [];
@@ -574,7 +579,7 @@ export class WheelManagementService {
                 recommendations: recommendations
             };
 
-            console.log('✅ WheelManagementService: Auto-detection completed:', result);
+            serviceLog('✅ WheelManagementService: Auto-detection completed:', result);
             return result;
 
         } catch (error: any) {
@@ -588,7 +593,7 @@ export class WheelManagementService {
      */
     static async autoUpdateWheelStatus(wheelId: string | number, trigger: string = 'position_change'): Promise<any> {
         try {
-            console.log('🔄 WheelManagementService: Auto-updating wheel status:', wheelId, trigger);
+            serviceLog('🔄 WheelManagementService: Auto-updating wheel status:', wheelId, trigger);
 
             const detection = await this.detectWheelStatus(wheelId);
 
@@ -604,14 +609,14 @@ export class WheelManagementService {
                         updated_by: 'auto_detector'
                     });
 
-                    console.log('✅ WheelManagementService: Auto-status update completed:', result);
+                    serviceLog('✅ WheelManagementService: Auto-status update completed:', result);
                     return result;
                 } else {
-                    console.log('📊 WheelManagementService: Status unchanged after detection');
+                    serviceLog('📊 WheelManagementService: Status unchanged after detection');
                     return { status: 'unchanged', detection: detection };
                 }
             } else {
-                console.log('📊 WheelManagementService: Auto-detection confidence too low, manual review needed');
+                serviceLog('📊 WheelManagementService: Auto-detection confidence too low, manual review needed');
                 return { status: 'manual_review_needed', detection: detection };
             }
 

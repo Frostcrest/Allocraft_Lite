@@ -20,22 +20,8 @@ export default function StrategySelectionStep({
   isQuickMode = false,
   prefilledData = null
 }) {
-  // console.log('📋 StrategySelectionStep rendering:', { formData, isQuickMode });
-
   const [tickerSearch, setTickerSearch] = useState(formData.ticker || '');
   const [selectedStrategy, setSelectedStrategy] = useState(formData.strategyType || '');
-
-  // Sync local state with formData when it changes (e.g., coming from previous step)
-  useEffect(() => {
-    if (formData.ticker && formData.ticker !== tickerSearch) {
-      console.log('📥 Syncing ticker from formData:', formData.ticker);
-      setTickerSearch(formData.ticker);
-    }
-    if (formData.strategyType && formData.strategyType !== selectedStrategy) {
-      console.log('📥 Syncing strategy from formData:', formData.strategyType);
-      setSelectedStrategy(formData.strategyType);
-    }
-  }, [formData.ticker, formData.strategyType]);
 
   // Available wheel strategies with detailed information
   const strategies = [
@@ -111,13 +97,10 @@ export default function StrategySelectionStep({
 
   // Update form data when selections change
   useEffect(() => {
-    const updatedData = {
+    updateFormData({
       strategyType: selectedStrategy,
-      strategy: selectedStrategy, // Also set strategy field for compatibility
       ticker: tickerSearch.toUpperCase()
-    };
-    console.log('📝 StrategySelectionStep updating form data:', updatedData);
-    updateFormData(updatedData);
+    });
   }, [selectedStrategy, tickerSearch, updateFormData]);
 
   // Handle strategy selection

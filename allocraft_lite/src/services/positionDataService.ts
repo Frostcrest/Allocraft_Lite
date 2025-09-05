@@ -196,7 +196,7 @@ export class PositionDataService {
         }
 
         try {
-            // console.log('🔍 Fetching positions from unified API...');
+            console.log('🔍 Fetching positions from unified API...');
 
             // Get both stock and option positions from unified API
             const [stockPositions, optionPositions] = await Promise.all([
@@ -279,7 +279,7 @@ export class PositionDataService {
             this.cachedPositions = transformedPositions;
             this.lastFetch = now;
 
-            // console.log(`✅ Successfully loaded ${transformedPositions.length} positions from unified API`);
+            console.log(`✅ Successfully loaded ${transformedPositions.length} positions from unified API`);
             return transformedPositions;
 
         } catch (error) {

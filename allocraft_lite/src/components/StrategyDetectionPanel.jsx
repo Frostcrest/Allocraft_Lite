@@ -79,6 +79,12 @@ const StrategyDetectionPanel = ({
     try {
       console.log('🔍 StrategyDetectionPanel: Starting manual analysis...');
 
+      // Check if positions data is available
+      if (!positionsData || (!positionsData.allPositions?.length && !positionsData.stockPositions?.length && !positionsData.optionPositions?.length)) {
+        console.warn('⚠️ No position data available for analysis');
+        throw new Error('No positions found. Please ensure you have active positions to analyze.');
+      }
+
       // Use parent-provided manual detection function if available
       if (onManualDetection) {
         console.log('🎯 Using parent manual detection function...');
@@ -128,6 +134,11 @@ const StrategyDetectionPanel = ({
 
     } catch (error) {
       console.error('❌ StrategyDetectionPanel: Analysis failed', error);
+      // Ensure error state is properly set for UI feedback
+      if (!wheelDetectionMutation.isError) {
+        // Manually set error state if needed
+        setLastAnalysis(null);
+      }
     }
   };
 
@@ -339,6 +350,20 @@ const StrategyDetectionPanel = ({
                 {new Date(lastAnalysis.analysis_date || Date.now()).toLocaleString()}
               </div>
             </div>
+            
+            {/* Show results summary */}
+            <div className="mt-2 text-sm text-slate-600">
+              {lastAnalysis.opportunities?.length > 0 ? (
+                <span className="text-green-700">
+                  Found {lastAnalysis.opportunities.length} wheel {lastAnalysis.opportunities.length === 1 ? 'opportunity' : 'opportunities'}
+                </span>
+              ) : (
+                <span className="text-amber-700">
+                  No wheel opportunities detected in current positions
+                </span>
+              )}
+            </div>
+            
             {lastAnalysis.market_context && (
               <div className="mt-2 text-xs text-slate-600">
                 Market Context: {lastAnalysis.market_context.session_type || 'Regular Hours'}
@@ -355,7 +380,32 @@ const StrategyDetectionPanel = ({
               <span className="text-sm font-medium text-red-900">Analysis Failed</span>
             </div>
             <p className="text-xs text-red-700 mt-1">
-              {wheelDetectionMutation.error?.message || 'Unable to analyze positions. Please try again.'}
+              {wheelDetectionMutation.error?.message || 'Unable to analyze positions. Please check your positions and try again.'}
+            </p>
+            <div className="mt-2 text-xs text-red-600">
+              <details>
+                <summary className="cursor-pointer hover:text-red-800">View troubleshooting tips</summary>
+                <ul className="mt-2 list-disc list-inside space-y-1">
+                  <li>Ensure you have active stock or option positions</li>
+                  <li>Check that your positions have valid symbols and quantities</li>
+                  <li>Verify the backend connection is working</li>
+                  <li>Try refreshing your position data</li>
+                </ul>
+              </details>
+            </div>
+          </div>
+        )}
+
+        {/* No Data State */}
+        {!isLoading && !wheelDetectionMutation.isError && positionsData && 
+         (!positionsData.allPositions?.length && !positionsData.stockPositions?.length && !positionsData.optionPositions?.length) && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+              <span className="text-sm font-medium text-amber-900">No Positions Found</span>
+            </div>
+            <p className="text-xs text-amber-700 mt-1">
+              No active positions available for analysis. Add some stock or option positions to detect wheel opportunities.
             </p>
           </div>
         )}

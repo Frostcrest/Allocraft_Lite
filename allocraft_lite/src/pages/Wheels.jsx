@@ -12,13 +12,12 @@ import WheelDetailsModal from '../components/wheel-management/WheelDetailsModal'
 import WheelEditModal from '../components/wheel-management/WheelEditModal';
 import WheelRollModal from '../components/wheel-management/WheelRollModal';
 import WheelCloseModal from '../components/wheel-management/WheelCloseModal';
-import WheelDeleteModal from '../components/wheel-management/WheelDeleteModal';
 import { WheelManagementService } from '../services/WheelManagementService';
 
 // Silent logging function for Wheels page
 const wheelsLog = (...args) => {
   // Logging disabled for cleaner console
-  // wheelsLog('[Wheels]', ...args);
+  // console.log('[Wheels]', ...args);
   void args; // Suppress unused parameter warning
 };
 
@@ -45,6 +44,27 @@ export default function Wheels() {
     refetch: refetchPositions
   } = usePositionsData();
 
+  // Transform wheel cycles data to flatten metadata for display components
+  const transformWheelCycles = (cycles) => {
+    return cycles.map(cycle => {
+      const metadata = cycle.detection_metadata || {};
+      return {
+        ...cycle,
+        // Flatten detection_metadata fields to top level for component compatibility
+        strike_price: metadata.strike_price || cycle.strike_price || null,
+        expiration_date: metadata.expiration_date || cycle.expiration_date || null,
+        contract_count: metadata.contract_count || cycle.contract_count || null,
+        premium_collected: metadata.premium || cycle.premium_collected || null,
+        position_size: metadata.position_size || cycle.position_size || null,
+        // Keep original metadata for reference
+        original_metadata: metadata
+      };
+    });
+  };
+
+  // Transform cycles for component consumption
+  const transformedCycles = transformWheelCycles(cycles);
+
   // Wheel detection hooks
   const wheelDetectionMutation = useWheelDetection();
   const {
@@ -63,17 +83,105 @@ export default function Wheels() {
   const [showWheelEdit, setShowWheelEdit] = useState(false);
   const [showWheelRoll, setShowWheelRoll] = useState(false);
   const [showWheelClose, setShowWheelClose] = useState(false);
-  const [showWheelDelete, setShowWheelDelete] = useState(false);
   const [selectedWheel, setSelectedWheel] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false); // Disabled by default to reduce API calls
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [quickCreationData, setQuickCreationData] = useState(null);
-  const [isDeletingWheel, setIsDeletingWheel] = useState(false);
+
+  // State for auto-detected wheels that need price information
+  const [detectedWheels, setDetectedWheels] = useState([]);
+  const [wheelsNeedingPrices, setWheelsNeedingPrices] = useState([]);
+  const [showPricePrompt, setShowPricePrompt] = useState(false);
+  const [selectedDetectedWheel, setSelectedDetectedWheel] = useState(null);
 
   // Computed values
-  const tickers = Array.from(new Set(cycles.map(c => c.ticker))).sort();
+  const tickers = Array.from(new Set(transformedCycles.map(c => c.ticker))).sort();
   const loading = cyclesLoading || positionsLoading;
+
+  // Auto-detect wheels when positions are loaded
+  useEffect(() => {
+    console.log("🔍 Position data changed:", { 
+      allPositionsExist: !!allPositions, 
+      allPositionsLength: allPositions?.length || 0, 
+      positionsLoading 
+    });
+    
+    if (allPositions && allPositions.length > 0 && !positionsLoading) {
+      console.log("✅ Triggering auto-detection with", allPositions.length, "positions");
+      autoDetectWheels();
+    } else if (allPositions && allPositions.length === 0 && !positionsLoading) {
+      console.log("⚠️ No positions available for wheel detection");
+    }
+  }, [allPositions, positionsLoading]);
+
+  const autoDetectWheels = async () => {
+    try {
+      setDetectionLoading(true);
+      console.log("Auto-detecting wheel strategies...");
+      
+      const detections = await WheelManagementService.detectWheelStrategies(allPositions);
+      
+      if (detections && detections.length > 0) {
+        // Check for new detections that aren't already active wheels
+        const existingTickers = new Set(transformedCycles.map(c => c.ticker));
+        const newDetections = detections.filter(d => !existingTickers.has(d.ticker));
+        
+        if (newDetections.length > 0) {
+          console.log(`Found ${newDetections.length} new wheel strategies`);
+          setDetectedWheels(newDetections);
+          
+          // Check which detections need price data
+          const needingPrices = newDetections.filter(detection => {
+            const needsStockPrice = !detection.stock_purchase_price || detection.stock_purchase_price <= 0;
+            const needsPutPrice = detection.put_sold_price === null || detection.put_sold_price <= 0;
+            return needsStockPrice || needsPutPrice;
+          });
+          
+          if (needingPrices.length > 0) {
+            setWheelsNeedingPrices(needingPrices);
+            setShowPricePrompt(true);
+          }
+          
+          // Auto-create wheels that have complete data
+          const completeWheels = newDetections.filter(detection => {
+            const hasStockPrice = detection.stock_purchase_price && detection.stock_purchase_price > 0;
+            const hasPutPrice = detection.put_sold_price !== null && detection.put_sold_price > 0;
+            return hasStockPrice && hasPutPrice;
+          });
+          
+          for (const wheel of completeWheels) {
+            await createWheelFromDetection(wheel);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Auto-detection failed:", error);
+    } finally {
+      setDetectionLoading(false);
+    }
+  };
+
+  const createWheelFromDetection = async (detection) => {
+    try {
+      const wheelData = {
+        ticker: detection.ticker,
+        shares: detection.shares,
+        stock_purchase_price: detection.stock_purchase_price,
+        put_strike_price: detection.strike_price,
+        put_sold_price: detection.put_sold_price,
+        put_expiration_date: detection.expiration_date,
+        cycle_type: detection.strategy_type || 'standard',
+        notes: `Auto-detected ${detection.strategy_type} wheel strategy`
+      };
+
+      await WheelManagementService.createWheelCycle(wheelData);
+      await refetchWheelCycles();
+      console.log(`Auto-created wheel for ${detection.ticker}`);
+    } catch (error) {
+      console.error(`Failed to auto-create wheel for ${detection.ticker}:`, error);
+    }
+  };
 
   // Real wheel detection using unified position data
   const runWheelDetection = async (isAutoRefresh = false) => {
@@ -155,7 +263,7 @@ export default function Wheels() {
         // Also refresh position data
         refetchPositions();
       }
-    }, 5 * 60 * 1000); // 5 minutes instead of 30 seconds
+    }, 30000); // 30 seconds
 
     setRefreshInterval(interval);
   };
@@ -296,8 +404,38 @@ export default function Wheels() {
           break;
 
         case 'delete_wheel':
-          setSelectedWheel(wheel);
-          setShowWheelDelete(true);
+          // Enhanced confirmation for deletion
+          const confirmationText = `DELETE ${wheel.ticker}`;
+          const userConfirmation = prompt(
+            `⚠️ PERMANENT DELETION WARNING ⚠️\n\n` +
+            `You are about to permanently delete the ${wheel.ticker} wheel strategy.\n\n` +
+            `This action will:\n` +
+            `• Remove all wheel cycle data\n` +
+            `• Delete all associated events and history\n` +
+            `• Cannot be undone\n\n` +
+            `To confirm, type exactly: ${confirmationText}`
+          );
+          
+          if (userConfirmation === confirmationText) {
+            try {
+              wheelsLog(`🗑️ Deleting wheel ${wheel.ticker} (ID: ${wheel.id})`);
+              await WheelManagementService.deleteWheel(wheel.id);
+              wheelsLog(`✅ Wheel ${wheel.ticker} deleted successfully`);
+              
+              // Refresh wheel cycles data
+              refetchWheelCycles();
+              
+              // Show success message
+              alert(`✅ ${wheel.ticker} wheel strategy has been permanently deleted.`);
+            } catch (error) {
+              console.error('❌ Failed to delete wheel:', error);
+              alert(`❌ Failed to delete ${wheel.ticker} wheel strategy.\n\nError: ${error.message}\n\nPlease try again or contact support.`);
+            }
+          } else if (userConfirmation !== null) {
+            // User tried to confirm but typed wrong text
+            alert(`❌ Confirmation text didn't match. Deletion cancelled for safety.\n\nRequired: ${confirmationText}\nYou typed: ${userConfirmation || '(empty)'}`);
+          }
+          // If userConfirmation is null, user clicked Cancel, so do nothing
           break;
 
         case 'add_notes':
@@ -391,38 +529,12 @@ export default function Wheels() {
     }
   };
 
-  const handleWheelDelete = async (wheelId) => {
-    try {
-      setIsDeletingWheel(true);
-      wheelsLog('🗑️ Deleting wheel strategy:', wheelId);
-
-      const result = await WheelManagementService.deleteWheel(wheelId);
-
-      wheelsLog('✅ Wheel deleted successfully:', result);
-
-      // Close modal and refresh data
-      setShowWheelDelete(false);
-      setSelectedWheel(null);
-      setIsDeletingWheel(false);
-
-      // Show success message
-      alert('Wheel strategy deleted successfully!');
-
-    } catch (error) {
-      wheelsLog('❌ Wheel deletion failed:', error);
-      setIsDeletingWheel(false);
-      alert(`Deletion failed: ${error.message}`);
-    }
-  };
-
   const closeAllModals = () => {
     setShowWheelDetails(false);
     setShowWheelEdit(false);
     setShowWheelRoll(false);
     setShowWheelClose(false);
-    setShowWheelDelete(false);
     setSelectedWheel(null);
-    setIsDeletingWheel(false);
   };
 
   // Handle view details for opportunity
@@ -586,10 +698,7 @@ export default function Wheels() {
               )}
             </Button>
             <Button
-              onClick={() => {
-                setQuickCreationData(null); // Clear any existing quick creation data
-                setShowWheelCreationModal(true);
-              }}
+              onClick={() => setShowWheelCreationModal(true)}
               className="bg-blue-600 hover:bg-blue-700 shadow-lg transition-all duration-200"
             >
               <Target className="w-5 h-5 mr-2" />
@@ -623,10 +732,7 @@ export default function Wheels() {
             </Button>
             */}
             <Button
-              onClick={() => {
-                setQuickCreationData(null); // Clear any existing quick creation data
-                setShowWheelCreationModal(true);
-              }}
+              onClick={() => setShowWheelCreationModal(true)}
               variant="outline"
               className="border-slate-300 hover:bg-slate-50 shadow-sm"
             >
@@ -651,8 +757,7 @@ export default function Wheels() {
           isLoading={wheelDetectionMutation.isPending}
           onCreateWheel={handleCreateWheelFromOpportunity}
           onViewDetails={handleViewOpportunityDetails}
-          onManualDetection={runWheelDetection}
-          isDetectionLoading={wheelDetectionMutation.isPending}
+          onAnalyzePositions={runWheelDetection}
           className="shadow-lg"
         />
 
@@ -671,25 +776,15 @@ export default function Wheels() {
               </p>
               <div className="flex gap-3 justify-center">
                 <Button
-                  onClick={async () => {
-                    wheelsLog('🎯 ANALYZE: Starting position analysis...');
-                    try {
-                      const result = await runWheelDetection(false);
-                      wheelsLog('🎯 ANALYZE: Analysis completed', result);
-                    } catch (error) {
-                      wheelsLog('🎯 ANALYZE: Analysis failed', error);
-                    }
-                  }}
+                  onClick={autoDetectWheels}
+                  disabled={detectionLoading}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <Target className="w-5 h-5 mr-2" />
-                  Analyze My Positions
+                  {detectionLoading ? 'Scanning...' : 'Refresh Detection'}
                 </Button>
                 <Button
-                  onClick={() => {
-                    setQuickCreationData(null); // Clear any existing quick creation data
-                    setShowWheelCreationModal(true);
-                  }}
+                  onClick={() => setShowWheelCreationModal(true)}
                   variant="outline"
                 >
                   <Plus className="w-5 h-5 mr-2" />
@@ -700,7 +795,7 @@ export default function Wheels() {
           ) : (
             /* Active Wheels Display - Using new ActiveWheelsSection component */
             <ActiveWheelsSection
-              wheelCycles={cycles}
+              wheelCycles={transformedCycles}
               onWheelAction={handleWheelAction}
               className="shadow-lg"
             />
@@ -757,9 +852,7 @@ export default function Wheels() {
             setShowWheelCreationModal(false);
             setQuickCreationData(null);
 
-            // Refresh wheel cycles data
-            wheelsLog('🔄 Refreshing wheel cycles data...');
-            await refetchWheelCycles();
+            // TODO: Refresh wheel cycles data
             wheelsLog('✅ Wheel successfully created with new modal system');
           }}
           prefilledData={quickCreationData}
@@ -796,13 +889,59 @@ export default function Wheels() {
         onCloseWheel={handleWheelClose}
       />
 
-      <WheelDeleteModal
-        isOpen={showWheelDelete}
-        onClose={closeAllModals}
-        wheel={selectedWheel}
-        onDelete={handleWheelDelete}
-        isDeleting={isDeletingWheel}
-      />
+      {/* Price Data Prompt Modal for Auto-Detected Wheels */}
+      {showPricePrompt && wheelsNeedingPrices.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">
+              Complete Wheel Setup
+            </h3>
+            <p className="text-gray-600 mb-4">
+              I found {wheelsNeedingPrices.length} potential wheel strategy{wheelsNeedingPrices.length > 1 ? 'ies' : 'y'} that need price information to be created automatically.
+            </p>
+            
+            <div className="space-y-3 mb-6">
+              {wheelsNeedingPrices.map((wheel, index) => (
+                <div key={index} className="p-3 border rounded bg-gray-50">
+                  <div className="font-medium text-sm">{wheel.ticker}</div>
+                  <div className="text-xs text-gray-600">
+                    {wheel.strategy_type} • {wheel.shares} shares
+                  </div>
+                  <div className="text-xs text-yellow-600 mt-1">
+                    Missing: {!wheel.stock_purchase_price ? 'Stock Price' : ''} 
+                    {(!wheel.stock_purchase_price && !wheel.put_sold_price) ? ', ' : ''}
+                    {!wheel.put_sold_price ? 'Put Price' : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex space-x-3">
+              <Button
+                onClick={() => {
+                  setShowPricePrompt(false);
+                  setWheelsNeedingPrices([]);
+                  // Open wheel creation modal for manual entry
+                  setShowWheelCreationModal(true);
+                }}
+                className="flex-1"
+              >
+                Add Manually
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowPricePrompt(false);
+                  setWheelsNeedingPrices([]);
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Skip for Now
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

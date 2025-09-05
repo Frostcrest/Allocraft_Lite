@@ -87,7 +87,7 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
     const requestId = Math.random().toString(36).substr(2, 9);
     const startTime = performance.now();
 
-    console.group(`🔄 [${requestId}] API Request: ${path}`);
+    // Disabled for cleaner console: console.group(`🔄 [${requestId}] API Request: ${path}`);
     apiLog('📊 Request Details:', {
         path,
         method: options.method || 'GET',
@@ -128,7 +128,7 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
             );
 
             apiLog('🚨 Throwing ApiError:', apiError);
-            console.groupEnd();
+            // Disabled for cleaner console: console.groupEnd();
             throw apiError;
         }
 
@@ -141,7 +141,7 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
                 (data && typeof data === 'object' && 'length' in data) ? data.length : 'N/A'
         });
 
-        console.groupEnd();
+        // Disabled for cleaner console: console.groupEnd();
         return data;
     } catch (error) {
         const responseTime = performance.now() - startTime;
@@ -150,7 +150,7 @@ async function enhancedFetch<T = any>(path: string, options: RequestInit = {}): 
             responseTime: `${responseTime.toFixed(2)}ms`,
             path
         });
-        console.groupEnd();
+        // Disabled for cleaner console: console.groupEnd();
 
         if (error instanceof ApiError) throw error;
         throw new ApiError(
@@ -375,7 +375,7 @@ export const useWheelDetectionResults = (options: {
     enabled?: boolean;
     refetchInterval?: number;
 } = {}) => {
-    const { enabled = true, refetchInterval = 5 * 60 * 1000 } = options; // 5 minutes instead of 30 seconds
+    const { enabled = true, refetchInterval = 30000 } = options;
 
     return useQuery<any>({
         queryKey: queryKeys.wheelDetectionResults,
@@ -748,7 +748,7 @@ export const useStockPositions = () => {
                 return response;
             }
 
-            // console.warn('⚠️ useStockPositions: Unexpected response format, returning empty array');
+            console.warn('⚠️ useStockPositions: Unexpected response format, returning empty array');
             return [];
         },
         staleTime: 3 * 60 * 1000,
@@ -778,7 +778,7 @@ export const useOptionPositions = () => {
                 return response;
             }
 
-            // console.warn('⚠️ useOptionPositions: Unexpected response format, returning empty array');
+            console.warn('⚠️ useOptionPositions: Unexpected response format, returning empty array');
             return [];
         },
         staleTime: 3 * 60 * 1000,

@@ -21,8 +21,6 @@ export default function ActiveWheelsSection({
   onWheelAction = () => { },
   className = ''
 }) {
-  // console.log('⚙️ ActiveWheelsSection rendering:', { wheelCyclesCount: wheelCycles.length });
-
   // View and filtering state
   const [viewMode, setViewMode] = useState('grid'); // 'grid', 'list', 'timeline'
   const [searchTerm, setSearchTerm] = useState('');
@@ -199,7 +197,6 @@ export default function ActiveWheelsSection({
 
   // Handle wheel actions
   const handleWheelAction = (action, wheel) => {
-    // console.log(`🎯 Wheel action: ${action}`, wheel);
     onWheelAction(action, wheel);
   };
 

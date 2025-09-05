@@ -22,8 +22,6 @@ export default function ParameterConfigurationStep({
   isQuickMode = false,
   prefilledData = null
 }) {
-  // console.log('⚙️ ParameterConfigurationStep rendering:', { formData, isQuickMode });
-
   // Local state for calculations and validations
   const [calculations, setCalculations] = useState({
     maxRisk: 0,

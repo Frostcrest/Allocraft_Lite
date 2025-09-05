@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import {
     Settings,
     User,
-    Bot,
     AlertTriangle,
     CheckCircle2,
     Clock,
@@ -17,10 +16,9 @@ import WheelStatusBadge from './WheelStatusBadge';
 import { WheelManagementService } from '../../services/WheelManagementService';
 
 /**
- * StatusUpdateModal - Advanced status management interface
+ * StatusUpdateModal - Manual status management interface
  * 
- * Provides manual status override functionality with intelligent recommendations,
- * validation, and automatic detection integration.
+ * Provides manual status override functionality with validation.
  */
 export default function StatusUpdateModal({
     isOpen,
@@ -30,8 +28,6 @@ export default function StatusUpdateModal({
 }) {
     const [selectedStatus, setSelectedStatus] = useState(wheel?.status || '');
     const [isUpdating, setIsUpdating] = useState(false);
-    const [autoDetection, setAutoDetection] = useState(null);
-    const [isDetecting, setIsDetecting] = useState(false);
     const [validationResult, setValidationResult] = useState(null);
     const [updateReason, setUpdateReason] = useState('');
 
@@ -47,24 +43,6 @@ export default function StatusUpdateModal({
         { value: 'paused', label: 'Paused', description: 'Strategy temporarily suspended' },
         { value: 'closed', label: 'Closed', description: 'Strategy completed or manually closed' }
     ];
-
-    // Auto-detect recommended status
-    const handleAutoDetect = async () => {
-        setIsDetecting(true);
-        try {
-            const detection = await WheelManagementService.detectWheelStatus(wheel.id);
-            setAutoDetection(detection);
-
-            if (detection.confidence > 0.8) {
-                setSelectedStatus(detection.recommended_status);
-                await validateTransition(detection.recommended_status);
-            }
-        } catch (error) {
-            console.error('Auto-detection failed:', error);
-        } finally {
-            setIsDetecting(false);
-        }
-    };
 
     // Validate status transition
     const validateTransition = async (newStatus) => {
@@ -105,8 +83,7 @@ export default function StatusUpdateModal({
                 trigger_event: 'manual',
                 automated: false,
                 reason: updateReason || 'Manual status update',
-                updated_by: 'user',
-                auto_detection: autoDetection
+                updated_by: 'user'
             });
 
             onStatusUpdate(selectedStatus);
@@ -117,12 +94,6 @@ export default function StatusUpdateModal({
         } finally {
             setIsUpdating(false);
         }
-    };
-
-    const getConfidenceColor = (confidence) => {
-        if (confidence >= 0.8) return 'text-green-600';
-        if (confidence >= 0.6) return 'text-yellow-600';
-        return 'text-red-600';
     };
 
     return (
@@ -150,76 +121,6 @@ export default function StatusUpdateModal({
                                         'Unknown'
                                     }
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Auto-Detection */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <Bot className="h-4 w-4" />
-                                Automatic Status Detection
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <Button
-                                    variant="outline"
-                                    onClick={handleAutoDetect}
-                                    disabled={isDetecting}
-                                    className="w-full"
-                                >
-                                    {isDetecting ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                                            Analyzing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Bot className="h-4 w-4 mr-2" />
-                                            Auto-Detect Recommended Status
-                                        </>
-                                    )}
-                                </Button>
-
-                                {autoDetection && (
-                                    <div className="bg-blue-50 p-4 rounded-lg">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium">Recommended:</span>
-                                                <WheelStatusBadge status={autoDetection.recommended_status} size="sm" />
-                                            </div>
-                                            <Badge className={`${getConfidenceColor(autoDetection.confidence)}`}>
-                                                {Math.round(autoDetection.confidence * 100)}% confident
-                                            </Badge>
-                                        </div>
-
-                                        {autoDetection.trigger_events.length > 0 && (
-                                            <div className="text-sm text-slate-600 mb-2">
-                                                <span className="font-medium">Trigger events:</span>
-                                                <ul className="list-disc list-inside ml-2">
-                                                    {autoDetection.trigger_events.map((event, index) => (
-                                                        <li key={index} className="capitalize">
-                                                            {event.replace('_', ' ')}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
-
-                                        {autoDetection.recommendations.length > 0 && (
-                                            <div className="text-sm text-slate-600">
-                                                <span className="font-medium">Recommendations:</span>
-                                                <ul className="list-disc list-inside ml-2">
-                                                    {autoDetection.recommendations.map((rec, index) => (
-                                                        <li key={index}>{rec}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         </CardContent>
                     </Card>

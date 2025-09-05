@@ -14,8 +14,8 @@ interface DebugConfig {
 const DEBUG_CONFIG: DebugConfig = {
     schwabTestRunner: false, // Disabled by default
     schwabValidator: false,  // Disabled by default
-    wheelDetection: false,   // Disabled to reduce console noise
-    apiCalls: false         // Disabled to reduce console noise
+    wheelDetection: true,    // Keep wheel detection logs
+    apiCalls: true          // Keep API call logs
 };
 
 class DebugLogger {

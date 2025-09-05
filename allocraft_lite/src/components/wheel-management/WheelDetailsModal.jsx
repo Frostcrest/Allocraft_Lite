@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Calendar, DollarSign, TrendingUp, TrendingDown, Clock,
   Activity, FileText, Target, RotateCcw, AlertCircle,
-  Eye, BarChart3, History, Settings, Bot, Trash2
+  Eye, BarChart3, History, Settings, Bot
 } from "lucide-react";
 import WheelStatusBadge from '../status-tracking/WheelStatusBadge';
 import WheelStatusHistory from '../status-tracking/WheelStatusHistory';
@@ -422,14 +422,6 @@ export default function WheelDetailsModal({
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Add Notes
-              </Button>
-              <Button
-                variant="outline"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => onAction('delete_wheel', wheel)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Wheel
               </Button>
             </div>
             <div className="flex gap-2">

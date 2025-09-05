@@ -20,7 +20,7 @@ export default function ApiModeSwitcher() {
       setHealthStatus(health);
       setCurrentMode('backend');
 
-      // console.log('🔄 Switched to Backend API Mode');
+      console.log('🔄 Switched to Backend API Mode');
       console.log('Backend Health:', health);
     } catch (error) {
       console.error('Backend health check failed:', error);
@@ -31,7 +31,7 @@ export default function ApiModeSwitcher() {
   const switchToDirect = () => {
     setCurrentMode('direct');
     setHealthStatus(null);
-    // console.log('🔄 Switched to Direct API Mode');
+    console.log('🔄 Switched to Direct API Mode');
   };
 
   const testBackendConnection = async () => {

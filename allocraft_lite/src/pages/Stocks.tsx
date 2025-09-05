@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 import AddStockModal from '@/components/AddStockModal';
-import { usePositionsData, useBackendHealth } from '../api/enhancedClient';
+import { usePositionsData, useImportPositions, useBackendHealth } from '../api/enhancedClient';
 import { UnifiedPosition } from '../services/unifiedApi';
 import RefreshPricesButton from '@/components/RefreshPricesButton';
+import { isDevelopmentMode } from '../services/backendSchwabApi';
 
 // Tax Lot interface for organizing stock positions
 interface TaxLot {
@@ -32,26 +34,26 @@ interface StockPosition extends UnifiedPosition {
 }
 
 const Stocks: React.FC = () => {
-  // console.log('🎯 Stocks Component: Initializing...');
+  console.log('🎯 Stocks Component: Initializing...');
 
   // Add debug function to test API directly
   const testApiDirectly = async () => {
-    // console.log('🧪 Testing API endpoints directly...');
+    console.log('🧪 Testing API endpoints directly...');
     try {
       // Test stocks endpoint
       const stocksResponse = await fetch('http://127.0.0.1:8000/portfolio/positions/stocks');
       const stocksData = await stocksResponse.json();
-      // console.log('📊 Direct stocks API response:', stocksData);
+      console.log('📊 Direct stocks API response:', stocksData);
 
       // Test options endpoint
       const optionsResponse = await fetch('http://127.0.0.1:8000/portfolio/positions/options');
       const optionsData = await optionsResponse.json();
-      // console.log('📊 Direct options API response:', optionsData);
+      console.log('📊 Direct options API response:', optionsData);
 
       // Test all positions endpoint
       const allResponse = await fetch('http://127.0.0.1:8000/portfolio/positions');
       const allData = await allResponse.json();
-      // console.log('📊 Direct all positions API response:', allData);
+      console.log('📊 Direct all positions API response:', allData);
     } catch (error) {
       console.error('❌ Direct API test failed:', error);
     }
@@ -65,6 +67,8 @@ const Stocks: React.FC = () => {
     error,
     refetch
   } = usePositionsData();
+
+  const importPositionsMutation = useImportPositions();
 
   console.log('📊 Stocks Component: Raw data from usePositionsData:', {
     allPositionsCount: allPositions.length,
@@ -87,6 +91,37 @@ const Stocks: React.FC = () => {
   // UI state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set());
+
+  // Import positions handler
+  const handleImportPositions = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      console.log('📥 Starting positions import with React Query...');
+
+      const fileText = await file.text();
+      const importData = JSON.parse(fileText);
+
+      // Validate the import data structure
+      if (!importData.accounts || !importData.export_info) {
+        throw new Error('Invalid import file format');
+      }
+
+      // Use React Query mutation for import
+      const result = await importPositionsMutation.mutateAsync(importData);
+      console.log('✅ Positions imported:', result);
+
+      toast.success(`Imported successfully: ${result.imported_count} positions`);
+
+    } catch (error) {
+      console.error('❌ Error importing positions:', error);
+      toast.error(`Failed to import positions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      // Reset the file input
+      event.target.value = '';
+    }
+  };
 
   // Transform positions for backward compatibility - stocks only
   const stockPositions = useMemo<StockPosition[]>(() => {
@@ -436,6 +471,24 @@ const Stocks: React.FC = () => {
           >
             🧪 Test API
           </Button>
+          {isDevelopmentMode() && (
+            <div className="relative">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportPositions}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={isLoading}
+              />
+              <Button
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                disabled={isLoading}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {isLoading ? 'Importing...' : 'Import Data'}
+              </Button>
+            </div>
+          )}
           <Button
             onClick={() => setIsAddModalOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
