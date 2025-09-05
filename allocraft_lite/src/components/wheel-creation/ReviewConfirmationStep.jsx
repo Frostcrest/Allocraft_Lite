@@ -19,13 +19,6 @@ export default function ReviewConfirmationStep({
   isQuickMode = false,
   prefilledData = null
 }) {
-  const [acknowledgments, setAcknowledgments] = useState({
-    riskUnderstood: false,
-    parametersReviewed: false,
-    capitalAllocated: false,
-    marketRisks: false
-  });
-
   const [scenarioAnalysis, setScenarioAnalysis] = useState({
     bullish: {},
     bearish: {},
@@ -169,17 +162,6 @@ export default function ReviewConfirmationStep({
   };
 
   const riskAssessment = getRiskAssessment();
-
-  // Toggle acknowledgment
-  const toggleAcknowledgment = (key) => {
-    setAcknowledgments(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  // Check if all acknowledgments are complete
-  const allAcknowledged = Object.values(acknowledgments).every(Boolean);
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -390,53 +372,6 @@ export default function ReviewConfirmationStep({
         </div>
       )}
 
-      {/* Risk Acknowledgments */}
-      <div className="p-6 bg-red-50 border border-red-200 rounded-xl">
-        <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5" />
-          Risk Acknowledgment
-        </h3>
-
-        <div className="space-y-4">
-          {[
-            {
-              key: 'riskUnderstood',
-              text: 'I understand that options trading involves significant risk and I may lose some or all of my investment.'
-            },
-            {
-              key: 'parametersReviewed',
-              text: 'I have reviewed all strategy parameters and they align with my risk tolerance and investment goals.'
-            },
-            {
-              key: 'capitalAllocated',
-              text: 'I have sufficient capital allocated for this strategy and understand the margin requirements.'
-            },
-            {
-              key: 'marketRisks',
-              text: 'I understand that market conditions can change rapidly and may affect the performance of this strategy.'
-            }
-          ].map(({ key, text }) => (
-            <label key={key} className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={acknowledgments[key]}
-                onChange={() => toggleAcknowledgment(key)}
-                className="mt-1 w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500"
-              />
-              <span className="text-sm text-red-800">{text}</span>
-            </label>
-          ))}
-        </div>
-
-        {!allAcknowledged && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg">
-            <p className="text-sm text-red-800">
-              Please review and acknowledge all risk statements before proceeding.
-            </p>
-          </div>
-        )}
-      </div>
-
       {/* Additional Notes */}
       {formData.notes && (
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -477,19 +412,6 @@ export default function ReviewConfirmationStep({
           </div>
         </div>
       </div>
-
-      {/* Validation Errors */}
-      {!allAcknowledged && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-600" />
-            <span className="font-medium text-red-900">Cannot Create Strategy</span>
-          </div>
-          <p className="text-sm text-red-700 mt-1">
-            Please complete all risk acknowledgments to proceed with strategy creation.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

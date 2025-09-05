@@ -154,6 +154,24 @@ export default function ParameterConfigurationStep({
     calculateMetrics();
   }, [formData.strikePrice, formData.premium, formData.contractCount, formData.positionSize, formData.strategyType]);
 
+  // Auto-calculate cash position size for cash-secured puts
+  useEffect(() => {
+    const autoCalculatePositionSize = () => {
+      const strike = parseFloat(formData.strikePrice) || 0;
+      const contracts = parseInt(formData.contractCount) || 1;
+      
+      // Only auto-calculate for cash-secured put strategies and if current position size is empty or zero
+      if ((formData.strategyType === 'cash_secured_put' || formData.strategyType === 'full_wheel') && 
+          strike > 0 && 
+          (!formData.positionSize || parseFloat(formData.positionSize) === 0)) {
+        const calculatedSize = strike * contracts * 100;
+        updateFormData({ positionSize: calculatedSize.toString() });
+      }
+    };
+
+    autoCalculatePositionSize();
+  }, [formData.strikePrice, formData.contractCount, formData.strategyType]);
+
   // Handle form field updates
   const handleFieldUpdate = (field, value) => {
     updateFormData({ [field]: value });
@@ -196,19 +214,6 @@ export default function ParameterConfigurationStep({
           Use the suggestions below as starting points.
         </p>
       </div>
-
-      {/* Quick Mode Notice */}
-      {isQuickMode && prefilledData && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-green-600" />
-            <span className="font-medium text-green-900">Smart Parameters Detected</span>
-          </div>
-          <p className="text-sm text-green-700 mt-1">
-            Parameters pre-filled based on current market conditions and opportunity analysis.
-          </p>
-        </div>
-      )}
 
       {/* Core Parameters */}
       <div className="grid gap-6 lg:grid-cols-2">

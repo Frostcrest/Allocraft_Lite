@@ -118,18 +118,29 @@ export default function Wheels() {
   const autoDetectWheels = async () => {
     try {
       setDetectionLoading(true);
-      console.log("Auto-detecting wheel strategies...");
+      console.log("🔄 Auto-detecting wheel strategies...");
+      console.log("📊 Available positions for detection:", allPositions?.length || 0);
 
       const detections = await WheelManagementService.detectWheelStrategies(allPositions);
+      
+      console.log("🎯 Backend detection results:", detections);
+      console.log("📈 Number of detections returned:", detections?.length || 0);
 
       if (detections && detections.length > 0) {
         // Check for new detections that aren't already active wheels
         const existingTickers = new Set(transformedCycles.map(c => c.ticker));
         const newDetections = detections.filter(d => !existingTickers.has(d.ticker));
+        
+        console.log("🔍 Existing wheel tickers:", Array.from(existingTickers));
+        console.log("🆕 New detections after filtering:", newDetections);
 
         if (newDetections.length > 0) {
           console.log(`Found ${newDetections.length} new wheel strategies`);
           setDetectedWheels(newDetections);
+          
+          // 🔧 FIX: Also set detectedOpportunities for UI display
+          setDetectedOpportunities(newDetections);
+          console.log("✅ Set detectedOpportunities for UI display:", newDetections);
 
           // Check which detections need price data
           const needingPrices = newDetections.filter(detection => {
@@ -153,10 +164,16 @@ export default function Wheels() {
           for (const wheel of completeWheels) {
             await createWheelFromDetection(wheel);
           }
+        } else {
+          console.log("❌ No new detections found (all filtered out by existing wheels)");
         }
+      } else {
+        console.log("❌ No wheel opportunities detected from backend");
+        setDetectedOpportunities([]); // Clear any existing opportunities
       }
     } catch (error) {
-      console.error("Auto-detection failed:", error);
+      console.error("❌ Auto-detection failed:", error);
+      setDetectedOpportunities([]); // Clear opportunities on error
     } finally {
       setDetectionLoading(false);
     }

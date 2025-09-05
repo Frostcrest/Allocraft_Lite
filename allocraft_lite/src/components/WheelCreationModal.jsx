@@ -219,9 +219,9 @@ export default function WheelCreationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col">
         {/* Modal Header */}
-        <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-purple-50">
+        <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-purple-50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -304,22 +304,8 @@ export default function WheelCreationModal({
         </DialogHeader>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <div className="p-6">
-            {/* Quick Creation Badge */}
-            {isQuickCreation && (
-              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-amber-600" />
-                  <span className="font-medium text-amber-900">Quick Creation Mode</span>
-                  <Badge variant="secondary" className="text-xs">Fast Track</Badge>
-                </div>
-                <p className="text-sm text-amber-700 mt-1">
-                  Pre-filled with opportunity data. Review and adjust parameters as needed.
-                </p>
-              </div>
-            )}
-
             {/* Current Step Content */}
             {CurrentStepComponent && (
               <CurrentStepComponent
@@ -347,7 +333,7 @@ export default function WheelCreationModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
           <div className="flex items-center justify-between">
             {/* Step Info */}
             <div className="flex items-center gap-2 text-sm text-slate-500">
