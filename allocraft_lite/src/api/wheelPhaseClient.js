@@ -82,7 +82,7 @@ export function useWheelPhaseCycles() {
           throw new Error('Failed to fetch wheel cycles');
         }
         const cycles = await response.json();
-        
+
         // Transform cycles to include phase classification
         return cycles.map(cycle => transformCycleToPhaseData(cycle));
       } catch (error) {
@@ -118,16 +118,16 @@ export function usePhasePerformanceMetrics() {
  */
 function transformCycleToPhaseData(cycle) {
   const metadata = cycle.detection_metadata || {};
-  
+
   // Determine current phase based on strategy type and status
   const currentPhase = determineCurrentPhase(cycle);
-  
+
   // Calculate lifetime earnings (mock for now, will be enhanced with backend)
   const lifetimeEarnings = calculateLifetimeEarnings(cycle);
-  
+
   // Create phase data structure
   const phaseData = createPhaseDataStructure(cycle, metadata, currentPhase);
-  
+
   return {
     ...cycle,
     current_phase: currentPhase,
@@ -148,27 +148,27 @@ function transformCycleToPhaseData(cycle) {
 function determineCurrentPhase(cycle) {
   const strategy = cycle.strategy_type?.toLowerCase();
   const status = cycle.status?.toLowerCase();
-  
+
   // Phase 1: Cash-Secured Put (Initial or Put-only strategies)
   if (strategy === 'cash_secured_put' && status === 'open') {
     return 1;
   }
-  
+
   // Phase 2: Share Assignment/Ownership
   if (strategy === 'assignment' || strategy === 'share_ownership') {
     return 2;
   }
-  
+
   // Phase 3: Covered Call
   if (strategy === 'covered_call' && status === 'open') {
     return 3;
   }
-  
+
   // Phase 4: Called Away/Cycle Complete
   if (status === 'closed' || status === 'completed') {
     return 4;
   }
-  
+
   // Default to Phase 1 for new/unknown states
   return 1;
 }
@@ -180,7 +180,7 @@ function calculateLifetimeEarnings(cycle) {
   const metadata = cycle.detection_metadata || {};
   const premium = metadata.premium || 0;
   const contractCount = metadata.contract_count || 1;
-  
+
   // Mock lifetime calculation - will be replaced with backend aggregation
   return {
     phase1: premium * contractCount * 100 * 3, // Simulate 3 previous cycles
@@ -198,7 +198,7 @@ function createPhaseDataStructure(cycle, metadata, currentPhase) {
   const strikePrice = metadata.strike_price || 0;
   const contractCount = metadata.contract_count || 1;
   const expirationDate = metadata.expiration_date || '';
-  
+
   return {
     phase1: createPhase1Data(cycle, metadata, currentPhase === 1),
     phase2: createPhase2Data(cycle, metadata, currentPhase === 2),
@@ -212,7 +212,7 @@ function createPhase1Data(cycle, metadata, isActive) {
   const strikePrice = metadata.strike_price || 0;
   const contractCount = metadata.contract_count || 1;
   const expirationDate = metadata.expiration_date || '';
-  
+
   if (cycle.strategy_type === 'cash_secured_put') {
     return {
       status: isActive ? 'active' : 'complete',
@@ -232,7 +232,7 @@ function createPhase1Data(cycle, metadata, isActive) {
       }
     };
   }
-  
+
   return {
     status: 'pending',
     type: 'cash_secured_put',

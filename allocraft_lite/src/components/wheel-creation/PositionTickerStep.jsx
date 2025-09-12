@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Search, TrendingUp, TrendingDown, Target, AlertCircle,
-  DollarSign, Percent, ArrowUpRight, ArrowDownRight, Calendar, 
+  DollarSign, Percent, ArrowUpRight, ArrowDownRight, Calendar,
   Clock, Activity
 } from "lucide-react";
 import { usePositionsData } from '@/api/enhancedClient';
@@ -17,30 +17,30 @@ import { PositionDataService } from '@/services/positionDataService';
  */
 const parseOptionSymbol = (symbol) => {
   if (!symbol) return null;
-  
+
   // Pattern: TICKER YYMMDDX########
   // X = C (Call) or P (Put)
   // ######## = Strike price * 1000
   const match = symbol.match(/^([A-Z]+)\s+(\d{6})([CP])(\d{8})$/);
-  
+
   if (!match) return null;
-  
+
   const [, ticker, dateStr, typeChar, strikeStr] = match;
-  
+
   // Parse date: YYMMDD
   const year = 2000 + parseInt(dateStr.substring(0, 2));
   const month = parseInt(dateStr.substring(2, 4));
   const day = parseInt(dateStr.substring(4, 6));
-  
+
   // Parse strike: divide by 1000
   const strike = parseInt(strikeStr) / 1000;
-  
+
   // Format expiration date
   const expiration = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
   const expirationDisplay = `${month}/${day}/${year.toString().substring(2)}`;
-  
+
   const type = typeChar === 'C' ? 'Call' : 'Put';
-  
+
   return {
     ticker,
     expiration,
@@ -95,11 +95,11 @@ export default function PositionTickerStep({
   useEffect(() => {
     if (allPositions && allPositions.length > 0) {
       console.log('🔄 PositionTickerStep: Grouping positions by ticker...', allPositions.length, 'positions');
-      
+
       const grouped = allPositions.reduce((groups, position) => {
         // Extract clean ticker symbol
         let ticker;
-        
+
         if (position.isOption) {
           // Parse option symbol to get underlying ticker
           const parsed = parseOptionSymbol(position.symbol);
@@ -107,7 +107,7 @@ export default function PositionTickerStep({
         } else {
           ticker = position.symbol;
         }
-        
+
         if (!ticker) return groups;
 
         if (!groups[ticker]) {
@@ -127,8 +127,8 @@ export default function PositionTickerStep({
           const enhancedOption = {
             ...position,
             parsed: parsed,
-            displayName: parsed ? 
-              `${parsed.expirationDisplay} ${parsed.type} $${parsed.strike}` : 
+            displayName: parsed ?
+              `${parsed.expirationDisplay} ${parsed.type} $${parsed.strike}` :
               position.symbol
           };
           groups[ticker].options.push(enhancedOption);
@@ -137,9 +137,9 @@ export default function PositionTickerStep({
           groups[ticker].stocks.push(position);
           groups[ticker].totalShares += Math.abs(position.shares || 0);
         }
-        
+
         groups[ticker].totalValue += position.marketValue || 0;
-        
+
         return groups;
       }, {});
 
@@ -184,7 +184,7 @@ export default function PositionTickerStep({
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Select Position</h2>
           <p className="text-slate-600">Choose a ticker from your current holdings</p>
         </div>
-        
+
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-slate-600">Loading your positions...</p>
@@ -205,7 +205,7 @@ export default function PositionTickerStep({
           <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-900 mb-2">No Positions Found</h3>
           <p className="text-slate-600 mb-6">
-            {isError ? 
+            {isError ?
               `Error loading positions: ${error?.message || 'Unknown error'}` :
               'We couldn\'t find any positions in your portfolio. You can still create a wheel strategy manually.'
             }
@@ -240,14 +240,14 @@ export default function PositionTickerStep({
             className="pl-10"
           />
         </div>
-        
+
         <div className="flex justify-between items-center">
           <p className="text-sm text-slate-600">
             {filteredPositions.length} of {Object.keys(groupedPositions).length} tickers
           </p>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => setShowManualEntry(true)}
             className="text-slate-600 hover:text-slate-900"
@@ -295,11 +295,10 @@ export default function PositionTickerStep({
             <button
               key={group.ticker}
               onClick={() => handleTickerSelect(group.ticker)}
-              className={`w-full p-4 border rounded-lg text-left transition-all duration-200 hover:shadow-md ${
-                isSelected
+              className={`w-full p-4 border rounded-lg text-left transition-all duration-200 hover:shadow-md ${isSelected
                   ? 'border-blue-500 bg-blue-50 shadow-md'
                   : 'border-slate-200 bg-white hover:border-slate-300'
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -317,7 +316,7 @@ export default function PositionTickerStep({
                     )}
                   </div>
                 </div>
-                
+
                 {isSelected && (
                   <Badge className="bg-blue-600 text-white">
                     Selected
@@ -332,19 +331,18 @@ export default function PositionTickerStep({
                     <p className="text-slate-600 mb-1">Shares</p>
                     <p className="font-semibold">{group.totalShares.toLocaleString()}</p>
                   </div>
-                  
+
                   <div>
                     <p className="text-slate-600 mb-1">Market Value</p>
                     <p className="font-semibold">{formatCurrency(group.totalValue)}</p>
                   </div>
-                  
+
                   {stockPosition && (
                     <>
                       <div>
                         <p className="text-slate-600 mb-1">P&L</p>
-                        <p className={`font-semibold flex items-center gap-1 ${
-                          profitLoss >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        <p className={`font-semibold flex items-center gap-1 ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
                           {profitLoss >= 0 ? (
                             <ArrowUpRight className="w-3 h-3" />
                           ) : (
@@ -353,12 +351,11 @@ export default function PositionTickerStep({
                           {formatCurrency(Math.abs(profitLoss))}
                         </p>
                       </div>
-                      
+
                       <div>
                         <p className="text-slate-600 mb-1">Return</p>
-                        <p className={`font-semibold ${
-                          profitLossPercent >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        <p className={`font-semibold ${profitLossPercent >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
                           {formatPercent(profitLossPercent)}
                         </p>
                       </div>
@@ -378,16 +375,15 @@ export default function PositionTickerStep({
                     {group.options.slice(0, 3).map((option, index) => (
                       <div key={index} className="text-xs text-slate-600 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                            option.parsed?.type === 'Call' 
-                              ? 'bg-green-100 text-green-700' 
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${option.parsed?.type === 'Call'
+                              ? 'bg-green-100 text-green-700'
                               : 'bg-red-100 text-red-700'
-                          }`}>
+                            }`}>
                             {option.parsed?.typeShort || 'OPT'}
                           </span>
                           <span className="font-medium">
-                            {option.parsed ? 
-                              `$${option.parsed.strike} ${option.parsed.expirationDisplay}` : 
+                            {option.parsed ?
+                              `$${option.parsed.strike} ${option.parsed.expirationDisplay}` :
                               option.symbol
                             }
                           </span>
@@ -433,7 +429,7 @@ export default function PositionTickerStep({
       {/* Continue Button */}
       {selectedTicker && (
         <div className="pt-4 border-t">
-          <Button 
+          <Button
             onClick={onNext}
             className="w-full bg-blue-600 hover:bg-blue-700"
           >

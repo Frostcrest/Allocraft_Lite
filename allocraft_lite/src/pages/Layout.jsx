@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { isDevBackend, API_BASE } from "@/api/fastapiClient";
+import { isDevBackend, getApiBase } from "@/api/fastapiClient";
 import BrandedLoader from "@/components/ui/BrandedLoader";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -65,6 +65,8 @@ const settingsItems = [
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const [showLoader, setShowLoader] = useState(false);
+  const [devBackend, setDevBackend] = useState(null);
+  const [apiBase, setApiBase] = useState("");
 
   // Show loader immediately after login until initial user data loads or a fallback timeout
   useEffect(() => {
@@ -75,6 +77,26 @@ export default function Layout({ children, currentPageName }) {
       const t = setTimeout(() => setShowLoader(false), 5000);
       return () => clearTimeout(t);
     }
+  }, []);
+
+  // Resolve backend environment and API base for header badge/tooltips
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [isDev, base] = await Promise.all([isDevBackend(), getApiBase()]);
+        if (mounted) {
+          setDevBackend(!!isDev);
+          setApiBase(base);
+        }
+      } catch {
+        if (mounted) {
+          setDevBackend(false);
+          setApiBase("");
+        }
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   return (
@@ -162,8 +184,11 @@ export default function Layout({ children, currentPageName }) {
                   running backend (http://localhost:8000). It's a gentle reminder that data
                   and auth are local and safe to experiment with.
                 */}
-              {isDevBackend() && (
-                <span title={`DEV backend: ${API_BASE}`} className="hidden md:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+              {devBackend && (
+                <span
+                  title={`Using DEV backend at ${apiBase}. Detected as DEV when window.location is localhost/127.0.0.1.`}
+                  className="hidden md:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200"
+                >
                   DEV API
                 </span>
               )}

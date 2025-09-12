@@ -128,10 +128,10 @@ const WheelOpportunityCard = ({
       const isNotOptionBySymbol = !isOptionBySymbol(p.symbol || '');
       return isStockByType && isNotOptionBySymbol;
     });
-    
+
     const optionPositions = positions.filter(p => {
-      const isOptionByType = (p.type === 'option' || p.type === 'call' || p.type === 'put' || 
-                              p.instrument_type === 'option' || p.asset_type === 'OPTION');
+      const isOptionByType = (p.type === 'option' || p.type === 'call' || p.type === 'put' ||
+        p.instrument_type === 'option' || p.asset_type === 'OPTION');
       const hasOptionSymbolPattern = isOptionBySymbol(p.symbol || '');
       return isOptionByType || hasOptionSymbolPattern; // Include if either type says option OR symbol pattern matches
     });
@@ -146,7 +146,7 @@ const WheelOpportunityCard = ({
     });
 
     const shares = stockPositions.reduce((sum, p) => sum + (p.quantity || p.shares || 0), 0);
-    
+
     // Count actual option contracts, handling multiple data structures
     const options = optionPositions.reduce((sum, p) => {
       let contracts = 0;
@@ -167,7 +167,7 @@ const WheelOpportunityCard = ({
       }
       return sum + contracts;
     }, 0);
-    
+
     const totalValue = positions.reduce((sum, p) => sum + (p.market_value || p.value || 0), 0);
 
     const summary = { shares, options, totalValue };

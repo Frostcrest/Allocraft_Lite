@@ -52,11 +52,11 @@ export default function Wheels() {
       const perSharePremium = metadata.premium || 0;
       const contractCount = metadata.contract_count || cycle.contract_count || 1;
       const totalPremiumCollected = perSharePremium * 100 * contractCount;
-      
+
       // Use real-time P&L from backend if available, otherwise fallback to premium calculation
       const realTimePnL = cycle.total_pnl;
       const totalPnL = realTimePnL !== null && realTimePnL !== undefined ? realTimePnL : totalPremiumCollected;
-      
+
       // Debug logging for P&L calculation
       console.log(`🧮 Real-Time P&L for ${cycle.ticker}:`, {
         perSharePremium,
@@ -67,7 +67,7 @@ export default function Wheels() {
         strategy: cycle.strategy_type,
         priceLastUpdated: cycle.price_last_updated
       });
-      
+
       return {
         ...cycle,
         // Flatten detection_metadata fields to top level for component compatibility
@@ -146,7 +146,7 @@ export default function Wheels() {
       console.log("📊 Available positions for detection:", allPositions?.length || 0);
 
       const detections = await WheelManagementService.detectWheelStrategies(allPositions);
-      
+
       console.log("🎯 Backend detection results:", detections);
       console.log("📈 Number of detections returned:", detections?.length || 0);
 
@@ -170,14 +170,14 @@ export default function Wheels() {
         // Check for new detections that aren't already active wheels
         const existingTickers = new Set(transformedCycles.map(c => c.ticker));
         const newDetections = detections.filter(d => !existingTickers.has(d.ticker));
-        
+
         console.log("🔍 Existing wheel tickers:", Array.from(existingTickers));
         console.log("🆕 New detections after filtering:", newDetections);
 
         if (newDetections.length > 0) {
           console.log(`Found ${newDetections.length} new wheel strategies`);
           setDetectedWheels(newDetections);
-          
+
           // 🔧 FIX: Also set detectedOpportunities for UI display
           setDetectedOpportunities(newDetections);
           console.log("✅ Set detectedOpportunities for UI display:", newDetections);
@@ -360,19 +360,19 @@ export default function Wheels() {
       }
 
       const result = await response.json();
-      
+
       wheelsLog('✅ Wheel price refresh successful:', result);
-      
+
       // Refresh wheel cycles data to get updated P&L
       await refetchWheelCycles();
-      
+
       // Show success message
       if (result.success) {
         alert(`✅ Updated ${result.summary.updated} wheel cycles with real-time prices!`);
       } else {
         alert(`⚠️ Price refresh completed with some issues: ${result.message}`);
       }
-      
+
     } catch (error) {
       wheelsLog('❌ Wheel price refresh failed:', error);
       alert(`❌ Failed to refresh wheel prices: ${error.message}`);

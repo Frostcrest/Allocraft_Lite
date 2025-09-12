@@ -33,7 +33,7 @@ export default function WheelCreationModal({
     // Position Selection (NEW)
     selectedTicker: prefilledData?.ticker || '',
     isManualEntry: false,
-    
+
     // Strategy Selection
     strategyType: prefilledData?.strategy || '',
     ticker: prefilledData?.ticker || '',
@@ -156,7 +156,7 @@ export default function WheelCreationModal({
         const strategy = formData.strategyType || prefilledData?.strategy;
         const ticker = formData.ticker || prefilledData?.ticker;
         const strikePrice = formData.strikePrice || prefilledData?.strikePrice;
-        
+
         if (!strategy || !ticker || !strikePrice) {
           errors.general = "Please complete all required fields";
         }
@@ -209,7 +209,7 @@ export default function WheelCreationModal({
       // Get the ticker for the wheel cycle
       const ticker = (formData.ticker || prefilledData?.ticker).toUpperCase();
       const strategy = formData.strategyType || prefilledData?.strategy;
-      
+
       // Generate a unique cycle key
       const timestamp = Date.now();
       const cycleKey = `${ticker}-${strategy}-${timestamp}`;
@@ -244,7 +244,7 @@ export default function WheelCreationModal({
 
       // Call the actual backend API
       const createdWheelCycle = await createWheelCycle.mutateAsync(wheelCycleData);
-      
+
       console.log('✅ Wheel cycle created successfully:', createdWheelCycle);
 
       // Notify parent component with the created wheel cycle
@@ -252,7 +252,7 @@ export default function WheelCreationModal({
 
     } catch (error) {
       console.error('❌ Wheel cycle creation failed:', error);
-      
+
       // Handle specific API errors
       let errorMessage = 'Failed to create wheel cycle. Please try again.';
       if (error?.message) {
@@ -262,7 +262,7 @@ export default function WheelCreationModal({
       } else if (error?.status === 500) {
         errorMessage = 'Server error. Please try again later.';
       }
-      
+
       setValidationErrors({
         general: errorMessage
       });
@@ -331,13 +331,13 @@ export default function WheelCreationModal({
             {steps.map((step, index) => {
               const StepIcon = step.icon;
               const isActive = currentStep === step.id;
-              
+
               // Mark steps as completed if they were skipped due to prefilled data
               const isSkippedWithData = (
                 (step.id === 1 && prefilledData?.ticker && quickMode) ||
                 (step.id === 2 && prefilledData?.strategy && quickMode)
               );
-              
+
               const isCompleted = currentStep > step.id || isSkippedWithData;
               const isAccessible = step.id <= currentStep || isCompleted;
 

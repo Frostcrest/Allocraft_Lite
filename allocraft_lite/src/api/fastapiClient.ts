@@ -60,6 +60,11 @@ resolveApiBase().then(url => {
     fastApiLog('❌ Failed to initialize API base:', error);
 });
 
+// Helper to access the resolved API base (awaits resolution if needed)
+export async function getApiBase(): Promise<string> {
+    return resolveApiBase();
+}
+
 export async function isDevBackend(): Promise<boolean> {
     try {
         const apiBaseUrl = await resolveApiBase();

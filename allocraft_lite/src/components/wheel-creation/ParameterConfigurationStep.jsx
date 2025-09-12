@@ -159,11 +159,11 @@ export default function ParameterConfigurationStep({
     const autoCalculatePositionSize = () => {
       const strike = parseFloat(formData.strikePrice) || 0;
       const contracts = parseInt(formData.contractCount) || 1;
-      
+
       // Only auto-calculate for cash-secured put strategies and if current position size is empty or zero
-      if ((formData.strategyType === 'cash_secured_put' || formData.strategyType === 'full_wheel') && 
-          strike > 0 && 
-          (!formData.positionSize || parseFloat(formData.positionSize) === 0)) {
+      if ((formData.strategyType === 'cash_secured_put' || formData.strategyType === 'full_wheel') &&
+        strike > 0 &&
+        (!formData.positionSize || parseFloat(formData.positionSize) === 0)) {
         const calculatedSize = strike * contracts * 100;
         updateFormData({ positionSize: calculatedSize.toString() });
       }

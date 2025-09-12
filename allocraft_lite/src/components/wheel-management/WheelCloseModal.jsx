@@ -284,8 +284,8 @@ export default function WheelCloseModal({
                   <button
                     onClick={() => setCloseMethod('market_close')}
                     className={`p-4 border-2 rounded-lg text-left transition-colors ${closeMethod === 'market_close'
-                        ? 'border-red-500 bg-red-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-slate-200 hover:border-slate-300'
                       }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -300,8 +300,8 @@ export default function WheelCloseModal({
                   <button
                     onClick={() => setCloseMethod('limit_close')}
                     className={`p-4 border-2 rounded-lg text-left transition-colors ${closeMethod === 'limit_close'
-                        ? 'border-red-500 bg-red-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-slate-200 hover:border-slate-300'
                       }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
