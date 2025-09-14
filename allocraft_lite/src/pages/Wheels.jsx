@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Plus, RotateCcw, Target, CheckCircle2, Zap, TrendingUp, Search } from "lucide-react";
 import { useWheelCycles, useWheelDetection, useWheelDetectionResults, usePositionsData } from "@/api/enhancedClient";
-import WheelBuilder from "@/components/WheelBuilder";
+// import WheelBuilder from "@/components/WheelBuilder";
 import WheelCreationModal from "@/components/WheelCreationModal";
 import WheelOpportunityCard from "@/components/WheelOpportunityCard";
 import WheelOpportunityGrid from "@/components/WheelOpportunityGrid";
@@ -97,7 +97,7 @@ export default function Wheels() {
   } = useWheelDetectionResults({ enabled: false }); // Disable auto-fetching for now
 
   const [selectedTicker, setSelectedTicker] = useState(null);
-  const [showWheelBuilder, setShowWheelBuilder] = useState(false);
+  // const [showWheelBuilder, setShowWheelBuilder] = useState(false);
   const [showWheelCreationModal, setShowWheelCreationModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [detectedOpportunities, setDetectedOpportunities] = useState([]);
@@ -914,25 +914,7 @@ export default function Wheels() {
         )}
       </div>
 
-      {/* Wheel Builder Modal (Legacy) */}
-      {showWheelBuilder && (
-        <WheelBuilder
-          isOpen={showWheelBuilder}
-          onClose={() => setShowWheelBuilder(false)}
-          onWheelCreated={async (wheelData) => {
-            wheelsLog('🎯 Wheel creation completed:', wheelData);
 
-            // Show success message
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
-
-            // Close the modal
-            setShowWheelBuilder(false);
-
-            wheelsLog('✅ Wheel successfully created and stored in backend');
-          }}
-        />
-      )}
 
       {/* New Wheel Creation Modal */}
       {showWheelCreationModal && (
