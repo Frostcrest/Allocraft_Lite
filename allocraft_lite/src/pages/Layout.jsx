@@ -28,6 +28,11 @@ import allocraftLogo from "@/assets/allocraft_logo-transparent-preview.png";
 
 const navigationItems = [
   {
+    title: "Import",
+    url: createPageUrl("Import"),
+    icon: PieChart,
+  },
+  {
     title: "Dashboard",
     url: createPageUrl("Dashboard"),
     icon: LayoutDashboard,
