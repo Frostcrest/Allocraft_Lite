@@ -46,7 +46,7 @@ export default function ProductionSchwabTester() {
     setTestResults(prev => ({
       ...prev,
       environment: {
-  apiBase: (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
+        apiBase: (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
         clientId: config.clientId ? 'Configured' : 'Missing',
         redirectUri: config.redirectUri,
         isReady,
@@ -58,7 +58,7 @@ export default function ProductionSchwabTester() {
   const runBackendHealthCheck = async () => {
     setIsLoading(true);
     try {
-  const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
       // Test general health
       const healthResponse = await fetch(`${apiBase}/healthz`);
@@ -91,7 +91,7 @@ export default function ProductionSchwabTester() {
   const testOAuthURL = async () => {
     setIsLoading(true);
     try {
-  const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
       const response = await fetch(`${apiBase}/schwab/auth-url`);
       const data = await response.json();
