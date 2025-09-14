@@ -20,7 +20,11 @@ import { formatCurrency } from "@/lib/utils";
 import RefreshPricesButton from "@/components/RefreshPricesButton";
 
 export default function Dashboard() {
-  const { stocks, options, wheels, snapshot, isLoading, error } = useDashboardData();
+  let { stocks, options, wheels, snapshot, isLoading, error } = useDashboardData();
+  // Patch: ensure wheels is always an array, even if backend returns { cycles: [...] }
+  if (wheels && !Array.isArray(wheels) && wheels.cycles && Array.isArray(wheels.cycles)) {
+    wheels = wheels.cycles;
+  }
 
   const calculateTotalValue = () => {
     let total = 0;
