@@ -5,8 +5,6 @@
 
 import { getApiBaseUrl } from '../utils/apiConfig';
 
-const API_BASE_URL = getApiBaseUrl();
-
 export interface UnifiedPosition {
     id: number | string; // Backend returns number, allow both for compatibility
     symbol: string;
@@ -61,18 +59,15 @@ export interface RefreshSummary {
 }
 
 class UnifiedApiService {
-    private baseUrl: string;
 
-    constructor() {
-        this.baseUrl = API_BASE_URL;
-    }
 
     /**
      * Get all positions from unified backend (corrected endpoint)
      */
     async getAllPositions(): Promise<{ total_positions: number; positions: UnifiedPosition[] }> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/positions`);
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/portfolio/positions`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -90,7 +85,8 @@ class UnifiedApiService {
      */
     async getStockPositions(): Promise<UnifiedPosition[]> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/positions/stocks`);
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/portfolio/positions/stocks`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -111,7 +107,8 @@ class UnifiedApiService {
      */
     async getOptionPositions(): Promise<UnifiedPosition[]> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/positions/options`);
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/portfolio/positions/options`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -132,7 +129,8 @@ class UnifiedApiService {
      */
     async getAllAccounts(): Promise<{ total_accounts: number; accounts: UnifiedAccount[] }> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/accounts`);
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/portfolio/accounts`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -150,7 +148,8 @@ class UnifiedApiService {
      */
     async importPositions(importData: any): Promise<{ message: string; imported_count: number }> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/import/positions`, {
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/portfolio/import/positions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -174,7 +173,8 @@ class UnifiedApiService {
      */
     async checkHealth(): Promise<{ status: string }> {
         try {
-            const response = await fetch(`${this.baseUrl}/health`);
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/health`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -192,7 +192,8 @@ class UnifiedApiService {
      */
     async refreshAllPrices(): Promise<RefreshSummary> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/refresh-all-prices`, {
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/portfolio/refresh-all-prices`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -215,7 +216,8 @@ class UnifiedApiService {
      */
     async refreshSelectedPrices(positionIds: number[]): Promise<RefreshSummary> {
         try {
-            const response = await fetch(`${this.baseUrl}/portfolio/refresh-selected-prices`, {
+            const baseUrl = getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/portfolio/refresh-selected-prices`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
