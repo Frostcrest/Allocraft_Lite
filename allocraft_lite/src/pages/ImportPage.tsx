@@ -1,5 +1,5 @@
 import React from 'react';
-import SchwabJsonImport from '../components/SchwabJsonImport';
+import SchwabDataImportCenter from '../components/SchwabDataImportCenter';
 
 const ImportPage: React.FC = () => {
     return (
@@ -11,7 +11,7 @@ const ImportPage: React.FC = () => {
                 <p style={{ color: '#444', fontSize: 17, marginBottom: 32, textAlign: 'center' }}>
                     Import your data from various sources. More importers coming soon!
                 </p>
-                <SchwabJsonImport />
+                <SchwabDataImportCenter />
                 {/* Future importers can be added here as new sections/components */}
             </div>
         </div>

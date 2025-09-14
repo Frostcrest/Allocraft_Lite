@@ -33,6 +33,11 @@ const navigationItems = [
     icon: PieChart,
   },
   {
+    title: "Schwab Data Import Center",
+    url: createPageUrl("SchwabDataImportCenter"),
+    icon: PieChart,
+  },
+  {
     title: "Dashboard",
     url: createPageUrl("Dashboard"),
     icon: LayoutDashboard,
