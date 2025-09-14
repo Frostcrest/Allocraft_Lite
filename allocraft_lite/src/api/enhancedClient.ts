@@ -735,6 +735,7 @@ export const useStockPositions = () => {
             apiLog('🔍 useStockPositions: Starting fetch...');
             const response = await enhancedFetch<{ value: UnifiedPosition[]; Count: number }>('/portfolio/positions/stocks');
             apiLog('📊 useStockPositions: Raw response:', response);
+            console.log('[Schwab API] /portfolio/positions/stocks result:', response);
 
             // Backend returns { "value": [...], "Count": 7 } - extract the array
             if (response.value && Array.isArray(response.value)) {
@@ -765,6 +766,7 @@ export const useOptionPositions = () => {
             apiLog('🔍 useOptionPositions: Starting fetch...');
             const response = await enhancedFetch<{ value: UnifiedPosition[]; Count: number }>('/portfolio/positions/options');
             apiLog('📊 useOptionPositions: Raw response:', response);
+            console.log('[Schwab API] /portfolio/positions/options result:', response);
 
             // Backend returns { "value": [...], "Count": 16 } - extract the array
             if (response.value && Array.isArray(response.value)) {
