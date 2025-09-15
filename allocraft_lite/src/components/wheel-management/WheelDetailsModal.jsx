@@ -350,6 +350,44 @@ export default function WheelDetailsModal({
                               Strategy: {cycle.strategy_type.replace('_', ' ')}
                             </div>
                           )}
+
+                          {/* Wheel Events for this cycle */}
+                          {cycle.events && cycle.events.length > 0 ? (
+                            <div className="mt-4">
+                              <h4 className="font-semibold mb-2 text-slate-800 flex items-center gap-2">
+                                <Activity className="h-4 w-4 text-blue-600" />
+                                Events
+                              </h4>
+                              <ul className="divide-y divide-slate-200">
+                                {cycle.events.map((event) => (
+                                  <li key={event.id} className="py-2 flex flex-col md:flex-row md:items-center md:gap-4">
+                                    <span className="font-medium text-slate-700 w-32 inline-block">{event.event_type.replace(/_/g, ' ')}</span>
+                                    <span className="text-xs text-slate-500 w-32 inline-block">{event.event_date ? formatDate(event.event_date) : ''}</span>
+                                    {event.quantity_shares !== undefined && (
+                                      <span className="text-xs text-slate-600">Shares: {event.quantity_shares}</span>
+                                    )}
+                                    {event.contracts !== undefined && (
+                                      <span className="text-xs text-slate-600">Contracts: {event.contracts}</span>
+                                    )}
+                                    {event.strike !== undefined && (
+                                      <span className="text-xs text-slate-600">Strike: {event.strike}</span>
+                                    )}
+                                    {event.premium !== undefined && (
+                                      <span className="text-xs text-green-700">Premium: {formatCurrency(event.premium)}</span>
+                                    )}
+                                    {event.price !== undefined && (
+                                      <span className="text-xs text-blue-700">Price: {formatCurrency(event.price)}</span>
+                                    )}
+                                    {event.notes && (
+                                      <span className="text-xs text-slate-400 italic">{event.notes}</span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-400 mt-2">No events for this cycle</div>
+                          )}
                         </div>
                       ))
                     ) : (
