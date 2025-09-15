@@ -71,6 +71,31 @@ export function schwabToAllocraftUnified({
                     long_quantity: p.longQuantity || p.long_quantity || 0,
                     short_quantity: p.shortQuantity || p.short_quantity || 0,
                     market_value: p.marketValue || p.market_value || 0,
+                    // --- Added for dashboard/PL support ---
+                    current_price:
+                        p.currentPrice ||
+                        p.marketPrice ||
+                        p.market_price ||
+                        p.instrument?.currentPrice ||
+                        p.instrument?.marketPrice ||
+                        null,
+                    average_price:
+                        p.averagePrice ||
+                        p.average_price ||
+                        p.costBasisPerShare ||
+                        p.cost_basis_per_share ||
+                        p.costBasis ||
+                        p.cost_basis ||
+                        null,
+                    status: p.status || (p.positionStatus || p.position_status) || 'Open',
+                    // fallback for shares/contracts
+                    shares: p.shares || p.longQuantity || p.long_quantity || 0,
+                    contracts: p.contracts || p.longQuantity || p.long_quantity || 0,
+                    // P&L fields if available
+                    current_day_profit_loss: p.currentDayProfitLoss || p.current_day_profit_loss || 0,
+                    current_day_profit_loss_percentage: p.currentDayProfitLossPercentage || p.current_day_profit_loss_percentage || 0,
+                    long_open_profit_loss: p.longOpenProfitLoss || p.long_open_profit_loss || 0,
+                    short_open_profit_loss: p.shortOpenProfitLoss || p.short_open_profit_loss || 0,
                     data_source: 'schwab_import'
                 })),
                 orders: acctOrders,
@@ -169,7 +194,7 @@ const SchwabDataImportCenter: React.FC = () => {
 
             // Send to backend
             const result = await importPositions.mutateAsync(unified);
-            setSuccessMsg(`Imported ${result.imported_count || result.positions || 0} positions successfully!`);
+            setSuccessMsg(`Imported ${result.imported_count || 0} positions successfully!`);
         } catch (err: any) {
             setParseError(err?.message || 'Import failed.');
         }
