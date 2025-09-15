@@ -44,9 +44,14 @@ export default function Wheels() {
     refetch: refetchPositions
   } = usePositionsData();
 
+  // If cycles is an object with a value property, use that for mapping
+  const cyclesArray = Array.isArray(cycles) ? cycles : (Array.isArray(cycles.value) ? cycles.value : []);
+  // DEBUG: Log cyclesArray
+  console.log('DEBUG cyclesArray:', cyclesArray, typeof cyclesArray, Array.isArray(cyclesArray));
+
   // Transform wheel cycles data to flatten metadata for display components
-  const transformWheelCycles = (cycles) => {
-    return cycles.map(cycle => {
+  const transformWheelCycles = (cyclesInput) => {
+    return cyclesInput.map(cycle => {
       const metadata = cycle.detection_metadata || {};
       // Calculate total premium collected (per-share premium * 100 shares * contract count)
       const perSharePremium = metadata.premium || 0;
@@ -87,10 +92,11 @@ export default function Wheels() {
   };
 
   // Transform cycles for component consumption
-  const transformedCycles = transformWheelCycles(cycles);
+  const transformedCycles = transformWheelCycles(cyclesArray);
 
   // Wheel detection hooks
   const wheelDetectionMutation = useWheelDetection();
+  const detectionLoading = wheelDetectionMutation.isLoading;
   const {
     data: detectionResults,
     isLoading: detectionResultsLoading
@@ -378,6 +384,9 @@ export default function Wheels() {
       alert(`❌ Failed to refresh wheel prices: ${error.message}`);
     }
   };
+
+  // DEBUG: Log cycles before transforming
+  console.log('DEBUG cycles:', cycles, typeof cycles, Array.isArray(cycles));
 
   // Effect to run detection when positions data is available
   useEffect(() => {

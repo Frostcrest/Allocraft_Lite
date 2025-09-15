@@ -733,22 +733,13 @@ export const useStockPositions = () => {
         queryKey: queryKeys.stockPositions,
         queryFn: async () => {
             apiLog('🔍 useStockPositions: Starting fetch...');
-            const response = await enhancedFetch<{ value: UnifiedPosition[]; Count: number }>('/portfolio/positions/stocks');
+            const response = await enhancedFetch<UnifiedPosition[]>('/portfolio/positions/stocks');
             apiLog('📊 useStockPositions: Raw response:', response);
             console.log('[Schwab API] /portfolio/positions/stocks result:', response);
-
-            // Backend returns { "value": [...], "Count": 7 } - extract the array
-            if (response.value && Array.isArray(response.value)) {
-                apiLog(`✅ useStockPositions: Extracted ${response.value.length} positions`);
-                return response.value;
-            }
-
-            // Fallback if response is already an array
             if (Array.isArray(response)) {
                 apiLog(`✅ useStockPositions: Direct array with ${response.length} positions`);
                 return response;
             }
-
             console.warn('⚠️ useStockPositions: Unexpected response format, returning empty array');
             return [];
         },
@@ -764,22 +755,13 @@ export const useOptionPositions = () => {
         queryKey: queryKeys.optionPositions,
         queryFn: async () => {
             apiLog('🔍 useOptionPositions: Starting fetch...');
-            const response = await enhancedFetch<{ value: UnifiedPosition[]; Count: number }>('/portfolio/positions/options');
+            const response = await enhancedFetch<UnifiedPosition[]>('/portfolio/positions/options');
             apiLog('📊 useOptionPositions: Raw response:', response);
             console.log('[Schwab API] /portfolio/positions/options result:', response);
-
-            // Backend returns { "value": [...], "Count": 16 } - extract the array
-            if (response.value && Array.isArray(response.value)) {
-                apiLog(`✅ useOptionPositions: Extracted ${response.value.length} positions`);
-                return response.value;
-            }
-
-            // Fallback if response is already an array
             if (Array.isArray(response)) {
                 apiLog(`✅ useOptionPositions: Direct array with ${response.length} positions`);
                 return response;
             }
-
             console.warn('⚠️ useOptionPositions: Unexpected response format, returning empty array');
             return [];
         },

@@ -3,8 +3,15 @@
 
 export function transform_accounts(json: any): any[] {
     if (!json) return [];
+    // Schwab: array of { securitiesAccount: { ... } }
+    if (Array.isArray(json)) {
+        // If the array contains objects with 'securitiesAccount', flatten them
+        if (json.length > 0 && json[0].securitiesAccount) {
+            return json.map((item: any) => item.securitiesAccount);
+        }
+        return json;
+    }
     if (Array.isArray(json.accounts)) return json.accounts;
-    if (Array.isArray(json)) return json;
     return [];
 }
 
@@ -23,7 +30,11 @@ export function transform_positions(json: any): any[] {
     }
     let all = [];
     for (const acct of accounts) {
-        if (Array.isArray(acct.positions)) all.push(...acct.positions);
+        if (Array.isArray(acct.positions)) {
+            // Attach accountNumber to each position for mapping
+            const acctNum = acct.accountNumber || acct.account_number;
+            all.push(...acct.positions.map((p: any) => ({ ...p, accountNumber: acctNum })));
+        }
     }
     return all;
 }
