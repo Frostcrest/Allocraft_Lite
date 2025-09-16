@@ -13,4 +13,9 @@ export default defineConfig({
     target: 'esnext', // Support modern features including top-level await
     minify: 'esbuild',
   },
+  server: {
+    proxy: {
+      '/wheels': 'http://localhost:8000',
+    },
+  },
 });

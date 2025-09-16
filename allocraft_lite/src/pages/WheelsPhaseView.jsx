@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useWheelPhaseCycles, usePhasePerformanceMetrics } from "@/api/wheelPhaseClient";
+import { useWheelPhaseCycles, usePhasePerformanceMetrics, deleteWheelCycle } from "@/api/wheelPhaseClient";
 import {
   RotateCcw,
   TrendingUp,
@@ -24,6 +24,7 @@ import {
 const TickerPhaseCard = ({ tickerData }) => {
   // Transform real backend data to match expected structure
   const {
+    id,
     ticker,
     current_stock_price: stockPrice,
     total_pnl: totalPnL,
@@ -31,6 +32,24 @@ const TickerPhaseCard = ({ tickerData }) => {
     lifetime_earnings: lifetimeEarnings = {},
     current_phase
   } = tickerData;
+
+  // For delete button state
+  const [deleting, setDeleting] = useState(false);
+  // Access refetchCycles from parent via context or prop drilling if needed
+  // For now, use a custom event to trigger refresh
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete wheel for ${ticker}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await deleteWheelCycle(id);
+      // Dispatch a custom event to notify parent to refresh
+      window.dispatchEvent(new CustomEvent('wheelPhase:refresh'));
+    } catch (err) {
+      alert('Failed to delete wheel.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Calculate days active
   const activeDays = created_at ? Math.floor((Date.now() - new Date(created_at)) / (1000 * 60 * 60 * 24)) : 0;
@@ -117,12 +136,22 @@ const TickerPhaseCard = ({ tickerData }) => {
               </div>
             </div>
           </div>
+          {/* Delete Button */}
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={deleting}
+            title="Remove this wheel cycle"
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(phaseNum => (
-            <div key={phaseNum} className="p-3 bg-slate-50 rounded-lg">
+            <div key={`phase-${id}-${phaseNum}`} className="p-3 bg-slate-50 rounded-lg">
               {getPhaseContent(phaseNum)}
             </div>
           ))}
@@ -135,6 +164,8 @@ const TickerPhaseCard = ({ tickerData }) => {
 // Main Wheels Phase View Component
 export default function WheelsPhaseView() {
   const [selectedView, setSelectedView] = useState('phase');
+  const [manualTicker, setManualTicker] = useState('');
+  const [addingTicker, setAddingTicker] = useState(false);
 
   // Fetch real wheel cycles data
   const {
@@ -150,6 +181,13 @@ export default function WheelsPhaseView() {
     isLoading: metricsLoading,
     error: metricsError
   } = usePhasePerformanceMetrics();
+
+  // Place this after all hooks and refetchCycles declaration
+  React.useEffect(() => {
+    const handler = () => refetchCycles();
+    window.addEventListener('wheelPhase:refresh', handler);
+    return () => window.removeEventListener('wheelPhase:refresh', handler);
+  }, [refetchCycles]);
 
   const isLoading = cyclesLoading || metricsLoading;
   const hasError = cyclesError || metricsError;
@@ -216,12 +254,48 @@ export default function WheelsPhaseView() {
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Wheel Phase Management</h1>
           <p className="text-slate-600 mt-1">Track wheel strategies across the 4-phase lifecycle</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              className="border rounded px-2 py-1 text-sm"
+              placeholder="Add ticker (e.g. AAPL)"
+              value={manualTicker}
+              onChange={e => setManualTicker(e.target.value.toUpperCase())}
+              disabled={addingTicker}
+              style={{ width: 120 }}
+            />
+            <Button
+              variant="outline"
+              disabled={addingTicker || !manualTicker.trim()}
+              onClick={async () => {
+                if (!manualTicker.trim()) return;
+                setAddingTicker(true);
+                try {
+                  // Call backend or update local state to add ticker
+                  // For now, use a simple POST to /wheels/track-ticker (adjust as needed)
+                  await fetch('/wheels/track-ticker', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: manualTicker.trim() })
+                  });
+                  setManualTicker('');
+                  refetchCycles();
+                } catch (err) {
+                  alert('Failed to add ticker.');
+                } finally {
+                  setAddingTicker(false);
+                }
+              }}
+            >
+              Add Ticker
+            </Button>
+          </div>
           <Button variant="outline" onClick={refetchCycles}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh Prices

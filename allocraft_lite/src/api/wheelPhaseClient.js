@@ -312,3 +312,16 @@ function calculateActiveDays(startedAt) {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 }
+
+/**
+ * Delete a wheel cycle
+ */
+export async function deleteWheelCycle(cycleId) {
+  const response = await fetch(`${API_BASE}/wheels/cycles/${cycleId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete wheel cycle');
+  }
+  return response.json();
+}
