@@ -4,8 +4,8 @@ import { clearApiUrlCache } from '@/utils/apiConfig';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function Login() {
-    const [username, setUsername] = useState('admin');
-    const [password, setPassword] = useState('admin123');
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
     const navigate = useNavigate();
     const loginMutation = useLogin();
 
